@@ -1,0 +1,771 @@
+/* ==========================================================================
+   ENKRIPSIH - Tactical Data Terminal Style (Anti-Slop Design System)
+   Distilled from tasteskill v2 app-screens (data-terminal architecture)
+   ========================================================================== */
+
+:root {
+  --ground: #101216;
+  --surface: #14171d;
+  --raised: #1c2028;
+  --border: #232832;
+  --rule: #1c2028;
+  --control: #222732;
+  --control-hover: #2b313f;
+  --control-border: #323948;
+
+  --text: #f0f2f5;
+  --muted: #848c99;
+  --dim: #505663;
+
+  --accent: #2eb88a;
+  --accent-line: #2eb88a;
+  --accent-bg: #14231e;
+
+  --positive: #3eb489;
+  --negative: #e0526b;
+  --warning: #d49b38;
+  --info: #4687d4;
+
+  --pill-positive-bg: #13221b;
+  --pill-positive-ink: #44b68e;
+  --pill-negative-bg: #261519;
+  --pill-negative-ink: #e0526b;
+  --pill-warning-bg: #241d11;
+  --pill-warning-ink: #d49b38;
+  --pill-neutral-bg: #191c23;
+  --pill-neutral-ink: #9da4b0;
+
+  --radius-card: 4px;
+  --radius-control: 3px;
+
+  --font-sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "Consolas", monospace;
+
+  --fs-title: 22px;
+  --fs-section: 15px;
+  --fs-body: 13px;
+  --fs-small: 11px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--ground);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  min-height: 100vh;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Header & Metadata Rail */
+.header-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-badge {
+  background: var(--accent-bg);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: var(--radius-control);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.logo-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--text);
+  text-transform: uppercase;
+}
+
+.logo-title span {
+  color: var(--accent);
+}
+
+.logo-subtitle {
+  font-size: var(--fs-small);
+  color: var(--muted);
+  letter-spacing: 0.2px;
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--fs-small);
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ground);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: var(--radius-control);
+}
+
+.led-indicator {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: inline-block;
+}
+
+.led-indicator.offline {
+  background: var(--negative);
+}
+
+/* Tabs: Active marked by 1px accent line */
+.tabs-container {
+  display: flex;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  gap: 8px;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 12px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  transition: color 0.15s ease;
+}
+
+.tab-btn:hover {
+  color: var(--text);
+}
+
+.tab-btn.active {
+  color: var(--text);
+}
+
+.tab-btn.active::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent-line);
+}
+
+.tab-badge {
+  background: var(--control);
+  color: var(--muted);
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+}
+
+/* Main Layout */
+.main-content {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.auth-gate {
+  max-width: 480px;
+  margin: 48px auto;
+}
+
+.auth-gate .card-title {
+  margin-bottom: 8px;
+}
+
+.auth-gate .card-subtitle {
+  margin-bottom: 24px;
+}
+
+.login-error {
+  margin-top: 12px;
+  color: var(--negative);
+}
+
+.view-section {
+  display: none;
+}
+
+.view-section.active {
+  display: block;
+}
+
+/* Flat Tactical Cards (No glows, no fuzzy drop-shadows) */
+.tactical-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 20px;
+  position: relative;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 12px;
+}
+
+.card-title {
+  font-size: var(--fs-section);
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-subtitle {
+  font-size: var(--fs-small);
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* Grid Layouts */
+.grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.grid-3col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 992px) {
+  .grid-2col, .grid-3col {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Buttons (Solid, flat, clean tactile edges) */
+.btn-tactical {
+  background: var(--control);
+  border: 1px solid var(--control-border);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-tactical:hover {
+  background: var(--control-hover);
+  border-color: var(--muted);
+}
+
+.btn-tactical-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0b110e;
+}
+
+.btn-tactical-primary:hover {
+  background: #36c796;
+  border-color: #36c796;
+}
+
+.btn-tactical-danger {
+  background: var(--pill-negative-bg);
+  border-color: var(--negative);
+  color: var(--negative);
+}
+
+.btn-tactical-danger:hover {
+  background: var(--negative);
+  color: #fff;
+}
+
+.btn-tactical-secondary {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.btn-tactical-secondary:hover {
+  background: var(--control);
+  color: var(--text);
+  border-color: var(--control-border);
+}
+
+/* Forms & Inputs */
+.form-group {
+  margin-bottom: 14px;
+}
+
+.form-label {
+  display: block;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  background: var(--ground);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  padding: 9px 12px;
+  border-radius: var(--radius-control);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--accent);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 96px;
+  line-height: 1.5;
+}
+
+/* Biometric Optical HUD Scanner (Mil-spec camera interface) */
+.webcam-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  max-width: 440px;
+  margin: 0 auto 16px;
+  background: #000000;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#webcamVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+#webcamCanvas {
+  display: none;
+}
+
+.biometric-reticle {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reticle-box {
+  width: 200px;
+  height: 230px;
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  position: relative;
+  transition: border-color 0.2s ease;
+}
+
+.reticle-box.detected {
+  border-color: var(--accent);
+}
+
+.reticle-corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: var(--accent);
+  border-style: solid;
+}
+.corner-tl { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+.corner-tr { top: -1px; right: -1px; border-width: 2px 2px 0 0; }
+.corner-bl { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; }
+.corner-br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+.reticle-crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+}
+.reticle-crosshair::before {
+  content: "";
+  position: absolute;
+  top: 11px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0.6;
+}
+.reticle-crosshair::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 11px;
+  width: 1px;
+  background: var(--accent);
+  opacity: 0.6;
+}
+
+.hud-telemetry {
+  position: absolute;
+  bottom: 8px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--fs-small);
+  color: var(--accent);
+  background: rgba(16, 18, 22, 0.85);
+  padding: 4px 8px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border);
+}
+
+/* Commander Badge Strip */
+.commander-badge-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.officer-info h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.officer-info p {
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+/* ==========================================================================
+   PHYSICAL TOKEN SIMULATOR (Industrial Cryptographic Hardware)
+   ========================================================================== */
+.keybca-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.keybca-token-device {
+  width: 330px;
+  background: #181b22;
+  border: 1px solid #2d3340;
+  border-radius: 12px;
+  padding: 20px;
+  position: relative;
+  user-select: none;
+}
+
+.token-brand {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.token-brand-name {
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #adb5c2;
+  text-transform: uppercase;
+}
+
+.token-model {
+  font-size: 10px;
+  color: var(--muted);
+  border: 1px solid #2d3340;
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+
+/* Authentic Dot Matrix LCD */
+.token-screen-bezel {
+  background: #101216;
+  border: 1px solid #282e3a;
+  border-radius: 4px;
+  padding: 10px;
+  margin-bottom: 18px;
+}
+
+.token-lcd {
+  background: #505c4d;
+  border-radius: 2px;
+  padding: 10px 8px;
+  color: #0f1710;
+  font-weight: 700;
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.token-lcd.screen-off {
+  background: #1e241d;
+  color: #171d16;
+}
+
+.lcd-line-1 {
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  opacity: 0.85;
+}
+
+.lcd-line-2 {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* Tactical Symbol Buttons */
+.btn-key-sym {
+  background: #1c2029;
+  border: 1px solid #2d3341;
+  border-radius: 6px;
+  height: 48px;
+  font-size: 20px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.1s ease, border-color 0.1s ease;
+}
+
+.btn-key-sym:hover {
+  background: #252b38;
+}
+
+.btn-key-sym:active {
+  background: #161920;
+}
+
+.sym-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-left: 6px;
+  font-weight: 500;
+}
+
+.btn-key-power {
+  background: #2b1419;
+  border: 1px solid #732230;
+  color: #f06a81;
+  font-size: 12px;
+  font-weight: 700;
+  height: 40px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background-color 0.15s ease;
+}
+
+.btn-key-power:hover {
+  background: #3d1b22;
+}
+
+/* ==========================================================================
+   RECEIVER & INTEL INBOX
+   ========================================================================== */
+.intel-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  margin-bottom: 14px;
+}
+
+.intel-card.locked {
+  border-left: 3px solid var(--warning);
+}
+
+.intel-card.unlocked {
+  border-left: 3px solid var(--positive);
+}
+
+.intel-card.burned {
+  border-left: 3px solid var(--negative);
+  opacity: 0.65;
+}
+
+.intel-header {
+  padding: 10px 14px;
+  background: var(--raised);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+
+.intel-body {
+  padding: 14px;
+}
+
+.challenge-highlight-box {
+  background: var(--ground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: 12px;
+  margin: 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.challenge-code-display {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 2px;
+}
+
+.decrypted-intel-box {
+  background: var(--ground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: 14px;
+  margin-top: 10px;
+  color: var(--text);
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.scramble-text {
+  color: var(--accent);
+}
+
+/* Priority Badges */
+.badge-priority {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 2px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.priority-top-secret {
+  background: var(--pill-negative-bg);
+  border: 1px solid var(--negative);
+  color: var(--negative);
+}
+
+.priority-urgent {
+  background: var(--pill-warning-bg);
+  border: 1px solid var(--warning);
+  color: var(--warning);
+}
+
+.priority-confidential {
+  background: var(--pill-neutral-bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+/* Toast Notifications (Overlay) */
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toast {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: var(--radius-control);
+  font-size: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); /* taste-skill-ignore: toast overlay shadow */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toast.toast-success { border-color: var(--positive); }
+.toast.toast-error { border-color: var(--negative); }
+.toast.toast-warning { border-color: var(--warning); }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header-bar {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .tabs-container {
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
