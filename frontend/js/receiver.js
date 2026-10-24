@@ -173,8 +173,8 @@ const Receiver = {
 
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "btn-tactical btn-tactical-primary";
-    button.textContent = "Cocokkan & buka pesan";
+    button.className = "btn-tactical btn-tactical-primary message-open-action";
+    button.textContent = "Buka Pesan";
     button.addEventListener("click", () =>
       this.unlockMessage(message, input, passkeyInput, wrapper)
     );
@@ -211,7 +211,7 @@ const Receiver = {
     }
     const button = wrapper.querySelector("button");
     button.disabled = true;
-    button.textContent = "MEMBUKA PESAN...";
+    button.textContent = "Membuka pesan...";
     try {
       if (requiresSecret) {
         const verifier = await MessageCrypto.verifier(secret, recipient.salt);
@@ -265,7 +265,7 @@ const Receiver = {
         : error.message || "Kunci salah atau ciphertext rusak.";
       showToast(detail, "error");
       button.disabled = false;
-      button.textContent = "Cocokkan & buka pesan";
+      button.textContent = "Buka Pesan";
       AudioSys.accessDenied();
     } finally {
       secret = "";

@@ -127,10 +127,12 @@ function initWebSocket() {
   State.ws.onopen = () => {
     console.log("[WS] Terhubung ke Server Enkripsih WebSocket.");
     const led = document.getElementById('wsLed');
+    const status = document.getElementById('connectionStatus');
     if (led) {
       led.classList.remove('offline');
-      led.title = "Koneksi Real-time Taktis Aktif";
+      led.title = "Terhubung";
     }
+    if (status) status.textContent = "Terhubung";
     clearInterval(State.wsHeartbeat);
     State.wsHeartbeat = setInterval(() => {
       if (State.ws && State.ws.readyState === WebSocket.OPEN) {
@@ -151,10 +153,12 @@ function initWebSocket() {
   State.ws.onclose = () => {
     console.warn("[WS] Koneksi terputus. Mencoba rekoneksi dalam 3 detik...");
     const led = document.getElementById('wsLed');
+    const status = document.getElementById('connectionStatus');
     if (led) {
       led.classList.add('offline');
-      led.title = "Koneksi Terputus - Mencoba menyambung...";
+      led.title = "Mencoba menyambungkan kembali";
     }
+    if (status) status.textContent = "Offline";
     clearInterval(State.wsHeartbeat);
     State.wsHeartbeat = null;
     State.ws = null;
@@ -193,10 +197,40 @@ function switchTab(tabName) {
     window.clearDecryptedMessages();
   }
   State.activeTab = tabName;
+  const screen = {
+    commander: {
+      title: 'Kirim pesan',
+      description: 'Tulis pesan, pilih anggota, lalu kirim dengan enkripsi di browser.'
+    },
+    receiver: {
+      title: 'Kotak masuk',
+      description: 'Pesan yang ditujukan ke akun receiver ini.'
+    },
+    members: {
+      title: 'Kelola anggota',
+      description: 'Daftarkan penerima dan kelola akses akunnya.'
+    },
+    architecture: {
+      title: 'Cara kerja',
+      description: 'Ringkasan alur enkripsi dan batasan prototipe.'
+    }
+  }[tabName];
+  if (screen) {
+    document.getElementById('workspaceTitle').textContent = screen.title;
+    document.getElementById('workspaceDescription').textContent = screen.description;
+  }
 
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tabName);
+    if (btn.dataset.tab === tabName) {
+      btn.setAttribute('aria-current', 'page');
+    } else {
+      btn.removeAttribute('aria-current');
+    }
   });
+  document.getElementById('appNavigation')?.classList.remove('is-open');
+  document.querySelector('.app-sidebar')?.classList.remove('is-open');
+  document.getElementById('mobileNavToggle')?.setAttribute('aria-expanded', 'false');
 
   document.querySelectorAll('.view-section').forEach(sec => {
     sec.classList.toggle('active', sec.id === `view-${tabName}`);
@@ -213,22 +247,22 @@ function switchTab(tabName) {
   }
 }
 
-// Clock updates (Military 24h format)
-function updateTacticalClock() {
-  const clockEl = document.getElementById('tacticalClock');
-  if (!clockEl) return;
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString('id-ID', { hour12: false }) + ' WIB';
-  clockEl.textContent = timeStr;
-}
-
 // Initializer
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
-
-  setInterval(updateTacticalClock, 1000);
-  updateTacticalClock();
-
+  document.getElementById('mobileNavToggle')?.addEventListener('click', event => {
+    const navigation = document.getElementById('appNavigation');
+    const expanded = event.currentTarget.getAttribute('aria-expanded') === 'true';
+    navigation?.classList.toggle('is-open', !expanded);
+    navigation?.closest('.app-sidebar')?.classList.toggle('is-open', !expanded);
+    event.currentTarget.setAttribute('aria-expanded', String(!expanded));
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    document.getElementById('appNavigation')?.classList.remove('is-open');
+    document.querySelector('.app-sidebar')?.classList.remove('is-open');
+    document.getElementById('mobileNavToggle')?.setAttribute('aria-expanded', 'false');
+  });
 });

@@ -89,8 +89,9 @@ const AppAuth = {
     State.principalId = session.principal_id;
     document.getElementById('authGate').style.display = 'none';
     document.getElementById('passwordChangeGate').style.display = 'block';
-    document.getElementById('appNavigation').style.display = 'none';
+    document.getElementById('appLayout').classList.remove('is-visible');
     document.getElementById('appWorkspace').style.display = 'none';
+    document.getElementById('mobileNavToggle').hidden = true;
     document.getElementById('btnLogout').style.display = 'inline-flex';
   },
 
@@ -143,8 +144,13 @@ const AppAuth = {
     State.principalId = session.principal_id || 'CMD-01';
     document.getElementById('authGate').style.display = 'none';
     document.getElementById('passwordChangeGate').style.display = 'none';
+    document.getElementById('appLayout').classList.add('is-visible');
     document.getElementById('appNavigation').style.display = 'flex';
+    document.getElementById('appNavigation').classList.remove('is-open');
+    document.querySelector('.app-sidebar').classList.remove('is-open');
     document.getElementById('appWorkspace').style.display = 'block';
+    document.getElementById('mobileNavToggle').hidden = false;
+    document.getElementById('mobileNavToggle').setAttribute('aria-expanded', 'false');
     document.getElementById('btnLogout').style.display = 'inline-flex';
 
     document.querySelectorAll('.tab-btn').forEach((tab) => {
@@ -176,7 +182,12 @@ const AppAuth = {
     document.getElementById('authGate').style.display = 'block';
     document.getElementById('passwordChangeGate').style.display = 'none';
     document.getElementById('appNavigation').style.display = 'none';
+    document.getElementById('appNavigation').classList.remove('is-open');
+    document.getElementById('appLayout').classList.remove('is-visible');
+    document.querySelector('.app-sidebar').classList.remove('is-open');
     document.getElementById('appWorkspace').style.display = 'none';
+    document.getElementById('mobileNavToggle').hidden = true;
+    document.getElementById('mobileNavToggle').setAttribute('aria-expanded', 'false');
     document.getElementById('btnLogout').style.display = 'none';
   }
 };

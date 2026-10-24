@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ENKRIPSIH - Kirim Pesan Terenkripsi</title>
+  <meta name="theme-color" content="#101216">
+  <meta name="description" content="Kirim pesan terenkripsi kepada anggota terdaftar.">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <title>ENKRIPSIH — Pesan terenkripsi</title>
   
   <!-- Typography: Public Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,49 +14,29 @@
   <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Stylesheet served by the FastAPI static mount -->
-  <link rel="stylesheet" href="/static/css/style.css?v=passkey-aligned1">
+  <link rel="stylesheet" href="/static/css/style.css?v=ui-polish1">
 </head>
 <body>
 
   <!-- Header -->
   <header class="header-bar">
     <div class="logo-area">
-      <div>
-        <h1 class="logo-title">ENKRIPSIH</h1>
-        <div class="logo-subtitle">Pesan terenkripsi dengan kunci anggota</div>
+      <img class="brand-mark" src="/static/favicon.svg" alt="">
+      <div class="brand-copy">
+        <span class="logo-title">ENKRIPSIH</span>
+        <span class="logo-subtitle">Pesan anggota, terenkripsi di perangkat</span>
       </div>
     </div>
 
     <div class="header-status">
-      <div class="status-pill">
-        <span class="led-indicator" id="wsLed" title="Koneksi WebSocket Aktif"></span>
-        <span style="color:var(--muted);">SISTEM:</span>
-        <strong style="color:var(--accent);">ONLINE</strong>
+      <div class="connection-status" role="status" aria-live="polite">
+        <span class="led-indicator offline" id="wsLed" title="Menghubungkan"></span>
+        <span id="connectionStatus">Tidak terhubung</span>
       </div>
-      <div class="status-pill">
-        <span style="color:var(--muted);">WAKTU:</span>
-        <span id="tacticalClock" style="color:var(--text); font-weight:600;">--:--:-- WIB</span>
-      </div>
+      <button class="mobile-nav-toggle btn-tactical btn-tactical-secondary" id="mobileNavToggle" type="button" aria-expanded="false" aria-controls="appNavigation" hidden>Menu</button>
       <button class="btn-tactical btn-tactical-secondary" id="btnLogout" type="button" style="display:none;">Keluar</button>
     </div>
   </header>
-
-  <!-- Navigation -->
-  <nav class="tabs-container" id="appNavigation" style="display:none;">
-    <button class="tab-btn active" data-tab="commander">
-      <span>Kirim pesan</span>
-    </button>
-    <button class="tab-btn" data-tab="receiver">
-      <span>Kotak masuk</span>
-      <span class="tab-badge" id="receiverBadge">0</span>
-    </button>
-    <button class="tab-btn" data-tab="members">
-      <span>Kelola anggota</span>
-    </button>
-    <button class="tab-btn" data-tab="architecture">
-      <span>Cara kerja</span>
-    </button>
-  </nav>
 
   <main class="main-content" id="authGate">
     <section class="tactical-card auth-gate">
@@ -100,8 +83,33 @@
     </section>
   </main>
 
-  <!-- Main Workspace -->
-  <main class="main-content" id="appWorkspace" style="display:none;">
+  <div class="app-layout" id="appLayout">
+    <aside class="app-sidebar">
+      <nav class="tabs-container" id="appNavigation" aria-label="Navigasi utama" style="display:none;">
+        <button class="tab-btn active" type="button" data-tab="commander" aria-controls="view-commander">
+          <span>Kirim pesan</span>
+        </button>
+        <button class="tab-btn" type="button" data-tab="receiver" aria-controls="view-receiver">
+          <span>Kotak masuk</span>
+          <span class="tab-badge" id="receiverBadge">0</span>
+        </button>
+        <button class="tab-btn" type="button" data-tab="members" aria-controls="view-members">
+          <span>Kelola anggota</span>
+        </button>
+        <button class="tab-btn" type="button" data-tab="architecture" aria-controls="view-architecture">
+          <span>Cara kerja</span>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="main-content app-workspace" id="appWorkspace" style="display:none;">
+    <div class="screen-heading">
+      <div>
+        <h1 id="workspaceTitle">Kirim pesan</h1>
+        <p id="workspaceDescription">Tulis pesan, pilih anggota, lalu kirim dengan enkripsi di browser.</p>
+      </div>
+    </div>
 
     <!-- Message composer is the default view. -->
     <section class="view-section active" id="view-commander">
@@ -134,7 +142,7 @@
             </div>
 
             <button type="submit" class="btn-tactical btn-tactical-primary" id="btnTransmitIntel" style="width:100%;">
-              <span>ENKRIPSI & KIRIM</span>
+              <span>Enkripsi dan kirim</span>
             </button>
           </form>
 
@@ -219,17 +227,15 @@
       <div class="tactical-card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">KOTAK MASUK INTELIJEN TAKTIS (RECEIVER TERMINAL)</h2>
-            <div class="card-subtitle">Inbound Encrypted Transmissions & Decryption Console</div>
+            <h2 class="card-title">Pesan masuk</h2>
+            <div class="card-subtitle">Masukkan challenge dan respons dari perangkat untuk membuka pesan baru.</div>
           </div>
-          <button class="btn-tactical btn-tactical-secondary" id="btnRefreshReceiverMsgs" style="font-size:11px; padding:3px 8px;">
+          <button class="btn-tactical btn-tactical-secondary" id="btnRefreshReceiverMsgs" type="button">
             Refresh Pesan
           </button>
         </div>
 
-        <p style="font-size:var(--fs-body); color:var(--muted); margin-bottom:16px;">
-          Untuk pesan baru, masukkan challenge 4 simbol ke perangkat passkey dan ketik respons 12 simbolnya. Mode ini untuk demo non-sensitif: respons 12 simbol hanya memiliki 24 bit kemungkinan dan dapat ditebak.
-        </p>
+        <p class="security-note">Catatan demo: respons passkey 12 simbol memiliki 24 bit kemungkinan. Jangan gunakan untuk pesan sensitif.</p>
 
         <!-- Message List Container -->
         <div id="receiverMessageList">
@@ -259,16 +265,17 @@
       </div>
     </section>
 
-  </main>
+    </main>
+  </div>
 
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts served by the FastAPI static mount -->
-  <script src="/static/js/app.js?v=passkey-symbols1"></script>
+  <script src="/static/js/app.js?v=ui-polish1"></script>
   <script src="/static/js/auth.js?v=receiver-accounts1"></script>
-  <script src="/static/js/commander.js?v=passkey-aligned1"></script>
+  <script src="/static/js/commander.js?v=ui-polish1"></script>
   <script src="/static/js/message_crypto.js?v=passkey-aligned1"></script>
-  <script src="/static/js/receiver.js?v=passkey-aligned1"></script>
+  <script src="/static/js/receiver.js?v=ui-polish1"></script>
 </body>
 </html>
