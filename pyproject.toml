@@ -1,2 +1,19 @@
+[project]
+name = "enkripsih"
+version = "2.0.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "uvicorn[standard]>=0.30,<1",
+    "cryptography>=42",
+    "argon2-cffi>=23.1,<26",
+    "python-dotenv>=1.0,<2",
+    "numpy>=1.26",
+    "opencv-python>=4.10,<5",
+    "sqlcipher3==0.6.4",
+    "psycopg[binary]>=3.2,<4",
+    "httpx>=0.27",
+]
+
 [tool.vercel]
 entrypoint = "backend.main:app"
