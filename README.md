@@ -119,7 +119,14 @@ Akses di browser:
 - **Web Application:** [http://localhost:8000](http://localhost:8000)
 - **Dokumentasi API Swagger:** [http://localhost:8000/docs](http://localhost:8000/docs)
 
-Saat mulai, terminal meminta password login dan passphrase database (keduanya minimal 16 karakter dan harus berbeda). Passphrase database tidak disimpan ke file konfigurasi. SQLCipher mengenkripsi database; kunci database acak dibungkus dengan AES-GCM, menggunakan kunci turunan Argon2id (3 iterasi, 64 MiB memori) dan disimpan di `backend\enkripsih.db.key.argon2`. Lupa passphrase atau kehilangan file kunci berarti database tidak dapat dibuka.
+Untuk memakai file environment lokal, salin template dan edit file `.env`:
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+Isi `DATABASE_URL` dengan connection string Neon dari tombol **Connect** (jangan gunakan URL contoh), lalu set `ENKRIPSIH_PASSWORD` ke password login unik minimal 16 karakter. `run.py` dan utility migrasi otomatis membaca `.env`. `.env` sudah diabaikan Git; jangan pernah commit atau membagikan file tersebut. Jika `DATABASE_URL` diisi, aplikasi memakai PostgreSQL dan tidak meminta passphrase SQLCipher lokal.
+
+Dalam mode lokal tanpa `DATABASE_URL`, terminal meminta password login dan passphrase database (keduanya minimal 16 karakter dan harus berbeda). Passphrase database tidak disimpan ke file konfigurasi. SQLCipher mengenkripsi database; kunci database acak dibungkus dengan AES-GCM, menggunakan kunci turunan Argon2id (3 iterasi, 64 MiB memori) dan disimpan di `backend\enkripsih.db.key.argon2`. Lupa passphrase atau kehilangan file kunci berarti database tidak dapat dibuka.
 
 Server hanya menerima koneksi dari komputer ini (`127.0.0.1`). Semua API dan WebSocket memerlukan sesi login, cookie sesi HttpOnly/SameSite, dan percobaan login dibatasi. Jangan mengubah host ke `0.0.0.0` atau meneruskan port `8000` ke internet.
 
@@ -134,6 +141,12 @@ Masukkan passphrase database saat diminta jika database sudah terenkripsi, lalu 
 .\.venv\Scripts\python.exe -m backend.secure_backup restore --source D:\Enkripsih-Backup\enkripsih-sebelum-migrasi.enc --output D:\Enkripsih-Backup\enkripsih-restore-check.db
 ```
 Backup lama yang dibuat sebelum perubahan passphrase memakai DPAPI dan hanya bisa dipulihkan pada profil Windows pembuat backup. Jika restore menghasilkan database plaintext, lanjutkan migrasi saat server berikutnya dijalankan; hapus file plaintext hasil restore setelah pemeriksaan.
+
+Jika passphrase database terlupa tetapi backup pra-Argon2id DPAPI masih tersedia, jalankan migrator dengan file backup tersebut sebagai sumber (gunakan akun Windows yang sama). Migrator membuka backup di memori, memverifikasi SQLite, lalu mengirim record ke PostgreSQL tanpa membuat file plaintext sementara:
+```powershell
+.\.venv\Scripts\python.exe -m backend.migrate_to_postgres --source D:\Enkripsih-Backup\enkripsih-pre-migration-20261023-112244.enc
+```
+Backup itu hanya memuat snapshot saat dibuat; perubahan setelah waktu backup tidak tercakup. Database tujuan harus kosong dan connection string PostgreSQL (`DATABASE_URL`) tetap disetel di terminal yang sama.
 
 ### Mode PostgreSQL untuk hosting
 Mode lokal tetap memakai SQLCipher. Untuk memakai PostgreSQL jarak jauh, install dependency terbaru (`.\.venv\Scripts\python.exe -m pip install -r requirements.txt`), buat database PostgreSQL kosong dengan TLS dari provider pilihan, lalu hentikan aplikasi dan buat backup terverifikasi. Jangan masukkan connection string ke source code atau Git.

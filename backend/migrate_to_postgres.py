@@ -6,7 +6,11 @@ import os
 import sqlite3
 from pathlib import Path
 
-from . import database
+from dotenv import load_dotenv
+
+from . import database, secure_backup
+
+load_dotenv()
 
 TABLE_COLUMNS = {
     "users": (
@@ -38,8 +42,16 @@ TABLE_COLUMNS = {
 
 
 def _open_local_database(source_path: Path, passphrase: str | None):
-    with source_path.open("rb") as source_file:
-        is_plaintext = source_file.read(16) == b"SQLite format 3\x00"
+    source_bytes = source_path.read_bytes()
+    if source_bytes.startswith(secure_backup.LEGACY_MAGIC):
+        plaintext_snapshot = secure_backup._restore_legacy_dpapi_backup(source_bytes)
+        secure_backup._verify_sqlite_bytes(plaintext_snapshot)
+        source = sqlite3.connect(":memory:")
+        source.deserialize(plaintext_snapshot)
+        source.row_factory = sqlite3.Row
+        return source
+
+    is_plaintext = source_bytes.startswith(b"SQLite format 3\x00")
 
     if is_plaintext:
         source = sqlite3.connect(f"{source_path.resolve().as_uri()}?mode=ro", uri=True)
@@ -153,10 +165,11 @@ def main() -> None:
     if not database_url:
         raise SystemExit("Atur DATABASE_URL ke connection string PostgreSQL tujuan.")
 
-    with args.source.open("rb") as source_file:
-        plaintext_source = source_file.read(16) == b"SQLite format 3\x00"
+    source_bytes = args.source.read_bytes()
+    encrypted_legacy_backup = source_bytes.startswith(secure_backup.LEGACY_MAGIC)
+    plaintext_source = source_bytes.startswith(b"SQLite format 3\x00")
     source_passphrase = None
-    if not plaintext_source:
+    if not plaintext_source and not encrypted_legacy_backup:
         source_passphrase = getpass.getpass("Passphrase database lokal: ")
 
     confirmation = input(

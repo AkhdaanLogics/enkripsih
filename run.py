@@ -6,6 +6,9 @@ Launches the FastAPI backend and serves the frontend on http://localhost:8000
 import uvicorn
 import os
 from getpass import getpass
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from backend.database import database_needs_migration, database_needs_passphrase_setup
 
