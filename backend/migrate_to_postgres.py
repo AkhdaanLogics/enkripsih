@@ -10,8 +10,6 @@ from dotenv import load_dotenv
 
 from . import database, secure_backup
 
-load_dotenv()
-
 TABLE_COLUMNS = {
     "users": (
         "id",
@@ -27,18 +25,41 @@ TABLE_COLUMNS = {
         "sender_id",
         "sender_name",
         "target_unit",
-        "subject",
-        "priority",
-        "challenge_letters",
-        "challenge_symbols",
+        "recipient_id",
         "paket",
         "status",
-        "plaintext",
         "created_at",
-        "decrypted_at",
+    ),
+    "recipient_keys": ("id", "name", "salt", "verifier", "created_at"),
+    "receiver_accounts": (
+        "recipient_id",
+        "username",
+        "password_salt",
+        "password_hash",
+        "must_change_password",
+        "created_at",
     ),
     "audit_logs": ("id", "timestamp", "category", "status", "message"),
 }
+
+
+def _normalize_record(table: str, row, known_recipient_ids: set[str] | None = None) -> dict:
+    record = dict(row)
+    if table == "messages":
+        record["recipient_id"] = record.get("recipient_id") or ""
+        if record["status"] == "BURNED":
+            record["paket"] = ""
+        elif (
+            not record["recipient_id"]
+            or (
+                known_recipient_ids is not None
+                and record["recipient_id"] not in known_recipient_ids
+            )
+        ):
+            record["status"] = "LEGACY"
+        elif record["status"] == "UNLOCKED":
+            record["status"] = "LOCKED"
+    return record
 
 
 def _open_local_database(source_path: Path, passphrase: str | None):
@@ -81,9 +102,11 @@ def migrate(source_path: Path, database_url: str, source_passphrase: str | None)
 
         counts_before = {
             table: target.execute(f"SELECT COUNT(*) AS count FROM {table}").fetchone()["count"]
-            for table in ("messages", "audit_logs")
+            for table in (
+                "messages", "recipient_keys", "receiver_accounts", "audit_logs"
+            )
         }
-        if counts_before["messages"] or counts_before["audit_logs"]:
+        if any(counts_before.values()):
             raise RuntimeError(
                 "Database PostgreSQL tujuan tidak kosong. Migrasi dibatalkan agar tidak "
                 "menggabungkan atau menggandakan data."
@@ -94,12 +117,48 @@ def migrate(source_path: Path, database_url: str, source_passphrase: str | None)
                 "Database tujuan sudah memiliki profil tambahan. Gunakan database PostgreSQL baru."
             )
 
+        recipient_columns = {
+            row["name"] for row in source.execute("PRAGMA table_info(recipient_keys)")
+        }
+        known_recipient_ids = (
+            {
+                row["id"]
+                for row in source.execute("SELECT id FROM recipient_keys").fetchall()
+            }
+            if "id" in recipient_columns
+            else set()
+        )
+
         expected_counts: dict[str, int] = {}
         for table, columns in TABLE_COLUMNS.items():
             placeholders = ", ".join("?" for _ in columns)
             column_list = ", ".join(columns)
-            rows = source.execute(f"SELECT {column_list} FROM {table}").fetchall()
+            try:
+                source_columns = {
+                    row["name"] for row in source.execute(f"PRAGMA table_info({table})")
+                }
+                if not source_columns:
+                    source_columns = {
+                        row["column_name"]
+                        for row in source.execute("""
+                            SELECT column_name FROM information_schema.columns
+                            WHERE table_name = ?
+                        """, (table,))
+                    }
+            except sqlite3.Error:
+                source_columns = set()
+            available_columns = [column for column in columns if column in source_columns]
+            if not available_columns:
+                expected_counts[table] = 0
+                if table == "users":
+                    target.execute("DELETE FROM users WHERE id = ?", ("CMD-01",))
+                continue
+            rows = source.execute(
+                f"SELECT {', '.join(available_columns)} FROM {table}"
+            ).fetchall()
             expected_counts[table] = len(rows)
+            if table == "users" and not any(row["id"] == "CMD-01" for row in rows):
+                target.execute("DELETE FROM users WHERE id = ?", ("CMD-01",))
             if not rows:
                 continue
 
@@ -116,10 +175,15 @@ def migrate(source_path: Path, database_url: str, source_passphrase: str | None)
                     face_template = EXCLUDED.face_template,
                     created_at = EXCLUDED.created_at
                 """
-            target.executemany(
-                insert,
-                [tuple(row[column] for column in columns) for row in rows],
-            )
+            values = []
+            for row in rows:
+                record = _normalize_record(
+                    table,
+                    row,
+                    known_recipient_ids if table == "messages" else None,
+                )
+                values.append(tuple(record[column] for column in columns))
+            target.executemany(insert, values)
 
         target.execute("""
             SELECT setval(
@@ -129,8 +193,6 @@ def migrate(source_path: Path, database_url: str, source_passphrase: str | None)
             )
             FROM audit_logs
         """)
-        target.commit()
-
         actual_counts = {
             table: target.execute(f"SELECT COUNT(*) AS count FROM {table}").fetchone()["count"]
             for table in TABLE_COLUMNS
@@ -139,6 +201,7 @@ def migrate(source_path: Path, database_url: str, source_passphrase: str | None)
             raise RuntimeError(
                 f"Jumlah record tidak cocok; sumber={expected_counts}, tujuan={actual_counts}."
             )
+        target.commit()
         return actual_counts
     except Exception:
         if target is not None:
@@ -155,6 +218,7 @@ def migrate(source_path: Path, database_url: str, source_passphrase: str | None)
 
 
 def main() -> None:
+    load_dotenv()
     parser = argparse.ArgumentParser(
         description="Pindahkan data lokal ENKRIPSIH ke database PostgreSQL kosong."
     )

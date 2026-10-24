@@ -1,224 +1,72 @@
-# ENKRIPSIH - Tactical Intelligence IoT Hub & KeyBCA Token Decoder
+# ENKRIPSIH
 
-Sistem demo transmisi pesan dengan enkripsi **PBKDF2 + AES-GCM** dan alur token bergaya **KeyBCA** menggunakan empat simbol (**△ Triangle, ○ Circle, ✕ Cross, □ Square**). Backend lokal memakai login password, sesi untuk API, dan database SQLCipher dengan kunci yang dilindungi Windows DPAPI. Ini masih prototipe: jangan gunakan untuk pesan sensitif atau produksi.
+Aplikasi demo untuk mengirim pesan terenkripsi ke anggota terdaftar. Pesan dienkripsi di browser dengan Web Crypto (PBKDF2-HMAC-SHA-256 dan AES-GCM), lalu server menyimpan paket ciphertext. Pesan passkey baru dibuka receiver hanya dengan respons dari perangkat passkey.
 
----
+Ini prototipe, bukan sistem komunikasi produksi atau skema yang telah diaudit. Gunakan hanya data sintetis. Enkripsi sisi-klien membantu mencegah plaintext tersimpan pada database/API normal, tetapi tidak melindungi pengguna dari server atau JavaScript frontend yang telah dikompromikan, malware di perangkat, atau kebocoran secret key.
 
-## 📐 Arsitektur Sistem 3 Device
+## Alur pemakaian
 
-```
-  [Device 1: Laptop Komandan] (Sender)
-     │
-     ├── 1. Login password aplikasi
-     ├── 2. Tulis Pesan Intelijen & Tentukan Klasifikasi (Top Secret)
-     ├── 3. Enkripsi AES-GCM & Generate 4-Simbol Challenge (contoh: △ ○ ✕ □ / TCXS)
-     ▼
-  [Server / Backend Enkripsih (Python FastAPI)]
-     │
-     ├── Menyimpan Ciphertext (Kunci Dekripsi TIDAK Disimpan di Server!)
-     │
-     ├──► Broadcast Challenge ke:
-     │
-     ├─────────► [Device 2: Wemos D1 Mini / ESP32 Token] (Pemecah Kode)
-     │                │
-     │                ├── Memasukkan 4 Simbol Challenge via 4 Tombol Fisik
-     │                ├── Chip Hardware menghitung HMAC-SHA256 (<2ms)
-     │                └── Layar OLED Menampilkan 12 Simbol Respon Dekripsi
-     │
-     └─────────► [Device 3: Receiver Terminal (Bawahan)] (Penerima)
-                      │
-                      ├── Menerima notifikasi transmisi terenkripsi
-                      ├── Memasukkan 12 Simbol Respon Token dari KeyBCA
-                      └── Ciphertext didekripsi & Pesan Taktis Terbuka!
-```
+1. Komandan masuk dengan password aplikasi (`ENKRIPSIH_PASSWORD`).
+2. Buka **Kelola anggota** untuk mendaftarkan anggota dan membuat secret key acak. Aplikasi membuat akun receiver dengan username berdasarkan nama anggota dan password sementara acak. Simpan keduanya saat hanya ditampilkan sekali; bagikan password akun dan secret key melalui kanal aman yang berbeda.
+3. Anggota memilih jenis akun **Anggota receiver**, masuk dengan username dan password sementara, lalu wajib menetapkan password pribadi minimal 16 karakter. Setelah itu anggota hanya melihat inbox dan pesan miliknya.
+4. Komandan memilih anggota, memasukkan secret key anggota, menulis pesan, lalu mengirim. Aplikasi membuat challenge empat simbol untuk pesan dan menyimpannya bersama envelope terenkripsi.
+5. Receiver melihat challenge di **Kotak masuk**, memasukkan urutan empat simbol ke perangkat passkey yang `SECRET_KEY`-nya sama persis dengan secret key anggota, lalu mengetik respons 12 simbol perangkat di browser. Pesan versi 4–5 tidak meminta secret key di browser; pesan versi 1–3 masih memerlukannya.
+6. Perhitungan HMAC passkey mengikuti firmware: HMAC-SHA-256 dengan secret key anggota dan empat byte challenge bernilai `0`–`3`; tidak ada prefix maupun ID anggota dalam input HMAC. Pesan versi 5 menurunkan kunci AES-GCM dengan PBKDF2-HMAC-SHA-256 dari 12 nilai simbol `0`–`3`, salt mentah, dan 200.000 iterasi sesuai `backend/crypto_engine.py`. Respons 12 simbol hanya memiliki 24 bit kemungkinan, jadi mudah ditebak dengan brute force: gunakan hanya untuk demo/data sintetis, bukan komunikasi nyata. Password akun hanya untuk autentikasi.
+7. Komandan dapat membuat ulang akun/password sementara anggota dari **Kelola anggota**. Tindakan itu mencabut sesi receiver sebelumnya dan mengharuskan penggantian password saat login berikutnya; secret key enkripsi tidak berubah.
+8. **Hapus ciphertext** mengosongkan paket pesan pada database aplikasi. Ini bukan jaminan penghapusan fisik dari WAL, backup, atau media penyimpanan PostgreSQL.
 
----
+Setiap anggota sebaiknya menggunakan secret key acak yang berbeda. Jika kunci hilang, pesan lama tidak dapat dibuka; daftarkan anggota/kunci baru untuk komunikasi selanjutnya. Verifier di server masih dapat digunakan untuk tebakan offline jika kunci lemah, jadi jangan memakai password manusia.
 
-## 🔣 Pemetaan Simbol Kriptografi
+Receiver yang sudah ada sebelum akun receiver ditambahkan belum memiliki login. Komandan perlu membuka **Kelola anggota** lalu memilih **Buat/reset akun receiver** untuk tiap anggota; password sementara hanya tampil sekali. Pesan lama dari skema sebelumnya ditandai `LEGACY`; pesan itu tidak kompatibel dengan kunci anggota baru. Migrasi menghapus kolom lama seperti `plaintext`, subject, prioritas, dan challenge. Buat dan verifikasi backup sebelum menjalankan migrasi database aktif.
 
-| Simbol Grafis | Huruf Shorthand | Nilai Index | Keterangan |
-| :---: | :---: | :---: | :---: |
-| **△** | `T` | `0` | Triangle |
-| **○** | `C` / `O` | `1` | Circle |
-| **✕** | `X` | `2` | Cross |
-| **□** | `S` | `3` | Square |
+## Menjalankan di Windows
 
-- **Panjang Challenge:** 4 Simbol (contoh: `△ ○ ✕ □` / `TCXS`)
-- **Panjang Respon Token:** 12 Simbol (contoh: `TCXSSTCCXTSC`)
-- **Kunci Dekripsi:** Diturunkan secara lokal via `PBKDF2-HMAC-SHA256(Respon, Salt, 200.000 iterasi)`.
+Siapkan environment dan dependency:
 
----
-
-## 🚀 Fitur Utama
-
-1. **Akses aplikasi:**
-   - Login memakai password aplikasi (minimal 16 karakter) yang dimasukkan saat server dijalankan.
-   - Endpoint API dan WebSocket memerlukan sesi login.
-
-2. **KeyBCA Symbol Challenge-Response Engine:**
-   - Emulator browser untuk pengujian alur challenge-response.
-   - **Virtual Skeuomorphic KeyBCA Token** di web: body realistis, LCD dot-matrix, tombol simbol taktis (`△`, `○`, `✕`, `□`), dan tombol merah `OK/Power`.
-
-3. **Optimasi untuk ESP32 / Wemos D1 Mini (ESP8266):**
-   - Eksekusi instan (<2 milidetik) dan hemat RAM (<1KB).
-   - Mendukung input tombol fisik, layar OLED I2C 128x64, Serial Monitor USB, atau kirim langsung via WiFi HTTP.
-   - Disertakan script `serial_bridge.py` untuk menghubungkan mikrokontroler via kabel USB langsung ke web!
-
-4. **Receiver Terminal (Prajurit / Intel Bawahan):**
-   - Monitoring kotak masuk transmisi secara real-time via WebSockets.
-   - Kolom validasi token KeyBCA 12-simbol.
-   - Animasi dekripsi teks ala Cyber/Matrix deciphering.
-   - Fitur penghancuran pesan permanen (*Burn / Self-Destruct*).
-
----
-
-## 📂 Struktur Direktori Proyek
-
-```
-e:\enkripsih/
-├── backend/
-│   ├── main.py              # FastAPI Web & WebSocket Server
-│   ├── crypto_engine.py     # PBKDF2 + AES-GCM & Algoritma Respon Simbol HMAC-SHA256
-│   ├── face_auth.py         # Endpoint opsional deteksi & verifikasi wajah
-│   └── database.py          # SQLite persistence untuk pesan dan user
-├── frontend/
-│   ├── index.html           # Formulir kirim pesan terenkripsi
-│   ├── css/
-│   │   └── style.css        # Desain Dark Military Cyber UI
-│   └── js/
-│       ├── app.js           # Core state, Web Audio synthesizer, WebSocket
-│       ├── face_auth.js     # Biometric webcam scanner controller
-│       ├── commander.js     # Intel composer & sender logic
-│       ├── keybca_token.js  # KeyBCA virtual emulator (Simbol △ ○ ✕ □)
-│       └── receiver.js      # Receiver inbox & decryptor
-├── iot_microcontroller/
-│   ├── esp32_keybca/
-│   │   └── esp32_keybca.ino # Firmware C++ siap flash ke ESP32 / Wemos D1 Mini
-│   └── wemos_d1_mini/
-│       ├── serial_bridge.py # Python USB Serial forwarder ke backend
-│       └── WIRING_GUIDE.md  # Panduan skema pinout & wiring
-├── run.py                   # Script sekali klik untuk menjalankan server
-└── README.md
-```
-
----
-
-## ⚡ Cara Menjalankan
-
-### 1. Menjalankan Server Web (Backend + Frontend)
-Buka PowerShell di direktori proyek, siapkan dependensi sekali:
-```bash
+```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-```
-Lalu jalankan server:
-```powershell
-.\.venv\Scripts\python.exe run.py
-```
-Akses di browser:
-- **Web Application:** [http://localhost:8000](http://localhost:8000)
-- **Dokumentasi API Swagger:** [http://localhost:8000/docs](http://localhost:8000/docs)
-
-Untuk memakai file environment lokal, salin template dan edit file `.env`:
-```powershell
 Copy-Item .env.example .env
 notepad .env
 ```
-Isi `DATABASE_URL` dengan connection string Neon dari tombol **Connect** (jangan gunakan URL contoh), lalu set `ENKRIPSIH_PASSWORD` ke password login unik minimal 16 karakter. `run.py` dan utility migrasi otomatis membaca `.env`. `.env` sudah diabaikan Git; jangan pernah commit atau membagikan file tersebut. Jika `DATABASE_URL` diisi, aplikasi memakai PostgreSQL dan tidak meminta passphrase SQLCipher lokal.
 
-Dalam mode lokal tanpa `DATABASE_URL`, terminal meminta password login dan passphrase database (keduanya minimal 16 karakter dan harus berbeda). Passphrase database tidak disimpan ke file konfigurasi. SQLCipher mengenkripsi database; kunci database acak dibungkus dengan AES-GCM, menggunakan kunci turunan Argon2id (3 iterasi, 64 MiB memori) dan disimpan di `backend\enkripsih.db.key.argon2`. Lupa passphrase atau kehilangan file kunci berarti database tidak dapat dibuka.
+Atur `ENKRIPSIH_PASSWORD` ke password login unik minimal 16 karakter. Untuk Neon/PostgreSQL, isi `DATABASE_URL` menggunakan connection string dari panel provider dan pertahankan TLS (`sslmode=require`). Encode karakter khusus dalam password URL (misalnya `@` menjadi `%40`). Jangan memasukkan kredensial ke Git atau membagikannya.
 
-Server hanya menerima koneksi dari komputer ini (`127.0.0.1`). Semua API dan WebSocket memerlukan sesi login, cookie sesi HttpOnly/SameSite, dan percobaan login dibatasi. Jangan mengubah host ke `0.0.0.0` atau meneruskan port `8000` ke internet.
+Password akun receiver disimpan sebagai hash PBKDF2-HMAC-SHA-256 dengan salt acak. Password sementara hanya dikembalikan saat akun dibuat/direset; aplikasi tidak memiliki fitur pemulihan password lama.
 
-Pada startup pertama dengan database lama yang masih plaintext, server akan meminta konfirmasi `MIGRATE`. Buat backup terenkripsi dan pastikan proses restore berhasil sebelum mengonfirmasi. Migrasi memverifikasi salinan SQLCipher sebelum mengganti file lama; file plaintext asli dihapus setelah penggantian berhasil. Jika database masih memakai key DPAPI versi sebelumnya, key akan dibungkus ulang dengan passphrase database dan file DPAPI lama dihapus setelah verifikasi.
+Jika `DATABASE_URL` dikosongkan, aplikasi memakai SQLCipher lokal dan meminta passphrase database yang berbeda dari password login. Simpan file database beserta file kunci `.key.argon2`; kehilangan salah satunya dapat membuat database tidak dapat dibuka.
 
-Buat backup terenkripsi sebelum migrasi (hentikan server dulu):
+Jalankan server:
+
 ```powershell
-.\.venv\Scripts\python.exe -m backend.secure_backup backup --output D:\Enkripsih-Backup\enkripsih-sebelum-migrasi.enc
+.\.venv\Scripts\python.exe run.py
 ```
-Masukkan passphrase database saat diminta jika database sudah terenkripsi, lalu pilih dan konfirmasi passphrase backup. File `.enc` dienkripsi dengan AES-GCM dan kunci turunan Argon2id; ia dapat dipindahkan ke komputer lain, tetapi tetap membutuhkan passphrase backup (dan passphrase database asli untuk backup dari database terenkripsi). Restore ke lokasi baru, jangan menimpa database aktif:
-```powershell
-.\.venv\Scripts\python.exe -m backend.secure_backup restore --source D:\Enkripsih-Backup\enkripsih-sebelum-migrasi.enc --output D:\Enkripsih-Backup\enkripsih-restore-check.db
-```
-Backup lama yang dibuat sebelum perubahan passphrase memakai DPAPI dan hanya bisa dipulihkan pada profil Windows pembuat backup. Jika restore menghasilkan database plaintext, lanjutkan migrasi saat server berikutnya dijalankan; hapus file plaintext hasil restore setelah pemeriksaan.
 
-Jika passphrase database terlupa tetapi backup pra-Argon2id DPAPI masih tersedia, jalankan migrator dengan file backup tersebut sebagai sumber (gunakan akun Windows yang sama). Migrator membuka backup di memori, memverifikasi SQLite, lalu mengirim record ke PostgreSQL tanpa membuat file plaintext sementara:
-```powershell
-.\.venv\Scripts\python.exe -m backend.migrate_to_postgres --source D:\Enkripsih-Backup\enkripsih-pre-migration-20261023-112244.enc
-```
-Backup itu hanya memuat snapshot saat dibuat; perubahan setelah waktu backup tidak tercakup. Database tujuan harus kosong dan connection string PostgreSQL (`DATABASE_URL`) tetap disetel di terminal yang sama.
+Buka <http://localhost:8000>. `run.py` membaca `.env`. Jangan expose port ke internet atau mengubah bind address dari localhost tanpa meninjau autentikasi, TLS, pembatasan percobaan, dan deployment multi-instance.
 
-### Mode PostgreSQL untuk hosting
-Mode lokal tetap memakai SQLCipher. Untuk memakai PostgreSQL jarak jauh, install dependency terbaru (`.\.venv\Scripts\python.exe -m pip install -r requirements.txt`), buat database PostgreSQL kosong dengan TLS dari provider pilihan, lalu hentikan aplikasi dan buat backup terverifikasi. Jangan masukkan connection string ke source code atau Git.
+## Migrasi lokal ke PostgreSQL
 
-#### PostgreSQL yang dipasang di Windows (lokal)
-1. Jalankan installer PostgreSQL, pastikan komponen **PostgreSQL Server** dan **pgAdmin 4** terpilih, lalu selesaikan instalasi. Ingat password yang Anda buat untuk role administrator `postgres`.
-2. Buka pgAdmin 4, sambungkan ke server lokal, buka **Query Tool**, lalu buat role dan database khusus aplikasi (ganti password contoh dengan password kuat):
-   ```sql
-   CREATE ROLE enkripsih_app LOGIN PASSWORD 'GANTI_DENGAN_PASSWORD_KUAT';
-   CREATE DATABASE enkripsih OWNER enkripsih_app;
-   ```
-3. Di PowerShell, isi connection string lokal. URL-encode karakter khusus dalam password (`@` menjadi `%40`, misalnya):
-   ```powershell
-   $env:DATABASE_URL = "postgresql://enkripsih_app:PASSWORD_URL_ENCODED@localhost:5432/enkripsih?sslmode=disable"
-   ```
-   `sslmode=disable` hanya untuk server PostgreSQL di komputer yang sama. Untuk database cloud/remote, gunakan TLS dan jangan menurunkan SSL mode.
+Hentikan server, buat backup terenkripsi dan uji pemulihannya. Pastikan `DATABASE_URL` menunjuk ke database PostgreSQL baru yang kosong. Lalu:
 
-Di PowerShell, atur URL database sebagai environment variable untuk sesi terminal ini:
-```powershell
-$env:DATABASE_URL = "postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require"
-```
-Pindahkan data yang sudah ada dengan utility migrasi; utility menolak target yang sudah berisi pesan atau audit log:
 ```powershell
 .\.venv\Scripts\python.exe -m backend.migrate_to_postgres --source E:\enkripsih\backend\enkripsih.db
 ```
-Masukkan passphrase database lokal saat diminta, lalu ketik `MIGRATE`. Utility memverifikasi jumlah record dan tidak menghapus database lokal. Untuk menjalankan API terhadap PostgreSQL lokal, pertahankan `$env:DATABASE_URL` dan jalankan `.\.venv\Scripts\python.exe run.py`; login aplikasi tetap diminta, tetapi passphrase SQLCipher lokal tidak digunakan.
 
-Untuk deployment Vercel, set `DATABASE_URL` dan `ENKRIPSIH_PASSWORD` sebagai environment secrets di project settings (jangan gunakan `run.py`, karena itu meminta input interaktif). `pyproject.toml` mengarahkan entrypoint FastAPI. Ini mengaktifkan persistence PostgreSQL, tetapi **belum membuat seluruh aplikasi siap produksi/serverless**: broadcast WebSocket lintas instance masih memakai koneksi di memori tiap proses, pembatasan percobaan login juga lokal per proses, dan frontend/static routing harus diuji di deployment. Vercel Functions berjalan di lingkungan cloud; gunakan hanya data sintetis untuk demo dan tinjau kebijakan penyimpanan/lokasi provider.
+Migrator meminta passphrase database lokal (jika sumber terenkripsi) dan konfirmasi `MIGRATE`. Record lama tanpa penerima baru ditandai `LEGACY`. Migrator tidak menghapus sumber lokal.
 
-Database lokal melindungi file saat tidak digunakan, bukan dari malware yang berjalan sebagai akun Windows Anda. Isi pesan setelah didekripsi masih disimpan di database. Alur KeyBCA dan firmware saat ini tetap bukan perlindungan kriptografi yang layak untuk pesan sungguhan; jangan gunakan data sensitif.
+## Pengujian
 
-Untuk keamanan, endpoint IoT sekarang juga berada di balik sesi browser. Virtual KeyBCA di web tetap dapat digunakan setelah login, tetapi firmware/serial bridge lama belum membawa kredensial sesi dan akan ditolak; jangan membuka kembali endpoint perangkat tanpa rancangan autentikasi perangkat khusus.
+Jalankan tes:
 
----
-
-### 2. Cara Menguji Seluruh Alur (Tanpa Hardware Fisik)
-Kamu bisa langsung menguji seluruh konsepnya di browser:
-1. Buka [http://localhost:8000](http://localhost:8000).
-2. Masukkan password aplikasi yang diminta saat server dijalankan. Setelah login, pilih penerima, isi subjek dan pesan, lalu klik **"Enkripsi & Transmisikan Pesan"**.
-3. Status sukses hanya muncul setelah server mengonfirmasi pesan berstatus terkunci dan ciphertext ditemukan kembali melalui API. Jika konfirmasi gagal, pesan tidak dilaporkan sebagai terkirim-terverifikasi.
-4. Pindah ke tab **Token KeyBCA**:
-   - Klik tombol merah **OK / POWER** untuk menyalakan token.
-   - Tekan 4 tombol simbol sesuai challenge (contoh: tekan `△`, `○`, `✕`, `□`).
-   - Token akan langsung menghitung dan menampilkan 12 simbol respon di layar (contoh: `TCXSSTCCXTSC`).
-   - Klik **"Salin Token"** (atau klik **"Kirim via IoT"**).
-5. Pindah ke tab **Kotak masuk**:
-   - Pesan yang terenkripsi akan terlihat di inbox.
-   - Masukkan 12 simbol respon token tadi ke kolom respon & klik **"DEKRIPSI DENGAN TOKEN KEYBCA"**.
-   - Efek dekripsi teks Matrix akan berjalan dan pesan rahasia Komandan langsung terbuka!
-
-### 3. Tes Pengiriman Pesan
-Jalankan tes dari direktori proyek untuk membuktikan pesan tersimpan sebagai ciphertext dan hanya dapat dibuka dengan token yang tepat:
-```bash
-python -m unittest discover -s backend\tests -v
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s backend\tests -v
 ```
-Tes memakai database sementara, memeriksa kontrol sesi API, enkripsi SQLCipher, Argon2id, migrasi database lama/DPAPI, serta backup dan restore terenkripsi; tes juga memastikan pesan kosong ditolak dan plaintext tidak tersimpan sebelum dekripsi.
 
-### Batas keamanan dan API
-Endpoint API dan WebSocket dilindungi sesi login; endpoint daftar/detail pesan tidak mengirim ciphertext atau token respons tersimpan. Token percobaan yang salah tidak dicatat ke audit log, dan endpoint audit log publik tidak tersedia. Mutasi API juga memeriksa Origin bila header tersebut dikirim.
+Tes transmisi memeriksa endpoint pengiriman, penyimpanan ciphertext tanpa metadata/plaintext lama, verifikasi secret key, round-trip AES-GCM dengan kunci cocok, kegagalan kunci salah, autentikasi API, status pesan lama, serta penghapusan ciphertext.
 
-SQLCipher melindungi database saat file tidak digunakan. Perlindungan ini tidak menghentikan malware yang berjalan sebagai akun Windows yang sama, dan pesan yang sudah didekripsi tetap disimpan sebagai plaintext di database. Enkripsi pesan dan alur token KeyBCA masih prototipe, bukan skema end-to-end yang telah diaudit. Tetap jalankan hanya di localhost dan jangan gunakan data sensitif.
+## Catatan keamanan
 
----
-
-### 4. Cara Menggunakan Board Hardware (ESP32 / Wemos D1 Mini)
-1. Hubungkan mikrokontroler ke laptop via kabel USB.
-2. Buka Arduino IDE, buka file [esp32_keybca.ino](file:///e:/enkripsih/iot_microcontroller/esp32_keybca/esp32_keybca.ino) dan klik **Upload**.
-3. Hubungkan pin tombol & OLED sesuai diagram di tab `Panduan`.
-4. Setelah ter-upload, kamu bisa:
-   - **Metode A (Offline/Air-gapped):** Lihat 4 simbol challenge di web, tekan 4 tombol di alat fisik, lihat 12 simbol respon di layar OLED, lalu ketik di web Receiver!
-   - **Metode B (Serial Bridge Otomatis):** Jalankan di terminal:
-     ```bash
-     python iot_microcontroller/wemos_d1_mini/serial_bridge.py
-     ```
-     **Catatan:** Firmware/serial bridge lama belum mendukung autentikasi sesi aplikasi, sehingga endpoint perangkat akan menolaknya. Jangan gunakan metode pengiriman otomatis atau membuka kembali endpoint tersebut sebelum autentikasi perangkat dirancang dan diuji.
+- Gunakan hanya `localhost` untuk demo; API dan WebSocket memerlukan sesi login.
+- Secret key tidak dikirim sebagai field API, tetapi verifier dikirim untuk verifikasi. Kode frontend disajikan oleh aplikasi, sehingga server yang dikompromikan dapat mengubah kode enkripsi/dekripsi.
+- Jangan mencatat, menempelkan, atau mengirim secret key maupun connection string ke log, chat, issue publik, atau repositori.
+- Endpoint token IoT lama bukan bagian dari alur UI pesan dan bukan pengganti autentikasi perangkat yang aman.

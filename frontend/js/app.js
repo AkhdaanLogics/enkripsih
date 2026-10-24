@@ -9,6 +9,8 @@ const State = {
   ws: null,
   wsHeartbeat: null,
   isLoggedIn: false,
+  role: null,
+  principalId: null,
   commander: null,
   messages: [],
   audioEnabled: true
@@ -69,7 +71,7 @@ class TacticalAudio {
     setTimeout(() => this.playTone(220, 'sawtooth', 0.25, 0.15), 160);
   }
 
-  intelDecrypted() {
+  tokenVerified() {
     this.init();
     this.playTone(600, 'triangle', 0.06, 0.1);
     setTimeout(() => this.playTone(900, 'triangle', 0.08, 0.12), 70);
@@ -99,7 +101,12 @@ function showToast(message, type = 'info') {
   if (type === 'error') label = '[ALERT]';
   if (type === 'warning') label = '[WARN]';
 
-  toast.innerHTML = `<span style="font-size:10px; font-weight:700; color:var(--muted);">${label}</span> <span>${message}</span>`;
+  const labelElement = document.createElement('span');
+  labelElement.style.cssText = 'font-size:10px; font-weight:700; color:var(--muted);';
+  labelElement.textContent = label;
+  const messageElement = document.createElement('span');
+  messageElement.textContent = message;
+  toast.append(labelElement, document.createTextNode(' '), messageElement);
   container.appendChild(toast);
 
   setTimeout(() => {
@@ -168,30 +175,23 @@ function handleWebSocketEvent(event) {
     if (window.loadMessages) window.loadMessages();
   }
 
-  if (event.type === 'MESSAGE_UNLOCKED') {
-    AudioSys.intelDecrypted();
-    showToast(`Pesan [${event.message_id}] Berhasil Didekripsi`, 'success');
-    if (window.loadMessages) window.loadMessages();
-  }
-
   if (event.type === 'MESSAGE_BURNED') {
     AudioSys.alarm();
     showToast(`Pesan [${event.message_id}] Telah Dihancurkan (Self-Destruct)`, 'error');
     if (window.loadMessages) window.loadMessages();
   }
 
-  if (event.type === 'IOT_TOKEN_SOLVED') {
-    AudioSys.keybcaBeep();
-    showToast(`Token Diterima dari ${event.device_id}: ${event.token}`, 'success');
-    if (window.onIoTTokenSolved) {
-      window.onIoTTokenSolved(event);
-    }
-  }
 }
 
 // Tab Switching (Marked by 1px bottom accent line)
 function switchTab(tabName) {
   AudioSys.click();
+  if (State.activeTab === 'members' && tabName !== 'members' && window.clearRecipientRegistrationSecret) {
+    window.clearRecipientRegistrationSecret();
+  }
+  if (State.activeTab === 'receiver' && tabName !== 'receiver' && window.clearDecryptedMessages) {
+    window.clearDecryptedMessages();
+  }
   State.activeTab = tabName;
 
   document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -207,6 +207,9 @@ function switchTab(tabName) {
   }
   if (tabName === 'commander' && window.loadCommanderMessages) {
     window.loadCommanderMessages();
+  }
+  if (tabName === 'members' && window.loadCommanderRecipients) {
+    window.loadCommanderRecipients();
   }
 }
 

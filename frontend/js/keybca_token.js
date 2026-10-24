@@ -1,5 +1,5 @@
 /**
- * Enkripsih - KeyBCA Tactical Token (Device 2)
+ * Enkripsih - Lexa Tactical Token (Device 2)
  * Features Symbol-based Challenge-Response:
  * Symbols: Triangle (△ / T), Circle (○ / C), Cross (✕ / X), Square (□ / S)
  * Matches the ESP32 / Wemos D1 Mini C++ sketch!
@@ -85,7 +85,7 @@ const KeyBCAToken = {
       this.currentChal = [];
       this.chalCount = 0;
       this.renderScreen();
-      showToast("KeyBCA Hidup. Masukkan 4 simbol challenge.", "info");
+      showToast("Lexa aktif. Masukkan 4 simbol challenge.", "info");
       return;
     }
 
@@ -137,7 +137,7 @@ const KeyBCAToken = {
       const data = await res.json();
 
       if (data.success) {
-        AudioSys.intelDecrypted();
+        AudioSys.tokenVerified();
         this.responseIndices = data.response_indices;
         this.responseLetters = data.response_letters;
         this.responseSymbols = data.response_symbols;
@@ -147,7 +147,7 @@ const KeyBCAToken = {
       }
     } catch (e) {
       console.error(e);
-      showToast("Gagal menghitung respon KeyBCA.", "error");
+      showToast("Gagal menghitung respon Lexa.", "error");
     }
   },
 
@@ -171,7 +171,7 @@ const KeyBCAToken = {
       });
       const data = await res.json();
       if (data.success) {
-        AudioSys.intelDecrypted();
+        AudioSys.tokenVerified();
         showToast("Token respon dipancarkan via IoT ke Receiver!", "success");
       }
     } catch (e) {

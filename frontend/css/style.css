@@ -53,6 +53,10 @@
   padding: 0;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   background-color: var(--ground);
   color: var(--text);
@@ -339,6 +343,72 @@ body {
 /* Forms & Inputs */
 .form-group {
   margin-bottom: 14px;
+}
+
+.recipient-form-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.registered-key-notice {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+}
+
+.registered-key-output {
+  display: block;
+  overflow-wrap: anywhere;
+  margin: 10px 0;
+  padding: 12px;
+  color: var(--text);
+  background: var(--ground);
+  border: 1px solid var(--border);
+  user-select: all;
+}
+
+.registered-key-output:empty {
+  display: none;
+}
+
+.passkey-challenge {
+  color: var(--text);
+  font-size: 18px;
+  letter-spacing: 3px;
+}
+
+.registered-key-dismiss {
+  margin-left: 8px;
+  padding: 8px 4px;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.recipient-list {
+  list-style: none;
+}
+
+.recipient-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.recipient-list li:first-child {
+  padding-top: 0;
+}
+
+.recipient-list li span {
+  color: var(--muted);
 }
 
 .form-label {
@@ -763,9 +833,16 @@ body {
     flex-direction: column;
     gap: 10px;
     align-items: flex-start;
+    padding: 14px 16px;
+  }
+  .header-status {
+    max-width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
   }
   .tabs-container {
     overflow-x: auto;
     white-space: nowrap;
+    padding: 0 16px;
   }
 }

@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ENKRIPSIH - Kirim Pesan Terenkripsi</title>
   
-  <!-- Typography: Public Sans & JetBrains Mono (data-terminal spec) -->
+  <!-- Typography: Public Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Stylesheet served by the FastAPI static mount -->
-  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/style.css?v=passkey-aligned1">
 </head>
 <body>
 
@@ -20,7 +20,7 @@
     <div class="logo-area">
       <div>
         <h1 class="logo-title">ENKRIPSIH</h1>
-        <div class="logo-subtitle">Kirim pesan yang dienkripsi AES-GCM</div>
+        <div class="logo-subtitle">Pesan terenkripsi dengan kunci anggota</div>
       </div>
     </div>
 
@@ -43,29 +43,59 @@
     <button class="tab-btn active" data-tab="commander">
       <span>Kirim pesan</span>
     </button>
-    <button class="tab-btn" data-tab="keybca">
-      <span>Token KeyBCA</span>
-    </button>
     <button class="tab-btn" data-tab="receiver">
       <span>Kotak masuk</span>
       <span class="tab-badge" id="receiverBadge">0</span>
     </button>
+    <button class="tab-btn" data-tab="members">
+      <span>Kelola anggota</span>
+    </button>
     <button class="tab-btn" data-tab="architecture">
-      <span>Panduan</span>
+      <span>Cara kerja</span>
     </button>
   </nav>
 
   <main class="main-content" id="authGate">
     <section class="tactical-card auth-gate">
       <h2 class="card-title">Masuk ke Enkripsih</h2>
-      <p class="card-subtitle">Masukkan password aplikasi untuk membuka pesan dan layanan lokal.</p>
+      <p class="card-subtitle">Komandan masuk dengan password aplikasi. Anggota masuk dengan akun receiver.</p>
       <form id="loginForm">
         <div class="form-group">
-          <label class="form-label" for="loginPassword">Password aplikasi</label>
+          <label class="form-label" for="loginRole">Jenis akun</label>
+          <select class="form-select" id="loginRole">
+            <option value="COMMANDER">Komandan</option>
+            <option value="RECEIVER">Anggota receiver</option>
+          </select>
+        </div>
+        <div class="form-group" id="receiverUsernameGroup" hidden>
+          <label class="form-label" for="receiverUsername">Nama pengguna</label>
+          <input class="form-input" id="receiverUsername" type="text" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label" id="loginPasswordLabel" for="loginPassword">Password aplikasi</label>
           <input class="form-input" id="loginPassword" type="password" autocomplete="current-password" required>
         </div>
         <button class="btn-tactical btn-tactical-primary" id="loginSubmit" type="submit">Masuk</button>
         <p id="loginError" role="alert" class="login-error" hidden></p>
+      </form>
+    </section>
+  </main>
+
+  <main class="main-content" id="passwordChangeGate" style="display:none;">
+    <section class="tactical-card auth-gate">
+      <h2 class="card-title">Ganti password sementara</h2>
+      <p class="card-subtitle">Buat password baru minimal 16 karakter sebelum membuka kotak masuk.</p>
+      <form id="passwordChangeForm">
+        <div class="form-group">
+          <label class="form-label" for="newReceiverPassword">Password baru</label>
+          <input class="form-input" id="newReceiverPassword" type="password" minlength="16" maxlength="128" autocomplete="new-password" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="confirmReceiverPassword">Ulangi password baru</label>
+          <input class="form-input" id="confirmReceiverPassword" type="password" minlength="16" maxlength="128" autocomplete="new-password" required>
+        </div>
+        <button class="btn-tactical btn-tactical-primary" id="changePasswordSubmit" type="submit">Simpan password</button>
+        <p id="passwordChangeError" role="alert" class="login-error" hidden></p>
       </form>
     </section>
   </main>
@@ -76,198 +106,115 @@
     <!-- Message composer is the default view. -->
     <section class="view-section active" id="view-commander">
       <div class="grid-2col">
-          <!-- Transmit Intel Card -->
-          <div class="tactical-card">
-            <div class="card-header">
-              <div>
-                <h2 class="card-title">Kirim pesan terenkripsi</h2>
-                <div class="card-subtitle">Pesan dienkripsi sebelum disimpan di server</div>
-              </div>
-              <span class="logo-badge">AES-GCM</span>
-            </div>
-
-            <form id="commanderTransmitForm">
-              <div class="form-group">
-                <label class="form-label" for="targetUnit">Penerima</label>
-                <select class="form-select" id="targetUnit" required>
-                  <option value="Tim Khusus Delta">Tim Khusus Delta (Operasi Lapangan)</option>
-                  <option value="Batalion Khusus 03">Batalion Khusus 03 (Garis Depan)</option>
-                  <option value="Pos Pantau Alpha-9">Pos Pantau Alpha-9 (Pengintaian)</option>
-                  <option value="Seluruh Satuan Tempur">Seluruh Satuan Tempur (Broadcast Darurat)</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" for="priorityLevel">Prioritas</label>
-                <select class="form-select" id="priorityLevel" required>
-                  <option value="TOP SECRET - EYES ONLY">TOP SECRET - EYES ONLY</option>
-                  <option value="URGENT TACTICAL">URGENT TACTICAL</option>
-                  <option value="CONFIDENTIAL">CONFIDENTIAL</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" for="intelSubject">Subjek pesan</label>
-                <input type="text" class="form-input" id="intelSubject" placeholder="Contoh: Operasi Rajawali - Koordinat Titik Kumpul" required />
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" for="intelMessage">Pesan yang akan dienkripsi</label>
-                <textarea class="form-textarea" id="intelMessage" placeholder="Tulis instruksi rahasia... contoh: Koordinat titik kumpul Alpha dialihkan ke Grid 074-882. Waktu operasi jam 23:00 WIB. Pertahankan radio silence." required></textarea>
-              </div>
-
-              <button type="submit" class="btn-tactical btn-tactical-primary" id="btnTransmitIntel" style="width:100%;">
-                <span>ENKRIPSI & TRANSMISIKAN PESAN</span>
-              </button>
-            </form>
-
-            <div id="lastTransmitNotice" role="status" aria-live="polite" style="display:none;"></div>
-          </div>
-
-          <!-- Sent Messages Monitor Card -->
-          <div class="tactical-card">
-            <div class="card-header">
-              <div>
-                <h2 class="card-title">Status pengiriman</h2>
-                <div class="card-subtitle">Pesan tersimpan dan menunggu token penerima</div>
-              </div>
-              <button class="btn-tactical btn-tactical-secondary" id="btnRefreshCommanderMsgs" style="font-size:11px; padding:3px 8px;">
-                Refresh
-              </button>
-            </div>
-
-            <div id="commanderSentList" style="max-height:560px; overflow-y:auto; padding-right:4px;">
-              <div style="text-align:center; padding:30px; color:var(--muted); font-size:13px;">
-                Memuat riwayat transmisi...
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ====================================================================
-         VIEW 2: KEYBCA VIRTUAL TOKEN (DEVICE 2) & WEMOS / ESP32 MONITOR
-         ==================================================================== -->
-    <section class="view-section" id="view-keybca">
-      <div class="grid-2col">
-        <!-- Interactive Skeuomorphic KeyBCA Token Simulator (Tactical Symbols) -->
-        <div class="tactical-card" style="display:flex; flex-direction:column; align-items:center;">
-          <div class="card-header" style="width:100%;">
-            <div>
-              <h2 class="card-title">PERANGKAT TOKEN KEYBCA (SIMULASI MIKROKONTROLER)</h2>
-              <div class="card-subtitle">Cryptographic Challenge-Response Hardware Emulator</div>
-            </div>
-            <span class="logo-badge">HMAC-SHA256</span>
-          </div>
-
-          <p style="font-size:var(--fs-small); color:var(--muted); text-align:center; margin-bottom:16px;">
-            Simulasi perangkat token fisik. Tekan tombol merah <strong>PWR / OK</strong> untuk menyalakan, masukkan 4 simbol challenge, lalu token akan menampilkan 12 simbol respon.
-          </p>
-
-          <!-- KeyBCA Physical Device Body -->
-          <div class="keybca-token-device" data-ui="hardware-token">
-            <div class="token-brand">
-              <span class="token-brand-name">KEYBCA TACTICAL</span>
-              <span class="token-model">ESP-CRYPTO-V1</span>
-            </div>
-
-            <!-- Dot Matrix Retro LCD -->
-            <div class="token-screen-bezel">
-              <div class="token-lcd screen-off" id="keybcaLcd">
-                <div class="lcd-line-1" id="lcdLine1"></div>
-                <div class="lcd-line-2" id="lcdLine2"></div>
-              </div>
-            </div>
-
-            <!-- 4 Tactical Symbol Buttons -->
-            <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 12px;">
-              <button class="btn-key-sym" data-sym="0">
-                △ <span class="sym-label">(T)</span>
-              </button>
-              <button class="btn-key-sym" data-sym="1">
-                ○ <span class="sym-label">(C)</span>
-              </button>
-              <button class="btn-key-sym" data-sym="2">
-                X <span class="sym-label">(X)</span>
-              </button>
-              <button class="btn-key-sym" data-sym="3">
-                □ <span class="sym-label">(S)</span>
-              </button>
-            </div>
-
-            <!-- Red Function Button -->
-            <button class="btn-key-power" id="keybcaBtnRed" style="width:100%;">
-              <span>PWR / OK (HAPUS / BARU)</span>
-            </button>
-          </div>
-
-          <!-- Token Shortcut Actions -->
-          <div style="display:flex; gap:10px; margin-top:18px; width:100%; max-width:330px;">
-            <button class="btn-tactical btn-tactical-secondary" id="btnCopyKeybcaToken" style="flex:1; font-size:11px;">
-              Salin Token
-            </button>
-            <button class="btn-tactical btn-tactical-primary" id="btnSyncIoTKeybca" style="flex:1; font-size:11px;">
-              Kirim via IoT
-            </button>
-          </div>
-        </div>
-
-        <!-- Wemos / ESP32 IoT Status & Hardware Bridge Monitor -->
         <div class="tactical-card">
           <div class="card-header">
             <div>
-              <h2 class="card-title">STATUS HARDWARE MIKROKONTROLER</h2>
-              <div class="card-subtitle">Microcontroller Cryptographic Coprocessor</div>
+              <h2 class="card-title">Kirim pesan terenkripsi</h2>
+              <div class="card-subtitle">Pesan dienkripsi di browser sebelum dikirim</div>
             </div>
-            <span class="logo-badge">WEMOS D1 / ESP32</span>
+            <span class="logo-badge">AES-GCM</span>
           </div>
 
-          <div style="background:var(--ground); border:1px solid var(--border); border-radius:var(--radius-control); padding:14px; margin-bottom:16px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-size:var(--fs-small); color:var(--muted);">BOARD TARGET:</span>
-              <strong style="color:var(--text);">Wemos D1 Mini (ESP8266) / ESP32</strong>
+          <form id="commanderTransmitForm">
+            <div class="form-group">
+              <label class="form-label" for="recipientId">Anggota penerima</label>
+              <select class="form-select" id="recipientId" required>
+                <option value="">Memuat anggota...</option>
+              </select>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-size:var(--fs-small); color:var(--muted);">CRYPTO ENGINE:</span>
-              <span style="font-size:var(--fs-small); color:var(--accent);">HMAC-SHA256 & PBKDF2 (200,000 iterasi)</span>
+
+            <div class="form-group">
+              <label class="form-label" for="senderSecretKey">Secret key anggota</label>
+              <input type="password" class="form-input" id="senderSecretKey" autocomplete="off" minlength="32" required />
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-size:var(--fs-small); color:var(--muted);">SIMBOL OPERASIONAL:</span>
-              <span style="font-size:var(--fs-small); color:var(--warning);">△ (T), ○ (C), X (X), □ (S)</span>
+
+            <div class="form-group">
+              <label class="form-label" for="intelMessage">Pesan yang akan dienkripsi</label>
+              <textarea class="form-textarea" id="intelMessage" placeholder="Tulis pesan yang akan dienkripsi..." required></textarea>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-size:var(--fs-small); color:var(--muted);">PANJANG KUNCI:</span>
-              <span style="font-size:var(--fs-small); color:var(--positive);">Challenge: 4 Simbol &rarr; Respon: 12 Simbol</span>
+
+            <button type="submit" class="btn-tactical btn-tactical-primary" id="btnTransmitIntel" style="width:100%;">
+              <span>ENKRIPSI & KIRIM</span>
+            </button>
+          </form>
+
+          <div id="lastTransmitNotice" role="status" aria-live="polite" style="display:none;"></div>
+        </div>
+
+        <div class="tactical-card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Status pengiriman</h2>
+              <div class="card-subtitle">Riwayat ciphertext per anggota</div>
             </div>
+            <button class="btn-tactical btn-tactical-secondary" id="btnRefreshCommanderMsgs" type="button">
+              Refresh
+            </button>
           </div>
 
-          <div style="font-size:var(--fs-small); font-weight:600; color:var(--muted); text-transform:uppercase; margin-bottom:8px;">
-            Live Stream Event Token Hardware
-          </div>
-          <div id="iotHardwareLogs" style="background:#0c0d10; border:1px solid var(--border); border-radius:var(--radius-control); padding:12px; min-height:160px; max-height:220px; overflow-y:auto;">
-            <div style="color:var(--dim); font-size:12px;">
-              [READY] Menunggu kalkulasi dari Wemos / ESP32 atau Virtual Token...
+          <div id="commanderSentList" style="max-height:560px; overflow-y:auto; padding-right:4px;">
+            <div style="text-align:center; padding:30px; color:var(--muted); font-size:13px;">
+              Memuat riwayat transmisi...
             </div>
-          </div>
-
-          <div style="margin-top:18px; padding:12px; background:var(--ground); border:1px solid var(--border); border-radius:var(--radius-control);">
-            <div style="color:var(--accent); font-size:var(--fs-small); font-weight:600; margin-bottom:6px;">
-              PETUNJUK MENGGUNAKAN BOARD FISIK:
-            </div>
-            <ol style="font-size:12px; color:var(--muted); padding-left:18px; line-height:1.6;">
-              <li>Flash sketch C++ ke Wemos D1 Mini / ESP32.</li>
-              <li>Tekan tombol merah (tahan 2 detik) untuk menyalakan layar OLED.</li>
-              <li>Ketik 4 simbol challenge (△, ○, X, □) menggunakan 4 tombol fisik.</li>
-              <li>Layar OLED akan langsung menampilkan 12 simbol respon pemecah sandi.</li>
-            </ol>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ====================================================================
-         VIEW 3: RECEIVER (TERMINAL BAWAHAN)
-         ==================================================================== -->
+    <section class="view-section" id="view-members">
+      <div class="grid-2col">
+        <div class="tactical-card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Daftarkan anggota</h2>
+              <div class="card-subtitle">Pendaftaran kunci hanya dilakukan di menu ini</div>
+            </div>
+          </div>
+          <p>Server menyimpan verifier secret key dan hash password. Username dan password sementara hanya ditampilkan sekali; bagikan password akun dan secret key lewat jalur terpisah yang aman.</p>
+          <form id="recipientRegisterForm">
+            <div class="form-group">
+              <label class="form-label" for="recipientName">Nama anggota</label>
+              <input type="text" class="form-input" id="recipientName" maxlength="80" autocomplete="off" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="recipientSecretKey">Secret key (minimal 32 karakter)</label>
+              <input type="password" class="form-input" id="recipientSecretKey" autocomplete="new-password" minlength="32" required />
+            </div>
+            <div class="recipient-form-actions">
+              <button class="btn-tactical btn-tactical-secondary" id="btnGenerateRecipientKey" type="button">Buat kunci acak</button>
+              <button class="btn-tactical btn-tactical-primary" id="btnRegisterRecipient" type="submit">Daftarkan</button>
+            </div>
+          </form>
+          <div id="registeredKeyNotice" role="status" aria-live="polite" hidden class="registered-key-notice">
+            <p>Secret key untuk <strong id="registeredKeyName"></strong>. Simpan dan bagikan dengan aman; server tidak dapat menampilkannya lagi.</p>
+            <output id="registeredKeyOutput" class="registered-key-output"></output>
+            <button class="btn-tactical btn-tactical-secondary" id="btnCopyRegisteredKey" type="button">Salin secret key</button>
+            <p>Akun receiver: <strong id="registeredReceiverUsername"></strong></p>
+            <p>Password sementara (wajib diganti saat login pertama):</p>
+            <output id="registeredReceiverPassword" class="registered-key-output"></output>
+            <button class="registered-key-dismiss" id="btnDismissRegisteredKey" type="button">Sudah disimpan</button>
+          </div>
+          <div id="receiverAccountNotice" role="status" aria-live="polite" hidden class="registered-key-notice">
+            <p>Password sementara untuk <strong id="receiverAccountName"></strong>. Anggota wajib menggantinya saat login pertama.</p>
+            <p>Username: <output id="receiverAccountUsername"></output></p>
+            <output id="receiverAccountPassword" class="registered-key-output"></output>
+            <button class="registered-key-dismiss" id="btnDismissReceiverAccount" type="button">Sudah disimpan</button>
+          </div>
+        </div>
+
+        <div class="tactical-card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Anggota terdaftar</h2>
+              <div class="card-subtitle">Kunci lama tidak bisa dipulihkan dari server</div>
+            </div>
+            <button class="btn-tactical btn-tactical-secondary" id="btnRefreshRecipients" type="button">Refresh</button>
+          </div>
+          <div id="recipientList" aria-live="polite">Memuat daftar anggota...</div>
+        </div>
+      </div>
+    </section>
+
     <section class="view-section" id="view-receiver">
       <div class="tactical-card">
         <div class="card-header">
@@ -281,9 +228,7 @@
         </div>
 
         <p style="font-size:var(--fs-body); color:var(--muted); margin-bottom:16px;">
-          Pesan intelijen militer yang diterima dalam kondisi terenkripsi AES-GCM. 
-          Gunakan 4 simbol <strong>Challenge</strong> yang tertera pada pesan, masukkan ke perangkat <strong>KeyBCA</strong>, 
-          lalu ketikkan 12 simbol respon token yang dihasilkan untuk membuka isi pesan.
+          Untuk pesan baru, masukkan challenge 4 simbol ke perangkat passkey dan ketik respons 12 simbolnya. Mode ini untuk demo non-sensitif: respons 12 simbol hanya memiliki 24 bit kemungkinan dan dapat ditebak.
         </p>
 
         <!-- Message List Container -->
@@ -295,99 +240,22 @@
       </div>
     </section>
 
-    <!-- ====================================================================
-         VIEW 4: ARSITEKTUR & PANDUAN HARDWARE
-         ==================================================================== -->
+    <!-- Key registration and encryption guidance -->
     <section class="view-section" id="view-architecture">
-      <div class="tactical-card" style="margin-bottom:20px;">
-        <div class="card-header">
-          <div>
-            <h2 class="card-title">SKEMA ALUR SISTEM 3 DEVICE (ENKRIPSIH)</h2>
-            <div class="card-subtitle">Architecture Blueprint & Node Topology</div>
-          </div>
-          <span class="logo-badge">KEYBCA PROTOCOL</span>
-        </div>
-
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:16px; margin-bottom:16px;">
-          <!-- Node 1 -->
-          <div style="background:var(--ground); border:1px solid var(--border); border-radius:var(--radius-control); padding:16px;">
-            <div style="margin-bottom:8px;">
-              <h3 style="color:var(--text); font-size:13px;">DEVICE 1: LAPTOP KOMANDAN</h3>
-              <div style="font-size:11px; color:var(--muted);">Web Portal Pengirim</div>
-            </div>
-            <ul style="font-size:12px; color:var(--muted); padding-left:18px; line-height:1.6;">
-              <li>Login biometrik verifikasi wajah OpenCV</li>
-              <li>Input pesan perintah intelijen</li>
-              <li>Generate 4 simbol challenge (△ ○ X □ / TCXS)</li>
-              <li>Enkripsi payload dengan PBKDF2 + AES-GCM</li>
-              <li>Transmisikan paket terenkripsi ke server</li>
-            </ul>
-          </div>
-
-          <!-- Node 2 -->
-          <div style="background:var(--ground); border:1px solid var(--border); border-radius:var(--radius-control); padding:16px;">
-            <div style="margin-bottom:8px;">
-              <h3 style="color:var(--accent); font-size:13px;">DEVICE 2: TOKEN KEYBCA (WEMOS / ESP32)</h3>
-              <div style="font-size:11px; color:var(--muted);">Pemecah Sandi Kripto</div>
-            </div>
-            <ul style="font-size:12px; color:var(--muted); padding-left:18px; line-height:1.6;">
-              <li>Chip hardware menyimpan SECRET_KEY</li>
-              <li>Input 4 simbol via tombol fisik</li>
-              <li>Layar OLED menampilkan bentuk grafis simbol</li>
-              <li>Kalkulasi HMAC-SHA256 secara instan (&lt;2ms)</li>
-              <li>Menghasilkan 12 simbol respon token pemecah kode</li>
-            </ul>
-          </div>
-
-          <!-- Node 3 -->
-          <div style="background:var(--ground); border:1px solid var(--border); border-radius:var(--radius-control); padding:16px;">
-            <div style="margin-bottom:8px;">
-              <h3 style="color:var(--text); font-size:13px;">DEVICE 3: RECEIVER BAWAHAN</h3>
-              <div style="font-size:11px; color:var(--muted);">Terminal Tampilan Intelijen</div>
-            </div>
-            <ul style="font-size:12px; color:var(--muted); padding-left:18px; line-height:1.6;">
-              <li>Menerima notifikasi transmisi masuk real-time</li>
-              <li>Menampilkan status terkunci & 4 simbol challenge</li>
-              <li>Menerima input 12 simbol respon dari KeyBCA</li>
-              <li>Dekripsi AES-GCM dan render pesan taktis</li>
-              <li>Fitur penghancuran pesan (Self-Destruct)</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <!-- Hardware Wiring & Sketch Info -->
       <div class="tactical-card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">PINOUT MIKROKONTROLER & SKETCH C++</h2>
-            <div class="card-subtitle">GPIO Wiring & Interfacing Specifications</div>
+            <h2 class="card-title">Cara kerja secret key anggota</h2>
+            <div class="card-subtitle">Kunci per anggota, tidak disimpan dalam bentuk asli</div>
           </div>
-          <span class="logo-badge">HARDWARE READY</span>
         </div>
-
-        <div style="background:#0c0d10; border:1px solid var(--border); border-radius:var(--radius-control); padding:14px; font-family:var(--font-mono); font-size:12px; color:var(--accent); margin-bottom:14px; overflow-x:auto;">
-<pre>
-  +-----------------------------------------------------------+
-  |              PINOUT MIKROKONTROLER (ESP32)                |
-  |                                                           |
-  |  [PIN 32]  ------------> Tombol △ (TRIANGLE / T / Simbol 0)|
-  |  [PIN 25]  ------------> Tombol ○ (CIRCLE   / C / Simbol 1)|
-  |  [PIN 26]  ------------> Tombol X (CROSS    / X / Simbol 2)|
-  |  [PIN 33]  ------------> Tombol □ (SQUARE   / S / Simbol 3)|
-  |  [PIN 27]  ------------> Tombol MERAH (PWR / OK)          |
-  |                                                           |
-  |  [PIN 21] (SDA) -------> OLED Display SDA                 |
-  |  [PIN 22] (SCL) -------> OLED Display SCL                 |
-  |  [3.3V / GND] ---------> VCC & GND OLED + Tombol          |
-  +-----------------------------------------------------------+
-</pre>
-        </div>
-
-        <p style="font-size:var(--fs-body); color:var(--muted); line-height:1.6;">
-          Sketsa C++ kompatibel dengan backend Python Enkripsih.
-          Setiap simbol yang dimasukkan di board mikrokontroler akan menghasilkan 12 simbol respon yang identik dengan yang dibutuhkan untuk membuka pesan di web Receiver.
-        </p>
+        <ol>
+          <li>Setiap anggota mendapat secret key acak yang unik. Server menyimpan salt dan verifier, bukan kunci asli.</li>
+          <li>Pengirim menulis pesan dan mengirimnya; aplikasi membuat challenge 4 simbol untuk pesan tersebut dan menampilkan challenge pada inbox receiver.</li>
+          <li>Receiver memasukkan challenge ke perangkat yang memakai secret key unik anggota, lalu mengetik respons 12 simbol. Pesan baru tidak meminta secret key di browser receiver.</li>
+          <li>HMAC-SHA-256 sesuai firmware membuat respons passkey. AES-GCM memakai PBKDF2-HMAC-SHA-256 atas 12 nilai simbol 0–3, salt mentah, dan 200.000 iterasi seperti backend crypto lama. Respons tersebut tetap hanya 24 bit, jadi gunakan data sintetis saja.</li>
+        </ol>
+        <p>Kunci tidak dapat dipulihkan dari server. Jika kunci hilang, pesan lama tidak dapat dibuka; daftarkan kunci baru untuk pesan berikutnya.</p>
       </div>
     </section>
 
@@ -397,10 +265,10 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts served by the FastAPI static mount -->
-  <script src="/static/js/app.js?v=auth1"></script>
-  <script src="/static/js/auth.js?v=auth1"></script>
-  <script src="/static/js/commander.js?v=auth1"></script>
-  <script src="/static/js/keybca_token.js?v=auth1"></script>
-  <script src="/static/js/receiver.js?v=auth1"></script>
+  <script src="/static/js/app.js?v=passkey-symbols1"></script>
+  <script src="/static/js/auth.js?v=receiver-accounts1"></script>
+  <script src="/static/js/commander.js?v=passkey-aligned1"></script>
+  <script src="/static/js/message_crypto.js?v=passkey-aligned1"></script>
+  <script src="/static/js/receiver.js?v=passkey-aligned1"></script>
 </body>
 </html>
