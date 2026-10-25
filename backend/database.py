@@ -664,6 +664,14 @@ def update_auth_session_password_change(token: str, required: bool) -> None:
         )
 
 
+def update_auth_session_expiry(token: str, expires_at: float) -> None:
+    with _managed_connection() as conn:
+        conn.execute(
+            "UPDATE auth_sessions SET expires_at = ? WHERE token = ?",
+            (expires_at, token),
+        )
+
+
 def provision_receiver_account(
     recipient_id: str,
     username: str,

@@ -508,8 +508,15 @@ class MessageTransmissionTests(unittest.TestCase):
                     client.post("/api/auth/login", json={"password": "incorrect"}).status_code,
                     401,
                 )
+                self.assertIsNone(client.cookies.get(main.SESSION_COOKIE))
+                self.assertFalse(client.get("/api/auth/session").json()["authenticated"])
+                self.assertEqual(client.get("/api/messages").status_code, 401)
                 login = client.post("/api/auth/login", json={"password": password})
                 self.assertEqual(login.status_code, 200)
+                self.assertEqual(
+                    login.json()["idle_timeout_seconds"],
+                    main.SESSION_IDLE_TIMEOUT_SECONDS,
+                )
                 self.assertTrue(client.cookies.get(main.SESSION_COOKIE))
                 registered = client.post("/api/recipients/register", json={
                     "name": "Anggota API",
@@ -562,6 +569,29 @@ class MessageTransmissionTests(unittest.TestCase):
                 self.assertEqual(client.post("/api/auth/logout").status_code, 200)
                 self.assertEqual(client.get("/api/messages").status_code, 401)
 
+    def test_authenticated_activity_slides_idle_expiry_and_idle_session_is_rejected(self):
+        password = "enkripsih-test-password-2026"
+        clock = [1_000.0]
+        with (
+            patch.dict(os.environ, {"ENKRIPSIH_PASSWORD": password}),
+            patch.object(main, "SESSION_IDLE_TIMEOUT_SECONDS", 10),
+            patch.object(main.time, "monotonic", side_effect=lambda: clock[0]),
+        ):
+            with TestClient(main.app) as client:
+                login = client.post("/api/auth/login", json={"password": password})
+                self.assertEqual(login.status_code, 200)
+
+                clock[0] += 9
+                refreshed = client.get("/api/auth/session")
+                self.assertEqual(refreshed.status_code, 200)
+                self.assertTrue(refreshed.json()["authenticated"])
+                clock[0] += 9
+                self.assertEqual(client.get("/api/messages").status_code, 200)
+
+                clock[0] += 11
+                self.assertEqual(client.get("/api/messages").status_code, 401)
+                self.assertFalse(client.get("/api/auth/session").json()["authenticated"])
+
     def test_receiver_accounts_change_password_and_scope_inbox_to_member(self):
         password = "enkripsih-test-password-2026"
         with patch.dict(os.environ, {"ENKRIPSIH_PASSWORD": password}):
@@ -595,6 +625,14 @@ class MessageTransmissionTests(unittest.TestCase):
 
                 client.post("/api/auth/logout")
                 receiver = recipients[0]
+                failed_receiver_login = client.post("/api/auth/receiver-login", json={
+                    "username": receiver["username"],
+                    "password": "incorrect",
+                })
+                self.assertEqual(failed_receiver_login.status_code, 401)
+                self.assertFalse(client.get("/api/auth/session").json()["authenticated"])
+                self.assertEqual(client.get("/api/messages").status_code, 401)
+
                 receiver_login = client.post("/api/auth/receiver-login", json={
                     "username": receiver["username"],
                     "password": receiver["temporary_password"],

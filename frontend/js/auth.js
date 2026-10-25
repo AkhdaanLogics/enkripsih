@@ -1,19 +1,61 @@
 const AppAuth = {
+  idleTimeoutMs: 5 * 60 * 1000,
+  idleTimer: null,
+  lastActivitySyncAt: 0,
+
   init() {
-    document.getElementById('loginForm').addEventListener('submit', (event) => {
+    const loginForm = document.getElementById('loginForm');
+    loginForm.addEventListener('submit', (event) => {
       event.preventDefault();
       this.login();
     });
+    loginForm.addEventListener('input', () => this.clearLoginError());
     document.getElementById('loginRole').addEventListener('change', () => {
       this.updateLoginFields();
+      this.clearLoginError();
     });
     document.getElementById('passwordChangeForm').addEventListener('submit', (event) => {
       event.preventDefault();
       this.changePassword();
     });
     document.getElementById('btnLogout').addEventListener('click', () => this.logout());
+    for (const eventName of ['pointerdown', 'keydown', 'touchstart', 'scroll']) {
+      window.addEventListener(eventName, () => this.recordActivity(), { passive: true });
+    }
     this.updateLoginFields();
+    this.restoreLoginError();
     this.checkSession();
+  },
+
+  restoreLoginError() {
+    try {
+      const message = sessionStorage.getItem('enkripsih_login_error');
+      if (message) this.showLoginError(message);
+    } catch (error) {
+      console.warn('Login error could not be restored:', error);
+    }
+  },
+
+  showLoginError(message) {
+    const errorBox = document.getElementById('loginError');
+    errorBox.textContent = message;
+    errorBox.hidden = false;
+    try {
+      sessionStorage.setItem('enkripsih_login_error', message);
+    } catch (error) {
+      console.warn('Login error could not be saved for refresh:', error);
+    }
+  },
+
+  clearLoginError() {
+    try {
+      sessionStorage.removeItem('enkripsih_login_error');
+    } catch (error) {
+      console.warn('Saved login error could not be cleared:', error);
+    }
+    const errorBox = document.getElementById('loginError');
+    errorBox.textContent = '';
+    errorBox.hidden = true;
   },
 
   updateLoginFields() {
@@ -44,7 +86,6 @@ const AppAuth = {
   async login() {
     const form = document.getElementById('loginForm');
     const button = document.getElementById('loginSubmit');
-    const errorBox = document.getElementById('loginError');
     const receiverMode = document.getElementById('loginRole').value === 'RECEIVER';
     const password = document.getElementById('loginPassword').value;
     const endpoint = receiverMode ? '/api/auth/receiver-login' : '/api/auth/login';
@@ -55,7 +96,7 @@ const AppAuth = {
       }
       : { password };
     button.disabled = true;
-    errorBox.hidden = true;
+    this.clearLoginError();
 
     try {
       const response = await fetch(endpoint, {
@@ -68,6 +109,7 @@ const AppAuth = {
         throw new Error(data.detail || 'Login gagal.');
       }
 
+      this.clearLoginError();
       form.reset();
       this.updateLoginFields();
       if (data.must_change_password) {
@@ -76,8 +118,7 @@ const AppAuth = {
         this.showWorkspace(data);
       }
     } catch (error) {
-      errorBox.textContent = error.message || 'Tidak dapat masuk ke aplikasi.';
-      errorBox.hidden = false;
+      this.showLoginError(error.message || 'Tidak dapat masuk ke aplikasi.');
     } finally {
       button.disabled = false;
     }
@@ -87,6 +128,7 @@ const AppAuth = {
     State.isLoggedIn = true;
     State.role = session.role;
     State.principalId = session.principal_id;
+    this.startIdleMonitor(session.idle_timeout_seconds);
     document.getElementById('authGate').style.display = 'none';
     document.getElementById('passwordChangeGate').style.display = 'block';
     document.getElementById('appLayout').classList.remove('is-visible');
@@ -128,7 +170,8 @@ const AppAuth = {
       this.showWorkspace({
         role: 'RECEIVER',
         principal_id: State.principalId,
-        must_change_password: false
+        must_change_password: false,
+        idle_timeout_seconds: data.idle_timeout_seconds
       });
     } catch (error) {
       errorBox.textContent = error.message || 'Password tidak dapat diperbarui.';
@@ -152,6 +195,7 @@ const AppAuth = {
     document.getElementById('mobileNavToggle').hidden = false;
     document.getElementById('mobileNavToggle').setAttribute('aria-expanded', 'false');
     document.getElementById('btnLogout').style.display = 'inline-flex';
+    this.startIdleMonitor(session.idle_timeout_seconds);
 
     document.querySelectorAll('.tab-btn').forEach((tab) => {
       tab.hidden = State.role === 'RECEIVER' && tab.dataset.tab !== 'receiver';
@@ -166,7 +210,43 @@ const AppAuth = {
     if (!State.ws) initWebSocket();
   },
 
-  async logout() {
+  startIdleMonitor(timeoutSeconds = 300) {
+    this.idleTimeoutMs = Math.max(1, Number(timeoutSeconds) || 300) * 1000;
+    this.lastActivitySyncAt = Date.now();
+    clearTimeout(this.idleTimer);
+    this.idleTimer = setTimeout(
+      () => this.logout('Sesi berakhir karena tidak ada aktivitas. Silakan masuk kembali.'),
+      this.idleTimeoutMs
+    );
+  },
+
+  recordActivity() {
+    if (!State.isLoggedIn) return;
+
+    const now = Date.now();
+    clearTimeout(this.idleTimer);
+    this.idleTimer = setTimeout(
+      () => this.logout('Sesi berakhir karena tidak ada aktivitas. Silakan masuk kembali.'),
+      this.idleTimeoutMs
+    );
+
+    const syncIntervalMs = Math.min(30_000, this.idleTimeoutMs / 3);
+    if (now - this.lastActivitySyncAt < syncIntervalMs) return;
+    this.lastActivitySyncAt = now;
+    fetch('/api/auth/activity', { method: 'POST' })
+      .then((response) => {
+        if (response.status === 401) {
+          this.logout('Sesi berakhir. Silakan masuk kembali.');
+        } else if (!response.ok) {
+          throw new Error(`Pembaruan sesi gagal (HTTP ${response.status}).`);
+        }
+      })
+      .catch((error) => console.error('Session activity update failed:', error));
+  },
+
+  async logout(message = '') {
+    clearTimeout(this.idleTimer);
+    this.idleTimer = null;
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch (error) {
@@ -189,6 +269,7 @@ const AppAuth = {
     document.getElementById('mobileNavToggle').hidden = true;
     document.getElementById('mobileNavToggle').setAttribute('aria-expanded', 'false');
     document.getElementById('btnLogout').style.display = 'none';
+    if (message) showToast(message, 'warning');
   }
 };
 

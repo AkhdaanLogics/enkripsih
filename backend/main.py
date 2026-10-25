@@ -25,7 +25,8 @@ from .database import (
     get_recipient_keys, get_recipient_key,
     get_commander_profile, save_auth_session,
     get_auth_session, delete_auth_session, delete_auth_sessions_for_principal,
-    update_auth_session_password_change, change_receiver_password,
+    update_auth_session_password_change, update_auth_session_expiry,
+    change_receiver_password,
     get_receiver_account, provision_receiver_account,
 )
 from .crypto_engine import (
@@ -34,7 +35,13 @@ from .crypto_engine import (
 )
 
 SESSION_COOKIE = "enkripsih_session"
-SESSION_TTL_SECONDS = 60 * 60
+SESSION_IDLE_TIMEOUT_SECONDS = int(
+    os.environ.get("ENKRIPSIH_SESSION_IDLE_TIMEOUT_SECONDS", "300")
+)
+if not 1 <= SESSION_IDLE_TIMEOUT_SECONDS <= 86_400:
+    raise RuntimeError(
+        "ENKRIPSIH_SESSION_IDLE_TIMEOUT_SECONDS harus antara 1 dan 86400."
+    )
 active_sessions: dict[str, dict] = {}
 login_attempts: dict[str, tuple[int, float]] = {}
 PASSWORD_HASH_ITERATIONS = 600_000
@@ -107,8 +114,21 @@ def _store_session(token: str, expires_at: float, principal: dict) -> None:
     else:
         active_sessions[token] = {
             **principal,
-            "expires_at": time.monotonic() + SESSION_TTL_SECONDS,
+            "expires_at": time.monotonic() + SESSION_IDLE_TIMEOUT_SECONDS,
         }
+
+
+def _touch_session(token: str) -> None:
+    if os.environ.get("DATABASE_URL"):
+        update_auth_session_expiry(
+            token,
+            time.time() + SESSION_IDLE_TIMEOUT_SECONDS,
+        )
+        return
+
+    session = active_sessions.get(token)
+    if session is not None:
+        session["expires_at"] = time.monotonic() + SESSION_IDLE_TIMEOUT_SECONDS
 
 
 def _receiver_allowed_path(path: str, method: str) -> bool:
@@ -128,6 +148,7 @@ async def protect_api(request: Request, call_next):
     public_auth_routes = {
         "/api/auth/login", "/api/auth/receiver-login", "/api/auth/session",
     }
+    refreshed_session_token = None
     if request.url.path.startswith("/api/"):
         origin = request.headers.get("origin")
         if origin and request.method not in {"GET", "HEAD", "OPTIONS"}:
@@ -165,9 +186,27 @@ async def protect_api(request: Request, call_next):
                     headers={"Cache-Control": "no-store"},
                 )
 
+        refreshed_session_token = request.cookies[SESSION_COOKIE]
+        _touch_session(refreshed_session_token)
+    elif request.url.path == "/api/auth/session":
+        session_token = request.cookies.get(SESSION_COOKIE)
+        if session_token and _session_principal(session_token) is not None:
+            refreshed_session_token = session_token
+            _touch_session(session_token)
+
     response = await call_next(request)
     if request.url.path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-store"
+    if refreshed_session_token:
+        response.set_cookie(
+            SESSION_COOKIE,
+            refreshed_session_token,
+            max_age=SESSION_IDLE_TIMEOUT_SECONDS,
+            httponly=True,
+            secure=request.url.scheme == "https",
+            samesite="strict",
+            path="/",
+        )
     return response
 
 # WebSocket connection manager
@@ -316,7 +355,7 @@ def login(req: LoginRequest, request: Request, response: Response):
 
     login_attempts.pop(client_id, None)
     token = secrets.token_urlsafe(32)
-    expires_at = time.time() + SESSION_TTL_SECONDS
+    expires_at = time.time() + SESSION_IDLE_TIMEOUT_SECONDS
     principal = {
         "principal_id": "CMD-01",
         "role": "COMMANDER",
@@ -326,14 +365,18 @@ def login(req: LoginRequest, request: Request, response: Response):
     _set_session_cookie(response, request, token)
     login_attempts.pop(client_id, None)
     log_event("AUTH", "SUCCESS", "Login komandan berhasil.")
-    return {"success": True, "expires_in": SESSION_TTL_SECONDS, **principal}
+    return {
+        "success": True,
+        "idle_timeout_seconds": SESSION_IDLE_TIMEOUT_SECONDS,
+        **principal,
+    }
 
 
 def _set_session_cookie(response: Response, request: Request, token: str) -> None:
     response.set_cookie(
         SESSION_COOKIE,
         token,
-        max_age=SESSION_TTL_SECONDS,
+        max_age=SESSION_IDLE_TIMEOUT_SECONDS,
         httponly=True,
         secure=request.url.scheme == "https",
         samesite="strict",
@@ -389,7 +432,7 @@ def receiver_login(req: ReceiverLoginRequest, request: Request, response: Respon
 
     login_attempts.pop(client_id, None)
     token = secrets.token_urlsafe(32)
-    expires_at = time.time() + SESSION_TTL_SECONDS
+    expires_at = time.time() + SESSION_IDLE_TIMEOUT_SECONDS
     principal = {
         "principal_id": account["recipient_id"],
         "role": "RECEIVER",
@@ -398,7 +441,11 @@ def receiver_login(req: ReceiverLoginRequest, request: Request, response: Respon
     _store_session(token, expires_at, principal)
     _set_session_cookie(response, request, token)
     log_event("AUTH", "SUCCESS", f"Login receiver [{account['recipient_id']}] berhasil.")
-    return {"success": True, "expires_in": SESSION_TTL_SECONDS, **principal}
+    return {
+        "success": True,
+        "idle_timeout_seconds": SESSION_IDLE_TIMEOUT_SECONDS,
+        **principal,
+    }
 
 
 @app.post("/api/auth/change-password")
@@ -421,13 +468,25 @@ def change_password(req: ChangePasswordRequest, request: Request):
         active_sessions[token]["must_change_password"] = False
     principal["must_change_password"] = False
     log_event("AUTH", "SUCCESS", f"Password receiver [{principal['principal_id']}] diperbarui.")
-    return {"success": True}
+    return {
+        "success": True,
+        "idle_timeout_seconds": SESSION_IDLE_TIMEOUT_SECONDS,
+    }
 
 
 @app.get("/api/auth/session")
 def get_session(request: Request):
     principal = _session_principal(request.cookies.get(SESSION_COOKIE))
-    return {"authenticated": principal is not None, **(principal or {})}
+    return {
+        "authenticated": principal is not None,
+        "idle_timeout_seconds": SESSION_IDLE_TIMEOUT_SECONDS,
+        **(principal or {}),
+    }
+
+
+@app.post("/api/auth/activity", status_code=204)
+def record_activity():
+    return Response(status_code=204)
 
 
 @app.post("/api/auth/logout")

@@ -32,6 +32,8 @@ notepad .env
 
 Atur `ENKRIPSIH_PASSWORD` ke password login unik minimal 16 karakter. Untuk Neon/PostgreSQL, isi `DATABASE_URL` menggunakan connection string dari panel provider dan pertahankan TLS (`sslmode=require`). Encode karakter khusus dalam password URL (misalnya `@` menjadi `%40`). Jangan memasukkan kredensial ke Git atau membagikannya.
 
+Sesi login otomatis berakhir setelah 5 menit tanpa aktivitas. Atur `ENKRIPSIH_SESSION_IDLE_TIMEOUT_SECONDS` di environment deployment untuk mengubahnya; nilainya harus antara 1 dan 86400 detik. Aktivitas aplikasi memperpanjang sesi, sedangkan heartbeat koneksi latar belakang tidak dihitung sebagai aktivitas.
+
 Password akun receiver disimpan sebagai hash PBKDF2-HMAC-SHA-256 dengan salt acak. Password sementara hanya dikembalikan saat akun dibuat/direset; aplikasi tidak memiliki fitur pemulihan password lama.
 
 Jika `DATABASE_URL` dikosongkan, aplikasi memakai SQLCipher lokal dan meminta passphrase database yang berbeda dari password login. Simpan file database beserta file kunci `.key.argon2`; kehilangan salah satunya dapat membuat database tidak dapat dibuka.
