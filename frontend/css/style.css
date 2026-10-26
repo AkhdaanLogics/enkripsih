@@ -224,6 +224,26 @@ body {
   color: var(--negative);
 }
 
+.login-lockout {
+  margin-top: 12px;
+  padding: 10px 12px;
+  color: var(--warning, #ffb020);
+  background: rgba(255, 176, 32, 0.08);
+  border: 1px solid rgba(255, 176, 32, 0.35);
+}
+
+.login-lockout .lockout-countdown {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+#loginForm.is-locked .form-input,
+#loginForm.is-locked .form-select,
+#loginForm.is-locked #loginSubmit {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
 .view-section {
   display: none;
 }

@@ -592,6 +592,42 @@ class MessageTransmissionTests(unittest.TestCase):
                 self.assertEqual(client.get("/api/messages").status_code, 401)
                 self.assertFalse(client.get("/api/auth/session").json()["authenticated"])
 
+    def test_login_lockout_persists_across_restart_and_resets_after_cooldown(self):
+        password = "enkripsih-test-password-2026"
+        for attempt in range(main.LOGIN_MAX_ATTEMPTS):
+            with patch.dict(os.environ, {"ENKRIPSIH_PASSWORD": password}), \
+                    patch.object(main.time, "time") as time_mock:
+                time_now = [1_000.0 + attempt]
+                time_mock.side_effect = lambda: time_now[0]
+                with TestClient(main.app) as client:
+                    request = client.post("/api/auth/login", json={"password": "salah"})
+                    if attempt < main.LOGIN_MAX_ATTEMPTS - 1:
+                        self.assertEqual(request.status_code, 401)
+                        remaining = main.LOGIN_MAX_ATTEMPTS - (attempt + 1)
+                        self.assertIn(f"Sisa {remaining} percobaan", request.json()["detail"])
+                    else:
+                        self.assertEqual(request.status_code, 429)
+                        self.assertIn("Retry-After", request.headers)
+
+        with patch.dict(os.environ, {"ENKRIPSIH_PASSWORD": password}), \
+                patch.object(main.time, "time") as time_mock:
+            time_now = [1_000.0 + main.LOGIN_MAX_ATTEMPTS]
+            time_mock.side_effect = lambda: time_now[0]
+            with TestClient(main.app) as client:
+                refresh_attempt = client.post("/api/auth/login", json={"password": password})
+                self.assertEqual(refresh_attempt.status_code, 429)
+                retry_after = int(refresh_attempt.headers["Retry-After"])
+                self.assertGreater(retry_after, 0)
+
+                time_now[0] += retry_after + 1
+                recovered = client.post("/api/auth/login", json={"password": password})
+                self.assertEqual(recovered.status_code, 200)
+
+            with TestClient(main.app) as client:
+                first_fail = client.post("/api/auth/login", json={"password": "salah"})
+                self.assertEqual(first_fail.status_code, 401)
+                self.assertIn("Sisa", first_fail.json()["detail"])
+
     def test_receiver_accounts_change_password_and_scope_inbox_to_member(self):
         password = "enkripsih-test-password-2026"
         with patch.dict(os.environ, {"ENKRIPSIH_PASSWORD": password}):
@@ -600,7 +636,6 @@ class MessageTransmissionTests(unittest.TestCase):
                     "/api/auth/login", json={"password": password}
                 )
                 self.assertEqual(commander_login.status_code, 200)
-
                 recipients = []
                 for name, salt, verifier in (
                     ("Receiver Satu", "11" * 16, "22" * 32),

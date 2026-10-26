@@ -2,11 +2,14 @@ const AppAuth = {
   idleTimeoutMs: 5 * 60 * 1000,
   idleTimer: null,
   lastActivitySyncAt: 0,
+  lockoutTimer: null,
+  lockoutDeadline: 0,
 
   init() {
     const loginForm = document.getElementById('loginForm');
     loginForm.addEventListener('submit', (event) => {
       event.preventDefault();
+      if (this.isLocked()) return;
       this.login();
     });
     loginForm.addEventListener('input', () => this.clearLoginError());
@@ -24,6 +27,7 @@ const AppAuth = {
     }
     this.updateLoginFields();
     this.restoreLoginError();
+    this.restoreLockout();
     this.checkSession();
   },
 
@@ -56,6 +60,88 @@ const AppAuth = {
     const errorBox = document.getElementById('loginError');
     errorBox.textContent = '';
     errorBox.hidden = true;
+  },
+
+  isLocked() {
+    return this.lockoutDeadline > Date.now();
+  },
+
+  restoreLockout() {
+    let deadline = 0;
+    try {
+      deadline = Number(sessionStorage.getItem('enkripsih_lockout_until') || 0);
+    } catch (error) {
+      console.warn('Lockout state could not be restored:', error);
+    }
+    if (deadline > Date.now()) {
+      this.lockoutDeadline = deadline;
+      this.startLockoutCountdown();
+    } else {
+      this.clearLockoutState();
+    }
+  },
+
+  applyLockout(retryAfterSeconds) {
+    this.lockoutDeadline = Date.now() + Math.max(1, Number(retryAfterSeconds) || 0) * 1000;
+    try {
+      sessionStorage.setItem('enkripsih_lockout_until', String(this.lockoutDeadline));
+    } catch (error) {
+      console.warn('Lockout state could not be saved:', error);
+    }
+    this.startLockoutCountdown();
+  },
+
+  startLockoutCountdown() {
+    const form = document.getElementById('loginForm');
+    const notice = document.getElementById('loginLockoutNotice');
+    const button = document.getElementById('loginSubmit');
+    form.classList.add('is-locked');
+    button.disabled = true;
+    notice.hidden = false;
+
+    const tick = () => {
+      const remainingMs = this.lockoutDeadline - Date.now();
+      if (remainingMs <= 0) {
+        this.clearLockout();
+        return;
+      }
+      const totalSeconds = Math.ceil(remainingMs / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      notice.innerHTML = '';
+      const prefix = document.createElement('span');
+      prefix.textContent = 'Akses dikunci. Mencoba lagi dalam ';
+      const countdown = document.createElement('span');
+      countdown.className = 'lockout-countdown';
+      countdown.textContent = `${minutes}:${String(seconds).padStart(2, '0')}`;
+      const suffix = document.createElement('span');
+      suffix.textContent = '...';
+      notice.append(prefix, countdown, suffix);
+      this.lockoutTimer = setTimeout(tick, 250);
+    };
+    tick();
+  },
+
+  clearLockout() {
+    const form = document.getElementById('loginForm');
+    const notice = document.getElementById('loginLockoutNotice');
+    const button = document.getElementById('loginSubmit');
+    clearTimeout(this.lockoutTimer);
+    this.lockoutTimer = null;
+    this.lockoutDeadline = 0;
+    form.classList.remove('is-locked');
+    button.disabled = false;
+    notice.hidden = true;
+    notice.textContent = '';
+    this.clearLockoutState();
+  },
+
+  clearLockoutState() {
+    try {
+      sessionStorage.removeItem('enkripsih_lockout_until');
+    } catch (error) {
+      console.warn('Lockout state could not be cleared:', error);
+    }
   },
 
   updateLoginFields() {
@@ -106,10 +192,17 @@ const AppAuth = {
       });
       const data = await response.json();
       if (!response.ok || !data.success) {
+        if (response.status === 429) {
+          const retryAfter = Number(response.headers.get('Retry-After')) || 300;
+          this.applyLockout(retryAfter);
+          this.showLoginError(data.detail || 'Terlalu banyak percobaan.');
+          return;
+        }
         throw new Error(data.detail || 'Login gagal.');
       }
 
       this.clearLoginError();
+      this.clearLockout();
       form.reset();
       this.updateLoginFields();
       if (data.must_change_password) {
@@ -120,7 +213,7 @@ const AppAuth = {
     } catch (error) {
       this.showLoginError(error.message || 'Tidak dapat masuk ke aplikasi.');
     } finally {
-      button.disabled = false;
+      if (!this.isLocked()) button.disabled = false;
     }
   },
 

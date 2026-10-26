@@ -28,6 +28,7 @@ from .database import (
     update_auth_session_password_change, update_auth_session_expiry,
     change_receiver_password,
     get_receiver_account, provision_receiver_account,
+    get_login_lockout, record_failed_login, clear_login_lockout,
 )
 from .crypto_engine import (
     calculate_response_symbols, response_to_string,
@@ -43,8 +44,9 @@ if not 1 <= SESSION_IDLE_TIMEOUT_SECONDS <= 86_400:
         "ENKRIPSIH_SESSION_IDLE_TIMEOUT_SECONDS harus antara 1 dan 86400."
     )
 active_sessions: dict[str, dict] = {}
-login_attempts: dict[str, tuple[int, float]] = {}
 PASSWORD_HASH_ITERATIONS = 600_000
+LOGIN_MAX_ATTEMPTS = 5
+LOGIN_LOCKOUT_SECONDS = 300
 
 
 @asynccontextmanager
@@ -60,7 +62,6 @@ async def lifespan(_: FastAPI):
         passphrase=os.environ.get("ENKRIPSIH_DB_PASSPHRASE"),
     )
     yield
-
 app = FastAPI(
     title="ENKRIPSIH",
     description="Encrypted message delivery for registered members.",
@@ -339,21 +340,27 @@ async def websocket_endpoint(websocket: WebSocket):
 # --- Authentication & Face Biometrics ---
 @app.post("/api/auth/login")
 def login(req: LoginRequest, request: Request, response: Response):
-    client_id = request.client.host if request.client else "unknown"
-    attempts, locked_until = login_attempts.get(client_id, (0, 0.0))
-    now = time.monotonic()
+    now = time.time()
+    lockout_key = _login_lockout_id(request, None)
+    attempts, locked_until = get_login_lockout(lockout_key, now)
     if locked_until > now:
-        raise HTTPException(status_code=429, detail="Terlalu banyak percobaan. Coba lagi beberapa menit.")
+        retry_after = int(locked_until - now) + 1
+        raise HTTPException(
+            status_code=429,
+            detail=f"Terlalu banyak percobaan. Coba lagi dalam {retry_after} detik.",
+            headers={"Retry-After": str(retry_after)},
+        )
 
     configured_password = os.environ.get("ENKRIPSIH_PASSWORD", "")
     if not hmac.compare_digest(req.password, configured_password):
-        attempts += 1
-        lock_until = now + 300 if attempts >= 5 else 0.0
-        login_attempts[client_id] = (0 if lock_until else attempts, lock_until)
-        log_event("AUTH", "DENIED", "Percobaan login gagal.")
-        raise HTTPException(status_code=401, detail="Password tidak benar.")
+        _handle_failed_login(
+            lockout_key, now,
+            "Password tidak benar. ",
+            "Percobaan login komandan gagal.",
+        )
+        return
 
-    login_attempts.pop(client_id, None)
+    clear_login_lockout(lockout_key)
     token = secrets.token_urlsafe(32)
     expires_at = time.time() + SESSION_IDLE_TIMEOUT_SECONDS
     principal = {
@@ -363,7 +370,6 @@ def login(req: LoginRequest, request: Request, response: Response):
     }
     _store_session(token, expires_at, principal)
     _set_session_cookie(response, request, token)
-    login_attempts.pop(client_id, None)
     log_event("AUTH", "SUCCESS", "Login komandan berhasil.")
     return {
         "success": True,
@@ -384,10 +390,48 @@ def _set_session_cookie(response: Response, request: Request, token: str) -> Non
     )
 
 
+def _login_lockout_id(request: Request, account_id: str | None) -> str:
+    if account_id:
+        return f"account:{account_id.lower()}"
+    client_host = request.client.host if request.client else "unknown"
+    forwarded = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+    if forwarded:
+        return f"ip:{forwarded}"
+    return f"ip:{client_host}"
+
+
 def _password_hash(password: str, salt: bytes) -> str:
     return hashlib.pbkdf2_hmac(
         "sha256", password.encode("utf-8"), salt, PASSWORD_HASH_ITERATIONS
     ).hex()
+
+
+def _handle_failed_login(
+    lockout_key: str,
+    now: float,
+    error_detail: str,
+    attempt_log_message: str,
+) -> None:
+    attempts, _ = get_login_lockout(lockout_key, now)
+    attempts += 1
+    locked_until = record_failed_login(
+        lockout_key, attempts, now,
+        max_attempts=LOGIN_MAX_ATTEMPTS,
+        lockout_seconds=LOGIN_LOCKOUT_SECONDS,
+    )
+    if locked_until > now:
+        retry_after = int(locked_until - now) + 1
+        log_event("AUTH", "DENIED", attempt_log_message)
+        raise HTTPException(
+            status_code=429,
+            detail=f"Akses dikunci sementara selama 5 menit. Coba lagi dalam {retry_after} detik.",
+            headers={"Retry-After": str(retry_after)},
+        )
+    log_event("AUTH", "DENIED", attempt_log_message)
+    remaining = max(0, LOGIN_MAX_ATTEMPTS - attempts)
+    if remaining > 0:
+        raise HTTPException(status_code=401, detail=f"{error_detail} Sisa {remaining} percobaan.")
+    raise HTTPException(status_code=401, detail=error_detail)
 
 
 def _new_receiver_password() -> str:
@@ -412,11 +456,17 @@ def _issue_receiver_account(recipient_id: str, username: str) -> str:
 
 @app.post("/api/auth/receiver-login")
 def receiver_login(req: ReceiverLoginRequest, request: Request, response: Response):
-    client_id = request.client.host if request.client else "unknown"
-    attempts, locked_until = login_attempts.get(client_id, (0, 0.0))
-    now = time.monotonic()
+    now = time.time()
+    username = req.username.strip().lower()
+    lockout_key = _login_lockout_id(request, username)
+    attempts, locked_until = get_login_lockout(lockout_key, now)
     if locked_until > now:
-        raise HTTPException(status_code=429, detail="Terlalu banyak percobaan. Coba lagi beberapa menit.")
+        retry_after = int(locked_until - now) + 1
+        raise HTTPException(
+            status_code=429,
+            detail=f"Terlalu banyak percobaan. Coba lagi dalam {retry_after} detik.",
+            headers={"Retry-After": str(retry_after)},
+        )
 
     account = get_receiver_account(req.username.strip())
     salt = bytes.fromhex(account["password_salt"]) if account else bytes(16)
@@ -424,13 +474,14 @@ def receiver_login(req: ReceiverLoginRequest, request: Request, response: Respon
     actual_hash = _password_hash(req.password, salt)
     password_valid = hmac.compare_digest(actual_hash, expected_hash)
     if account is None or not password_valid:
-        attempts += 1
-        lock_until = now + 300 if attempts >= 5 else 0.0
-        login_attempts[client_id] = (0 if lock_until else attempts, lock_until)
-        log_event("AUTH", "DENIED", "Percobaan login receiver gagal.")
-        raise HTTPException(status_code=401, detail="Nama pengguna atau password tidak benar.")
+        _handle_failed_login(
+            lockout_key, now,
+            "Nama pengguna atau password tidak benar. ",
+            "Percobaan login receiver gagal.",
+        )
+        return
 
-    login_attempts.pop(client_id, None)
+    clear_login_lockout(lockout_key)
     token = secrets.token_urlsafe(32)
     expires_at = time.time() + SESSION_IDLE_TIMEOUT_SECONDS
     principal = {
