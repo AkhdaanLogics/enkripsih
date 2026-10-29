@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Stylesheet served by the FastAPI static mount -->
-  <link rel="stylesheet" href="/static/css/style.css?v=ui-polish1">
+  <link rel="stylesheet" href="/static/css/style.css?v=ui-v2-whatsapp">
 </head>
 <body>
 
@@ -225,23 +225,40 @@
     </section>
 
     <section class="view-section" id="view-receiver">
-      <div class="tactical-card">
+      <div class="tactical-card receiver-card">
         <div class="card-header">
           <div>
             <h2 class="card-title">Pesan masuk</h2>
-            <div class="card-subtitle">Masukkan challenge dan respons dari perangkat untuk membuka pesan baru.</div>
+            <div class="card-subtitle">Pilih transmisi di kiri, ketik 12 respons dari perangkat di kanan untuk membuka.</div>
           </div>
           <button class="btn-tactical btn-tactical-secondary" id="btnRefreshReceiverMsgs" type="button">
-            Refresh Pesan
+            Refresh
           </button>
         </div>
 
-        <p class="security-note">Catatan demo: respons passkey 12 simbol memiliki 24 bit kemungkinan. Jangan gunakan untuk pesan sensitif.</p>
-
-        <!-- Message List Container -->
-        <div id="receiverMessageList">
-          <div style="text-align:center; padding:30px; color:var(--muted); font-size:13px;">
-            Memuat kotak masuk transmisi...
+        <!-- WhatsApp-like receiver workspace -->
+        <div class="receiver-workspace" id="receiverWorkspace">
+          <!-- Chat list (left) -->
+          <div class="receiver-chat-list">
+            <div class="receiver-chat-list-header">
+              Transmisi masuk
+            </div>
+            <div class="receiver-chat-list-body" id="receiverMessageList">
+              <div style="text-align:center; padding:30px; color:var(--muted); font-size:13px;">
+                Memuat kotak masuk transmisi...
+              </div>
+            </div>
+          </div>
+          <!-- Chat pane (right) -->
+          <div class="receiver-chat-pane">
+            <div class="receiver-no-chat" id="receiverNoChat">
+              Pilih pesan untuk melihat isi
+            </div>
+            <div class="receiver-message-container" id="receiverMessageContainer" style="display:none;">
+              <div class="receiver-message-header" id="receiverMessageHeader"></div>
+              <div class="receiver-message-body" id="receiverMessageBody"></div>
+              <div class="receiver-message-footer" id="receiverMessageFooter"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -271,12 +288,19 @@
 
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
-
   <!-- Scripts served by the FastAPI static mount -->
-  <script src="/static/js/app.js?v=ui-polish1"></script>
-  <script src="/static/js/auth.js?v=receiver-accounts1"></script>
-  <script src="/static/js/commander.js?v=ui-polish1"></script>
-  <script src="/static/js/message_crypto.js?v=passkey-aligned1"></script>
-  <script src="/static/js/receiver.js?v=ui-polish1"></script>
+  <script src="/static/js/app.js?v=ui-v2"></script>
+  <script src="/static/js/auth.js?v=receiver-accounts2"></script>
+  <script src="/static/js/commander.js?v=ui-v2"></script>
+  <script src="/static/js/message_crypto.js?v=passkey-svg1"></script>
+  <script src="/static/js/receiver.js?v=ui-v2-whatsapp"></script>
+  <script>
+    // Feature-detect Web Worker, create instance for crypto operations
+    if (window.Worker) {
+      window.__cryptoWorker = new Worker('/static/js/crypto_worker.js?v=1');
+      window.__cryptoWorker.onerror = (e) => console.error("Worker error:", e.message);
+    }
+  </script>
+
 </body>
 </html>

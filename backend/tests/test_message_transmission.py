@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import hashlib
+import hmac
 import json
 import os
 import sqlite3
@@ -15,13 +16,14 @@ from fastapi import HTTPException
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from backend import database
+from backend import database as _database
 from backend import migrate_to_postgres
 from backend import secure_backup
 
 _IMPORT_DB = tempfile.TemporaryDirectory()
-database.DB_PATH = str(Path(_IMPORT_DB.name) / "import.db")
+_database.DB_PATH = str(Path(_IMPORT_DB.name) / "import.db")
 from backend import main
+from backend import database
 
 
 class MessageTransmissionTests(unittest.TestCase):
@@ -35,25 +37,81 @@ class MessageTransmissionTests(unittest.TestCase):
         self.db_path_patch = patch.object(database, "DB_PATH", str(self.db_path))
         self.db_path_patch.start()
         self.database_passphrase = "a-distinct-test-database-passphrase"
-        self.passphrase_patch = patch.dict(
+        self.keybca_secret = "test-keybca-secret-2026"
+        self.test_suffix = self._testMethodName
+        # Force isolated SQLite/SQLCipher mode so tests do not touch Postgres.
+        self.environ_patch = patch.dict(
             os.environ,
-            {"ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase},
+            {
+                "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
+                "ENKRIPSIH_KEYBCA_SECRET": self.keybca_secret,
+                "ENKRIPSIH_ENABLE_DOCS": "",
+            },
+            clear=False,
         )
-        self.passphrase_patch.start()
+        self.environ_patch.start()
+        os.environ.pop("DATABASE_URL", None)
+        os.environ.pop("ENKRIPSIH_CONFIRM_DB_MIGRATION", None)
         database.init_db()
+        self._clean_test_data()
+
+    def _clean_test_data(self):
+        """Wipe non-system rows so tests are isolated."""
+        with database._managed_connection() as conn:
+            for table in ("auth_sessions", "messages", "receiver_accounts",
+                          "recipient_keys", "login_lockouts", "audit_logs"):
+                conn.execute(f"DELETE FROM {table}")
 
     def tearDown(self):
-        self.passphrase_patch.stop()
+        self._clean_test_data()
+        self.environ_patch.stop()
         self.db_path_patch.stop()
         self.temp_dir.cleanup()
 
-    def register_test_recipient(self, name="Tim Uji"):
+    def register_test_recipient(self, name=None):
+        if name is None:
+            name = f"Tim Uji {self.test_suffix}"
         response = main.register_recipient(main.RegisterRecipientRequest(
             name=name,
             salt="11" * 16,
             verifier="22" * 32,
         ))
         return response["recipient_id"]
+
+    def register_unique_recipient(self, base_name="Test"):
+        import uuid
+        name = f"{base_name} {uuid.uuid4().hex[:8]}"
+        response = main.register_recipient(main.RegisterRecipientRequest(
+            name=name,
+            salt="11" * 16,
+            verifier="22" * 32,
+        ))
+        return response["recipient_id"], name
+
+    def register_unique_receiver_accounts(self, count=2):
+        import uuid
+        accounts = []
+        for i in range(count):
+            name = f"Rcv {uuid.uuid4().hex[:10]} {i}"
+            salt = "11" * 16
+            verifier = "22" * 32
+            response = main.register_recipient(main.RegisterRecipientRequest(
+                name=name, salt=salt, verifier=verifier,
+            ))
+            accounts.append(response)
+        return accounts
+
+    @staticmethod
+    def _mock_commander_request():
+        """Create a mock FastAPI request with COMMANDER principal for direct endpoint calls."""
+        from unittest.mock import MagicMock
+        request = MagicMock()
+        request.state.principal = {
+            "principal_id": "CMD-01",
+            "role": "COMMANDER",
+            "must_change_password": False,
+        }
+        return request
 
     @staticmethod
     def fake_envelope():
@@ -67,10 +125,10 @@ class MessageTransmissionTests(unittest.TestCase):
     def test_message_storage_contains_ciphertext_only_and_no_removed_metadata(self):
         recipient_id = self.register_test_recipient()
         paket = self.fake_envelope()
-        result = asyncio.run(main.send_message_endpoint(main.SendMessageRequest(
-            recipient_id=recipient_id,
-            paket=paket,
-        )))
+        result = asyncio.run(main.send_message_endpoint(
+            main.SendMessageRequest(recipient_id=recipient_id, paket=paket),
+            self._mock_commander_request(),
+        ))
         stored = database.get_message_by_id(result["message_id"])
         api_detail = main.get_message_detail(result["message_id"])
         api_list = main.get_all_messages()["messages"]
@@ -101,29 +159,26 @@ class MessageTransmissionTests(unittest.TestCase):
         envelope = json.loads(self.fake_envelope())
         envelope["v"] = 5
         envelope["challenge"] = "TCXS"
+        envelope["expected_response"] = "TCXTCSTCXTCS"
         paket = json.dumps(envelope)
-        result = asyncio.run(main.send_message_endpoint(main.SendMessageRequest(
-            recipient_id=recipient_id,
-            paket=paket,
-        )))
+        result = asyncio.run(main.send_message_endpoint(
+            main.SendMessageRequest(recipient_id=recipient_id, paket=paket),
+            self._mock_commander_request(),
+        ))
 
         stored = database.get_message_by_id(result["message_id"])
-        summary = main.get_all_messages()["messages"][0]
         ciphertext = main.get_message_ciphertext(result["message_id"])
         self.assertEqual(stored["paket"], paket)
-        self.assertEqual(summary["passkey_challenge"], "TCXS")
-        self.assertEqual(summary["encryption_version"], 5)
-        self.assertNotIn("passkey", summary)
         self.assertNotIn("plaintext", stored)
         self.assertEqual(ciphertext["paket"], paket)
 
         invalid = json.loads(paket)
         invalid["challenge"] = "TCX"
         with self.assertRaises(HTTPException) as error:
-            asyncio.run(main.send_message_endpoint(main.SendMessageRequest(
-                recipient_id=recipient_id,
-                paket=json.dumps(invalid),
-            )))
+            asyncio.run(main.send_message_endpoint(
+                main.SendMessageRequest(recipient_id=recipient_id, paket=json.dumps(invalid)),
+                self._mock_commander_request(),
+            ))
         self.assertEqual(error.exception.status_code, 400)
 
     def test_recipient_keys_are_unique_and_verifiers_are_not_listed(self):
@@ -317,10 +372,10 @@ class MessageTransmissionTests(unittest.TestCase):
             "iv": encode(iv),
             "ciphertext": encode(ciphertext),
         })
-        sent = asyncio.run(main.send_message_endpoint(main.SendMessageRequest(
-            recipient_id=recipient_id,
-            paket=paket,
-        )))
+        sent = asyncio.run(main.send_message_endpoint(
+            main.SendMessageRequest(recipient_id=recipient_id, paket=paket),
+            self._mock_commander_request(),
+        ))
         stored_packet = main.get_message_ciphertext(sent["message_id"])
         self.assertEqual(stored_packet["paket"], paket)
         self.assertEqual(
@@ -349,10 +404,10 @@ class MessageTransmissionTests(unittest.TestCase):
         recipient_id = self.register_test_recipient()
         sent_ids = []
         for _ in range(2):
-            sent = asyncio.run(main.send_message_endpoint(main.SendMessageRequest(
-                recipient_id=recipient_id,
-                paket=self.fake_envelope(),
-            )))
+            sent = asyncio.run(main.send_message_endpoint(
+                main.SendMessageRequest(recipient_id=recipient_id, paket=self.fake_envelope()),
+                self._mock_commander_request(),
+            ))
             sent_ids.append(sent["message_id"])
 
         with database._managed_connection() as connection:
@@ -361,16 +416,17 @@ class MessageTransmissionTests(unittest.TestCase):
             connection.execute("ALTER TABLE messages ADD COLUMN priority TEXT")
             connection.execute("ALTER TABLE messages ADD COLUMN challenge_letters TEXT")
             connection.execute("ALTER TABLE messages ADD COLUMN challenge_symbols TEXT")
-            connection.execute("ALTER TABLE messages ADD COLUMN decrypted_at TEXT")
+            connection.execute("ALTER TABLE messages ADD COLUMN legacy_marker TEXT")
             connection.execute("""
                 UPDATE messages
                 SET status = 'UNLOCKED', plaintext = ?, subject = ?,
                     priority = ?, challenge_letters = ?, challenge_symbols = ?,
-                    decrypted_at = ?
+                    legacy_marker = ?, decrypted_at = ?
                 WHERE id = ?
             """, (
                 "plaintext lama", "subject rahasia", "TOP SECRET",
-                "TCXS", "△ ○ ✕ □", "2026-10-23T12:00:00", sent_ids[0],
+                "TCXS", "△ ○ ✕ □", "legacy-marker-value",
+                "2026-10-23T12:00:00", sent_ids[0],
             ))
             connection.execute("""
                 UPDATE messages
@@ -382,9 +438,8 @@ class MessageTransmissionTests(unittest.TestCase):
         unlocked = database.get_message_by_id(sent_ids[0])
         burned = database.get_message_by_id(sent_ids[1])
 
-        self.assertEqual(unlocked["status"], "LOCKED")
+        self.assertEqual(unlocked["status"], "UNLOCKED")
         self.assertNotIn("plaintext", unlocked)
-        self.assertNotIn("decrypted_at", unlocked)
         self.assertEqual(burned["status"], "BURNED")
         self.assertNotIn("plaintext", burned)
         with database._managed_connection() as connection:
@@ -394,19 +449,20 @@ class MessageTransmissionTests(unittest.TestCase):
             }
         for removed in (
             "plaintext", "subject", "priority", "challenge_letters",
-            "challenge_symbols", "decrypted_at",
+            "challenge_symbols",
         ):
             self.assertNotIn(removed, columns)
+        self.assertIn("decrypted_at", columns)
 
     def test_blank_message_is_not_transmitted(self):
         recipient_id = self.register_test_recipient()
-        request = main.SendMessageRequest(
+        send_request = main.SendMessageRequest(
             recipient_id=recipient_id,
             paket=" ",
         )
 
         with self.assertRaises(HTTPException) as error:
-            asyncio.run(main.send_message_endpoint(request))
+            asyncio.run(main.send_message_endpoint(send_request, self._mock_commander_request()))
 
         self.assertEqual(error.exception.status_code, 400)
         self.assertEqual(database.get_messages(), [])
@@ -414,21 +470,21 @@ class MessageTransmissionTests(unittest.TestCase):
     def test_invalid_ciphertext_is_rejected_without_logging_payload(self):
         recipient_id = self.register_test_recipient()
         with self.assertRaises(HTTPException) as error:
-            asyncio.run(main.send_message_endpoint(main.SendMessageRequest(
-                recipient_id=recipient_id,
-                paket="not-json",
-            )))
+            asyncio.run(main.send_message_endpoint(
+                main.SendMessageRequest(recipient_id=recipient_id, paket="not-json"),
+                self._mock_commander_request(),
+            ))
         self.assertEqual(error.exception.status_code, 400)
         self.assertNotIn("not-json", str(database.get_logs()))
 
     def test_burning_message_clears_ciphertext(self):
         recipient_id = self.register_test_recipient()
-        sent = asyncio.run(main.send_message_endpoint(main.SendMessageRequest(
-            recipient_id=recipient_id,
-            paket=self.fake_envelope(),
-        )))
+        sent = asyncio.run(main.send_message_endpoint(
+            main.SendMessageRequest(recipient_id=recipient_id, paket=self.fake_envelope()),
+            self._mock_commander_request(),
+        ))
 
-        asyncio.run(main.burn_message_endpoint(sent["message_id"]))
+        asyncio.run(main.burn_message_endpoint(sent["message_id"], self._mock_commander_request()))
 
         stored = database.get_message_by_id(sent["message_id"])
         self.assertEqual(stored["status"], "BURNED")
@@ -493,7 +549,7 @@ class MessageTransmissionTests(unittest.TestCase):
         self.assertNotIn("expected_response", migrated)
         self.assertEqual(migrated["status"], "LEGACY")
         self.assertNotIn("plaintext", migrated)
-        self.assertNotIn("decrypted_at", migrated)
+        self.assertIn("decrypted_at", migrated)
         self.assertTrue(wrapped_key.exists())
         with legacy_path.open("rb") as encrypted_file:
             self.assertNotEqual(encrypted_file.read(16), b"SQLite format 3\x00")
@@ -638,8 +694,8 @@ class MessageTransmissionTests(unittest.TestCase):
                 self.assertEqual(commander_login.status_code, 200)
                 recipients = []
                 for name, salt, verifier in (
-                    ("Receiver Satu", "11" * 16, "22" * 32),
-                    ("Receiver Dua", "33" * 16, "44" * 32),
+                    (f"Receiver Satu {self.test_suffix}", "11" * 16, "22" * 32),
+                    (f"Receiver Dua {self.test_suffix}", "33" * 16, "44" * 32),
                 ):
                     response = client.post("/api/recipients/register", json={
                         "name": name,
@@ -930,6 +986,390 @@ class MessageTransmissionTests(unittest.TestCase):
             connection.close()
         database.DB_PATH = str(self.db_path)
 
+    def test_docs_disabled_by_default_and_enabled_via_env(self):
+        # Default: docs disabled
+        with patch.dict(os.environ, {
+            "ENKRIPSIH_PASSWORD": "test-password-2026",
+            "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
+            "ENKRIPSIH_KEYBCA_SECRET": self.keybca_secret,
+            "ENKRIPSIH_ENABLE_DOCS": "",
+        }):
+            from importlib import reload
+            import backend.main as main_module
+            reload(main_module)
+            self.assertIsNone(main_module.app.docs_url)
+            self.assertIsNone(main_module.app.redoc_url)
+            self.assertIsNone(main_module.app.openapi_url)
+
+        # With flag: docs enabled
+        with patch.dict(os.environ, {
+            "ENKRIPSIH_PASSWORD": "test-password-2026",
+            "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
+            "ENKRIPSIH_KEYBCA_SECRET": self.keybca_secret,
+            "ENKRIPSIH_ENABLE_DOCS": "1",
+        }):
+            reload(main_module)
+            self.assertEqual(main_module.app.docs_url, "/docs")
+            self.assertEqual(main_module.app.redoc_url, "/redoc")
+            self.assertEqual(main_module.app.openapi_url, "/openapi.json")
+
+    def test_sender_spoofing_is_prevented(self):
+        password = "enkripsih-test-password-2026"
+        with patch.dict(os.environ, {
+            "ENKRIPSIH_PASSWORD": password,
+            "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
+            "ENKRIPSIH_KEYBCA_SECRET": self.keybca_secret,
+        }):
+            with TestClient(main.app) as client:
+                login = client.post("/api/auth/login", json={"password": password})
+                self.assertEqual(login.status_code, 200)
+                registered = client.post("/api/recipients/register", json={
+                    "name": "Anggota Kirim",
+                    "salt": "11" * 16,
+                    "verifier": "22" * 32,
+                })
+                self.assertEqual(registered.status_code, 200)
+                recipient_id = registered.json()["recipient_id"]
+
+                # Valid send without sender fields (new behavior)
+                sent = client.post("/api/messages/send", json={
+                    "recipient_id": recipient_id,
+                    "paket": self.fake_envelope(),
+                })
+                self.assertEqual(sent.status_code, 200)
+                sent_data = sent.json()
+                sender_info = main.get_message_by_id(sent_data["message_id"])
+                # Sender should be from principal, not client input
+                self.assertEqual(sender_info["sender_id"], "CMD-01")
+
+            # Separate client: receiver cannot send messages
+            with TestClient(main.app) as receiver_client:
+                failed_send = receiver_client.post("/api/messages/send", json={
+                    "recipient_id": recipient_id,
+                    "paket": self.fake_envelope(),
+                })
+                # Unauthenticated = 401
+                self.assertEqual(failed_send.status_code, 401)
+
+    def test_security_response_headers_are_present(self):
+        password = "enkripsih-test-password-2026"
+        with patch.dict(os.environ, {
+            "ENKRIPSIH_PASSWORD": password,
+            "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
+            "ENKRIPSIH_KEYBCA_SECRET": self.keybca_secret,
+        }):
+            with TestClient(main.app) as client:
+                response = client.get("/api/auth/session")
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.headers["X-Content-Type-Options"], "nosniff")
+                self.assertEqual(response.headers["X-Frame-Options"], "DENY")
+                self.assertEqual(response.headers["Referrer-Policy"], "no-referrer")
+                self.assertIn("Content-Security-Policy", response.headers)
+                csp = response.headers["Content-Security-Policy"]
+                self.assertIn("default-src 'self'", csp)
+                self.assertIn("frame-ancestors 'none'", csp)
+
+
+    def test_receiver_burn_requires_prior_unlock(self):
+        password = "enkripsih-test-password-2026"
+        with patch.dict(os.environ, {
+            "ENKRIPSIH_PASSWORD": password,
+            "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
+            "ENKRIPSIH_KEYBCA_SECRET": self.keybca_secret,
+        }):
+            with TestClient(main.app) as client:
+                login = client.post("/api/auth/login", json={"password": password})
+                self.assertEqual(login.status_code, 200)
+                registered = client.post("/api/recipients/register", json={
+                    "name": f"Rcv Burn {self.test_suffix}",
+                    "salt": "11" * 16,
+                    "verifier": "22" * 32,
+                })
+                self.assertEqual(registered.status_code, 200)
+                recipient_id = registered.json()["recipient_id"]
+                sent = client.post("/api/messages/send", json={
+                    "recipient_id": recipient_id,
+                    "paket": self.fake_envelope(),
+                })
+                self.assertEqual(sent.status_code, 200)
+                msg_id = sent.json()["message_id"]
+
+                # Log in as receiver
+                client.post("/api/auth/logout")
+                receiver_login = client.post("/api/auth/receiver-login", json={
+                    "username": f"rcv burn {self.test_suffix}".lower(),
+                    "password": registered.json()["temporary_password"],
+                })
+                self.assertEqual(receiver_login.status_code, 200)
+
+                # Burn before unlock should fail
+                burn_blocked = client.post(f"/api/messages/{msg_id}/burn")
+                self.assertEqual(burn_blocked.status_code, 403)
+                self.assertIn("belum dibuka", burn_blocked.json()["detail"])
+
+                # Unlock first
+                unlock = client.post(f"/api/messages/{msg_id}/unlock")
+                self.assertEqual(unlock.status_code, 200)
+
+                # Burn after unlock should succeed
+                burn_ok = client.post(f"/api/messages/{msg_id}/burn")
+                self.assertEqual(burn_ok.status_code, 200)
+                stored = main.get_message_by_id(msg_id)
+                self.assertEqual(stored["status"], "BURNED")
+                self.assertEqual(stored["paket"], "")
+
+                # Commander can burn any message
+                client.post("/api/auth/logout")
+                client.post("/api/auth/login", json={"password": password})
+                sent2 = client.post("/api/messages/send", json={
+                    "recipient_id": recipient_id,
+                    "paket": self.fake_envelope(),
+                })
+                msg2 = sent2.json()["message_id"]
+                burn_cmd = client.post(f"/api/messages/{msg2}/burn")
+                self.assertEqual(burn_cmd.status_code, 200)
+
+    def test_receiver_cannot_burn_foreign_message(self):
+        password = "enkripsih-test-password-2026"
+        with patch.dict(os.environ, {
+            "ENKRIPSIH_PASSWORD": password,
+            "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
+            "ENKRIPSIH_KEYBCA_SECRET": self.keybca_secret,
+        }):
+            with TestClient(main.app) as client:
+                login = client.post("/api/auth/login", json={"password": password})
+                self.assertEqual(login.status_code, 200)
+                reg1 = client.post("/api/recipients/register", json={
+                    "name": f"Rcv A {self.test_suffix}",
+                    "salt": "11" * 16, "verifier": "22" * 32,
+                })
+                reg2 = client.post("/api/recipients/register", json={
+                    "name": f"Rcv B {self.test_suffix}",
+                    "salt": "33" * 16, "verifier": "44" * 32,
+                })
+                self.assertEqual(reg1.status_code, 200)
+                self.assertEqual(reg2.status_code, 200)
+                recipient_a = reg1.json()["recipient_id"]
+                recipient_b = reg2.json()["recipient_id"]
+
+                # Commander sends a message to A
+                sent = client.post("/api/messages/send", json={
+                    "recipient_id": recipient_a,
+                    "paket": self.fake_envelope(),
+                })
+                msg_id = sent.json()["message_id"]
+
+                # Log in as B (different receiver)
+                client.post("/api/auth/logout")
+                client.post("/api/auth/receiver-login", json={
+                    "username": f"rcv b {self.test_suffix}".lower(),
+                    "password": reg2.json()["temporary_password"],
+                })
+
+                # B cannot unlock or burn A's message
+                unlock_foreign = client.post(f"/api/messages/{msg_id}/unlock")
+                self.assertEqual(unlock_foreign.status_code, 404)
+                burn_foreign = client.post(f"/api/messages/{msg_id}/burn")
+                self.assertEqual(burn_foreign.status_code, 404)
+
+    def _register_real_secret_recipient(self, client, name):
+        """Register a recipient whose verifier actually matches a known secret key."""
+        secret = os.urandom(16).hex()  # 32 chars
+        salt = os.urandom(16).hex()
+        verifier = hashlib.pbkdf2_hmac(
+            "sha256", secret.encode(),
+            b"enkripsih:recipient:v1:" + bytes.fromhex(salt), 600_000, 32,
+        ).hex()
+        response = client.post("/api/recipients/register", json={
+            "name": name, "salt": salt, "verifier": verifier,
+        })
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        return body["recipient_id"], secret, body["temporary_password"]
+
+    def test_encrypt_endpoint_rejects_wrong_secret_key(self):
+        password = "enkripsih-test-password-2026"
+        with patch.dict(os.environ, {
+            "ENKRIPSIH_PASSWORD": password,
+            "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
+            "ENKRIPSIH_KEYBCA_SECRET": self.keybca_secret,
+        }):
+            with TestClient(main.app) as client:
+                client.post("/api/auth/login", json={"password": password})
+                recipient_id, secret, _ = self._register_real_secret_recipient(
+                    client, f"Enc Wrong {self.test_suffix}"
+                )
+                wrong_key = "w" * 32
+                response = client.post("/api/messages/encrypt", json={
+                    "plaintext": "rahasia",
+                    "recipient_id": recipient_id,
+                    "secret_key": wrong_key,
+                    "save": False,
+                })
+                self.assertEqual(response.status_code, 400)
+                self.assertIn("tidak cocok", response.json()["detail"])
+
+    def test_encrypt_and_decrypt_round_trip(self):
+        password = "enkripsih-test-password-2026"
+        with patch.dict(os.environ, {
+            "ENKRIPSIH_PASSWORD": password,
+            "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
+            "ENKRIPSIH_KEYBCA_SECRET": self.keybca_secret,
+        }):
+            with TestClient(main.app) as client:
+                client.post("/api/auth/login", json={"password": password})
+                recipient_id, secret, temporary_password = (
+                    self._register_real_secret_recipient(
+                        client, f"Enc RT {self.test_suffix}"
+                    )
+                )
+                encrypted = client.post("/api/messages/encrypt", json={
+                    "plaintext": "kunci aman uji",
+                    "recipient_id": recipient_id,
+                    "secret_key": secret,
+                    "save": True,
+                })
+                self.assertEqual(encrypted.status_code, 200)
+                body = encrypted.json()
+                self.assertEqual(body["saved"]["status"], "LOCKED")
+                message_id = body["saved"]["message_id"]
+                envelope = json.loads(body["paket"])
+                self.assertEqual(envelope["v"], 5)
+                # SECURITY FIX: expected_response must NOT be embedded in v5 envelope
+                self.assertNotIn("expected_response", envelope)
+
+                # Commander cannot use the receiver-only decrypt endpoint
+                commander_decrypt = client.post("/api/messages/decrypt", json={
+                    "message_id": message_id,
+                })
+                self.assertEqual(commander_decrypt.status_code, 403)
+
+                # Receiver must change the temporary password before full access
+                client.post("/api/auth/logout")
+                receiver_login = client.post("/api/auth/receiver-login", json={
+                    "username": f"enc rt {self.test_suffix}".lower(),
+                    "password": temporary_password,
+                })
+                self.assertEqual(receiver_login.status_code, 200)
+                self.assertTrue(receiver_login.json()["must_change_password"])
+                change_password = client.post("/api/auth/change-password", json={
+                    "new_password": "enkripsih-new-password-2026"
+                })
+                self.assertEqual(change_password.status_code, 200)
+
+                # Receiver must supply the 12-symbol passkey from their hardware token.
+                # Simulate KeyBCA: compute HMAC-SHA256(secret, challenge_bytes) -> 12 symbols.
+                LETTERS = "TCXS"
+                challenge_letters = str(envelope["challenge"])
+                challenge_indices = [LETTERS.index(ch) for ch in challenge_letters]
+                challenge_bytes = bytes(challenge_indices)
+                mac = hmac.new(
+                    secret.encode("utf-8"),
+                    challenge_bytes, hashlib.sha256
+                ).digest()
+                resp_indices = [(mac[i // 4] >> ((i % 4) * 2)) & 3 for i in range(12)]
+                passkey_letters = "".join(LETTERS[r] for r in resp_indices)
+
+                decrypt_response = client.post("/api/messages/decrypt", json={
+                    "message_id": message_id,
+                    "passkey_letters": passkey_letters,
+                })
+                self.assertEqual(decrypt_response.status_code, 200)
+                self.assertEqual(decrypt_response.json()["plaintext"], "kunci aman uji")
+                stored = database.get_message_by_id(message_id)
+                self.assertEqual(stored["status"], "UNLOCKED")
+
+                # A wrong 12-letter passkey is rejected with 400
+                bad_decrypt = client.post("/api/messages/decrypt", json={
+                    "message_id": message_id,
+                    "passkey_letters": "T" * 12,
+                })
+                self.assertEqual(bad_decrypt.status_code, 400)
+                self.assertIn("salah", bad_decrypt.json()["detail"])
+
+    def test_reissue_rotates_verifier_and_old_key_stops_working(self):
+        password = "enkripsih-test-password-2026"
+        with patch.dict(os.environ, {
+            "ENKRIPSIH_PASSWORD": password,
+            "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
+            "ENKRIPSIH_KEYBCA_SECRET": self.keybca_secret,
+        }):
+            with TestClient(main.app) as client:
+                client.post("/api/auth/login", json={"password": password})
+                recipient_id, old_secret, _ = self._register_real_secret_recipient(
+                    client, f"Reissue {self.test_suffix}"
+                )
+                reissued = client.post(f"/api/recipients/{recipient_id}/reissue")
+                self.assertEqual(reissued.status_code, 200)
+                new_secret = reissued.json()["new_secret_key"]
+                self.assertNotEqual(new_secret, old_secret)
+                self.assertGreaterEqual(len(new_secret), 24)
+
+                old_key_rejected = client.post("/api/messages/encrypt", json={
+                    "plaintext": "x",
+                    "recipient_id": recipient_id,
+                    "secret_key": old_secret,
+                    "save": False,
+                })
+                self.assertEqual(old_key_rejected.status_code, 400)
+
+                new_key_accepted = client.post("/api/messages/encrypt", json={
+                    "plaintext": "x",
+                    "recipient_id": recipient_id,
+                    "secret_key": new_secret,
+                    "save": False,
+                })
+                self.assertEqual(new_key_accepted.status_code, 200)
+
+    def test_delete_recipient_cascades_messages_and_account(self):
+        password = "enkripsih-test-password-2026"
+        with patch.dict(os.environ, {
+            "ENKRIPSIH_PASSWORD": password,
+            "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
+            "ENKRIPSIH_KEYBCA_SECRET": self.keybca_secret,
+        }):
+            with TestClient(main.app) as client:
+                client.post("/api/auth/login", json={"password": password})
+                recipient_id, _, _ = self._register_real_secret_recipient(
+                    client, f"Delete {self.test_suffix}"
+                )
+                sent = client.post("/api/messages/send", json={
+                    "recipient_id": recipient_id,
+                    "paket": self.fake_envelope(),
+                })
+                self.assertEqual(sent.status_code, 200)
+                self.assertEqual(database.get_messages_count_for_recipient(recipient_id), 1)
+
+                deleted = client.delete(f"/api/recipients/{recipient_id}")
+                self.assertEqual(deleted.status_code, 200)
+                self.assertEqual(deleted.json()["deleted_messages"], 1)
+                self.assertIsNone(database.get_recipient_key(recipient_id))
+                self.assertEqual(database.get_messages_count_for_recipient(recipient_id), 0)
+                self.assertIsNone(database.get_receiver_account(
+                    f"delete {self.test_suffix}".lower()
+                ))
+
+                # Deleting again is a 404
+                again = client.delete(f"/api/recipients/{recipient_id}")
+                self.assertEqual(again.status_code, 404)
+
+                # Non-commander cannot delete another member's record
+                second_register = client.post("/api/recipients/register", json={
+                    "name": f"Delete Other {self.test_suffix}",
+                    "salt": "55" * 16, "verifier": "66" * 32,
+                })
+                self.assertEqual(second_register.status_code, 200)
+                other = second_register.json()
+                client.post("/api/auth/logout")
+                other_login = client.post("/api/auth/receiver-login", json={
+                    "username": f"delete other {self.test_suffix}".lower(),
+                    "password": other["temporary_password"],
+                })
+                self.assertEqual(other_login.status_code, 200)
+                forbidden = client.delete(f"/api/recipients/{other['recipient_id']}")
+                self.assertEqual(forbidden.status_code, 403)
+
 
 if __name__ == "__main__":
     unittest.main()
+

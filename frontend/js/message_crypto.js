@@ -1,3 +1,13 @@
+const PASSKEY_SVG = {
+  icons: {
+    T: '<svg class="pk-symbol" viewBox="0 0 24 24" fill="currentColor"><polygon points="4 20 12 5 20 20" stroke="currentColor" stroke-width="1" fill="none"/></svg>',
+    C: '<svg class="pk-symbol" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.5"/></svg>',
+    X: '<svg class="pk-symbol" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.5"/></svg>',
+    S: '<svg class="pk-symbol" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" stroke="currentColor" stroke-width="1.5"/></svg>',
+  },
+  label: { T: "Segitiga", C: "Lingkaran", X: "Cross", S: "Kotak" },
+};
+
 const MessageCrypto = {
   iterations: 600000,
   encoder: new TextEncoder(),
@@ -164,6 +174,16 @@ const MessageCrypto = {
     return responseIndices.map(index => this.letters[index]).join("");
   },
 
+  isPasskeyValid(value) {
+    if (typeof value !== "string") return false;
+    const compact = value.toUpperCase().replace(/\s+/g, "");
+    const letters = Array.from(compact, character => {
+      const symbolIndex = this.symbols.indexOf(character);
+      return symbolIndex === -1 ? character : this.letters[symbolIndex];
+    }).join("");
+    return /^[TCXS]{12}$/.test(letters);
+  },
+
   normalizePasskey(value) {
     if (typeof value !== "string") {
       throw new Error("Passkey harus berisi tepat 12 simbol.");
@@ -179,17 +199,27 @@ const MessageCrypto = {
     return letters;
   },
 
-  async encrypt(plaintext, secret, recipientId, challengeIndices) {
-    const generatedPasskey = await this.derivePasskey(
-      secret,
-      challengeIndices
-    );
+  async encrypt(plaintext, secret, recipientId, challengeIndices, expectedResponse) {
+    if (
+      !Array.isArray(challengeIndices)
+      || challengeIndices.length !== 4
+      || challengeIndices.some(index => !Number.isInteger(index) || index < 0 || index > 3)
+    ) {
+      throw new Error("Challenge harus terdiri dari 4 simbol yang valid.");
+    }
     const salt = this.randomBytes(16);
     const iv = this.randomBytes(12);
-    const keyBytes = await this.deriveBitsFromDeviceResponse(
-      generatedPasskey.response_indices,
-      salt
-    );
+    let keyBytes;
+    if (typeof expectedResponse === "string") {
+      // Passkey-only mode (v5): key derived from the device response only.
+      const responseIndices = Array.from(this.normalizePasskey(expectedResponse), letter => this.letters.indexOf(letter));
+      keyBytes = await this.deriveBitsFromDeviceResponse(responseIndices, salt);
+    } else {
+      // Legacy shared-secret mode (v3): key derived from secret + expected passkey.
+      const responseLetters = expectedResponse;
+      const messageSecret = `${secret}\u0000${responseLetters}`;
+      keyBytes = await this.deriveBits(messageSecret, salt, "message");
+    }
     const key = await crypto.subtle.importKey(
       "raw",
       keyBytes,
@@ -202,17 +232,26 @@ const MessageCrypto = {
         name: "AES-GCM",
         iv,
         tagLength: 128,
+        ...(typeof expectedResponse === "string"
+          ? {}
+          : { additionalData: this.encoder.encode(`enkripsih:v1:${recipientId}`) }),
       },
       key,
       this.encoder.encode(plaintext)
     );
-    return JSON.stringify({
-      v: 5,
+    const challengeLetters = challengeIndices.map(index => this.letters[index]).join("");
+    const envelope = {
+      v: typeof expectedResponse === "string" ? 5 : 3,
       salt: this.toBase64Url(salt),
       iv: this.toBase64Url(iv),
       ciphertext: this.toBase64Url(new Uint8Array(ciphertext)),
-      challenge: generatedPasskey.challenge_letters,
-    });
+      challenge: challengeLetters,
+    };
+    // v5: do NOT embed expected_response — receiver must supply passkey from hardware token.
+    if (typeof expectedResponse === "string" && envelope.v === 3) {
+      envelope.expected_response = expectedResponse;
+    }
+    return JSON.stringify(envelope);
   },
 
   async decrypt(envelopeText, secret, recipientId, passkey) {
@@ -235,6 +274,12 @@ const MessageCrypto = {
     if (envelope.v === 5) {
       if (typeof envelope.challenge !== "string" || !/^[TCXS]{4}$/.test(envelope.challenge)) {
         throw new Error("Challenge passkey pada pesan tidak valid.");
+      }
+      // Passkey-only mode: user MUST supply the 12-symbol response from their
+      // hardware passkey device. No embedded fallback — the device response
+      // is the only authorised decryption path.
+      if (typeof passkey !== "string" || !passkey.trim()) {
+        throw new Error("Respons perangkat passkey 12 simbol wajib dimasukkan.");
       }
       const responseIndices = Array.from(
         this.normalizePasskey(passkey),

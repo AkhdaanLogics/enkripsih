@@ -2,8 +2,14 @@
 Serial Bridge for Wemos D1 Mini / ESP32 to Enkripsih Web API
 Reads token calculation events from the Microcontroller over USB COM port
 and forwards them to the Enkripsih backend in real time.
+
+SECURITY: All requests are signed with HMAC-SHA256 using ENKRIPSIH_IOT_TOKEN
+to prevent unauthenticated injection via the serial bridge.
 """
 
+import hashlib
+import hmac
+import os
 import sys
 import time
 import requests
@@ -11,12 +17,21 @@ import serial
 import serial.tools.list_ports
 
 BACKEND_URL = "http://localhost:8000/api/iot/keybca/solve"
+_IOS_TOKEN = os.environ.get("ENKRIPSIH_IOT_TOKEN", "")
+
+
+def sign(payload: str) -> str:
+    """Compute HMAC-SHA256(payload, ENKRIPSIH_IOT_TOKEN)."""
+    return hmac.new(_IOS_TOKEN.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+
 
 def find_serial_ports():
     ports = serial.tools.list_ports.comports()
     return [p.device for p in ports]
 
 def run_bridge(port: str = None, baud: int = 115200):
+    if not _IOS_TOKEN:
+        print("[!] ENKRIPSIH_IOT_TOKEN tidak di-set — bridge akan mengirim tanpa sign (mode dev).")
     available = find_serial_ports()
     if not available:
         print("[!] Tidak ada port USB Serial (COM) yang terdeteksi.")
@@ -48,14 +63,30 @@ def run_bridge(port: str = None, baud: int = 115200):
                     part_chal = line.split("Challenge:")[1].split("->")[0].strip()
                     part_resp = line.split("Response:")[1].strip()
 
+                    device_id = f"KEYBCA-{port}"
+                    payload = f"{device_id}:{part_chal}:{part_resp}"
+                    signature = sign(payload) if _IOS_TOKEN else None
+
                     print(f"\n[>>>] Token Terdeteksi! Challenge: {part_chal} -> Response: {part_resp}")
 
-                    payload = {
-                        "device_id": f"KEYBCA-{port}",
+                    post_payload = {
+                        "device_id": device_id,
                         "challenge": part_chal,
-                        "token": part_resp
+                        "token": part_resp,
                     }
-                    res = requests.post(BACKEND_URL, json=payload, timeout=3)
+                    if signature:
+                        post_payload["hmac_signature"] = signature
+
+                    headers = {"Content-Type": "application/json"}
+                    if signature:
+                        headers["x-hmac-signature"] = signature
+
+                    res = requests.post(
+                        BACKEND_URL,
+                        json=post_payload,
+                        headers=headers,
+                        timeout=3
+                    )
                     if res.status_code == 200:
                         print("[OK] Berhasil diteruskan ke server Enkripsih!\n")
                     else:

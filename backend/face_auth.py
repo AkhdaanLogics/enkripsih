@@ -141,21 +141,17 @@ def verify_commander_face(image_base64: str, user_id: str = "CMD-01", threshold:
         
         captured_features = extract_face_features(face_roi)
         
-        # If not enrolled yet, auto-enroll this first face
+        # SECURITY FIX: do NOT auto-enroll the first face. Require explicit
+        # registration via register_commander_face() (admin-only action).
         if not user["face_enrolled"] or not user["face_template"]:
-            update_face_template(user_id, captured_features)
-            log_event("AUTH", "SUCCESS", f"Wajah Komandan pertama kali didaftarkan secara otomatis.")
+            log_event("AUTH", "DENIED", f"Wajah Komandan belum terdaftar — daftarkan dulu via /api/auth/register-face.")
             return {
-                "success": True,
-                "message": "Wajah Komandan terverifikasi dan didaftarkan sebagai master biometrik.",
+                "success": False,
+                "message": "Wajah Komandan belum terdaftar. Hubungi administrator untuk mendaftarkan biometrik.",
                 "face_detected": True,
-                "confidence": 98.5,
+                "confidence": 0.0,
                 "bounding_box": box,
-                "user": {
-                    "id": user["id"],
-                    "name": user["name"],
-                    "rank": user["rank"]
-                }
+                "user": None
             }
         
         # Compare with enrolled template

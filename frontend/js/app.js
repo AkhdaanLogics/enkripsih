@@ -185,6 +185,12 @@ function handleWebSocketEvent(event) {
     if (window.loadMessages) window.loadMessages();
   }
 
+  if (event.type === 'MESSAGE_UNLOCKED') {
+    AudioSys.accessGranted();
+    showToast(`Pesan [${event.message_id}] dibuka oleh receiver.`, 'info');
+    if (window.loadMessages) window.loadMessages();
+  }
+
 }
 
 // Tab Switching (Marked by 1px bottom accent line)
@@ -235,6 +241,11 @@ function switchTab(tabName) {
   document.querySelectorAll('.view-section').forEach(sec => {
     sec.classList.toggle('active', sec.id === `view-${tabName}`);
   });
+
+  document.body.classList.toggle('view-receiver', tabName === 'receiver');
+  document.body.classList.toggle('view-commander', tabName === 'commander');
+  document.body.classList.toggle('view-members', tabName === 'members');
+  document.body.classList.toggle('view-architecture', tabName === 'architecture');
 
   if (tabName === 'receiver' && window.loadMessages) {
     window.loadMessages();

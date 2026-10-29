@@ -3,6 +3,11 @@
  */
 const Receiver = {
   recipients: [],
+  _pollTimer: null,
+  _decrypting: false,
+  _decryptedTexts: new Map(),
+  _messages: [],
+  currentMessageId: null,
 
   init() {
     document.getElementById("btnRefreshReceiverMsgs")
@@ -13,77 +18,258 @@ const Receiver = {
     window.loadMessages = () => this.loadMessages();
     window.clearReceiverSensitiveData = () => this.clearSensitiveData();
     window.clearDecryptedMessages = () => this.clearSensitiveData();
+    this.startPolling();
+  },
+
+  startPolling() {
+    if (this._pollTimer) return;
+    this._pollTimer = setInterval(() => {
+      if (State.isLoggedIn && State.activeTab === "receiver" && !this._decrypting && !this.isEditingPasskey()) {
+        this.loadMessages();
+      }
+    }, 15_000);
   },
 
   clearSensitiveData() {
     const list = document.getElementById("receiverMessageList");
     list?.replaceChildren();
     this.recipients = [];
+    this._decryptedTexts.clear();
   },
 
-  async requestJSON(url, options) {
+  isEditingPasskey() {
+    const active = document.activeElement;
+    if (active && active.closest && active.closest(".passkey-symbol-picker")) return true;
+    const activePicker = document.querySelector(".passkey-symbol-picker");
+    if (activePicker) {
+      const filled = activePicker.querySelectorAll(".symbol-slot.filled").length;
+      if (filled > 0) return true;
+    }
+    return false;
+  },
+
+  async requestJSON(url, options, { allow401 = false } = {}) {
     const response = await fetch(url, options);
+    if (response.status === 401 && State.isLoggedIn) {
+      if (window.AppAuth && !allow401) AppAuth.logout("Sesi berakhir. Silakan masuk kembali.");
+      throw new Error("Sesi berakhir.");
+    }
     const data = await response.json();
     if (!response.ok) throw new Error(data.detail || "Permintaan gagal.");
     return data;
   },
 
   async loadMessages() {
-    const list = document.getElementById("receiverMessageList");
-    if (!list) return;
+    if (this._decrypting || this._loading) return;
+    const preserveSelection = !!this.currentMessageId;
+    const wasEditing = this.isEditingPasskey();
+    this._loading = true;
+
     try {
       const [messages, recipients] = await Promise.all([
         this.requestJSON("/api/messages"),
         this.requestJSON("/api/recipients"),
       ]);
+      if (this._decrypting) {
+        this._loading = false;
+        return;
+      }
       this.recipients = recipients.recipients;
+      const prevIds = (this._messages || []).map(m => m.id).join("|");
+      const nextIds = messages.messages.map(m => m.id).join("|");
+      this._messages = messages.messages;
+
       const badge = document.getElementById("receiverBadge");
       if (badge) {
         const locked = messages.messages.filter(message => message.status === "LOCKED").length;
         badge.textContent = locked ? `${locked} Baru` : `${messages.messages.length}`;
       }
-      list.replaceChildren();
-      if (!messages.messages.length) {
-        list.textContent = "Belum ada pesan untuk anggota.";
+
+      // If the user is actively typing a passkey into the open form, do NOT
+      // rebuild the list or the detail pane — that would wipe their input.
+      if (wasEditing) {
+        this._loading = false;
         return;
       }
-      for (const message of messages.messages) {
-        list.append(this.renderMessageCard(message));
+
+      // Only re-render the list when the message set actually changed.
+      const list = document.getElementById("receiverMessageList");
+      if (!list) {
+        this._loading = false;
+        return;
+      }
+      if (list.dataset.loadedIds !== nextIds) {
+        list.dataset.loadedIds = nextIds;
+        list.replaceChildren();
+        if (!messages.messages.length) {
+          list.textContent = "Belum ada pesan untuk anggota.";
+        } else {
+          for (const message of messages.messages) {
+            list.append(this.renderChatItem(message));
+          }
+        }
+      }
+
+      if (!messages.messages.length) return;
+      const stillThere = messages.messages.some(m => m.id === this.currentMessageId);
+      if (preserveSelection && stillThere) {
+        this.selectMessage(this.currentMessageId);
+      } else {
+        this.selectMessage(messages.messages[0].id);
       }
     } catch (error) {
       console.error("Load receiver messages error:", error);
       showToast(error.message || "Gagal memuat kotak masuk.", "error");
+    } finally {
+      this._loading = false;
     }
   },
 
-  renderMessageCard(message) {
-    const card = document.createElement("article");
-    card.className = `intel-card ${message.status.toLowerCase()}`;
-    card.id = `card-${message.id}`;
+  renderChatItem(message) {
+    const item = document.createElement("div");
+    item.className = `receiver-chat-item ${message.status === "LOCKED" ? "has-unread" : ""}`;
+    item.dataset.messageId = message.id;
+    item.role = "button";
 
-    const header = document.createElement("div");
-    header.className = "intel-header";
-    const identity = document.createElement("strong");
-    identity.textContent = message.id;
-    const recipient = document.createElement("span");
-    recipient.textContent = `Untuk ${message.target_unit}`;
-    const state = document.createElement("span");
-    state.className = "logo-badge";
-    state.textContent = {
+    const statusLabel = {
       LOCKED: "TERENKRIPSI",
+      UNLOCKED: "DIBUKA",
       BURNED: "DIHANCURKAN",
       LEGACY: "FORMAT LAMA",
     }[message.status] || message.status;
-    header.append(identity, recipient, state);
 
-    const body = document.createElement("div");
-    body.className = "intel-body";
-    const sentAt = document.createElement("p");
-    sentAt.textContent = `Dikirim ${new Date(message.created_at).toLocaleString("id-ID")}`;
-    body.append(sentAt);
+    const sender = document.createElement("div");
+    sender.className = "sender";
+
+    const displayName = message.id.slice(0, 8).toUpperCase();
+    const nameEl = document.createElement("span");
+    nameEl.className = "sender-name";
+    nameEl.textContent = displayName;
+
+    const meta = document.createElement("span");
+    meta.className = "sender-meta";
+    const timeEl = document.createElement("span");
+    timeEl.className = "sender-time";
+    timeEl.textContent = new Date(message.created_at).toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const statusEl = document.createElement("span");
+    statusEl.className = "sender-status";
+    statusEl.textContent = statusLabel;
+    meta.append(timeEl, statusEl);
+
+    sender.append(nameEl, meta);
+    item.append(sender);
+
+    item.addEventListener("click", () => this.selectMessage(message.id));
+    return item;
+  },
+
+  selectMessage(messageId) {
+    const messages = this._messages || [];
+    const message = messages.find(m => m.id === messageId);
+    if (!message) return;
+
+    const noChat = document.getElementById("receiverNoChat");
+    const container = document.getElementById("receiverMessageContainer");
+
+    // If the same message is already open, don't wipe and rebuild the detail
+    // pane (that causes the flicker). Just make sure it is visible.
+    const alreadyOpen =
+      this.currentMessageId === messageId &&
+      container &&
+      container.style.display !== "none" &&
+      noChat &&
+      noChat.style.display === "none";
+    if (alreadyOpen) {
+      this.currentMessageId = messageId;
+      return;
+    }
+
+    this.currentMessageId = messageId;
+
+    document.querySelectorAll(".receiver-chat-item").forEach(item => {
+      item.classList.toggle("active", item.dataset.messageId === messageId);
+    });
+
+    if (noChat) noChat.style.display = "none";
+    if (container) container.style.display = "flex";
+
+    this.renderMessageDetail(message);
+  },
+
+  renderMessageDetail(message) {
+    const header = document.getElementById("receiverMessageHeader");
+    const body = document.getElementById("receiverMessageBody");
+    const footer = document.getElementById("receiverMessageFooter");
+    if (!header || !body || !footer) return;
+
+    header.replaceChildren();
+    body.replaceChildren();
+    footer.replaceChildren();
+
+    const contactInfo = document.createElement("div");
+    contactInfo.className = "contact-info";
+    const avatar = document.createElement("div");
+    avatar.className = "contact-avatar";
+    avatar.textContent = "★";
+    const nameWrap = document.createElement("div");
+    nameWrap.className = "contact-name-wrap";
+    const nameEl = document.createElement("div");
+    nameEl.className = "contact-name";
+    nameEl.textContent = message.target_unit || message.id.slice(0, 8).toUpperCase();
+    const metaEl = document.createElement("div");
+    metaEl.className = "contact-meta";
+    metaEl.textContent = `ID: ${message.id.slice(0, 12)}... · ${new Date(message.created_at).toLocaleString("id-ID")}`;
+    nameWrap.append(nameEl, metaEl);
+    contactInfo.append(avatar, nameWrap);
+
+    const statusBadge = document.createElement("span");
+    statusBadge.className = `status-badge ${message.status.toLowerCase()}`;
+    statusBadge.textContent = {
+      LOCKED: "TERENKRIPSI",
+      UNLOCKED: "DIBUKA",
+      BURNED: "DIHANCURKAN",
+      LEGACY: "FORMAT LAMA",
+    }[message.status] || message.status;
+
+    const headerActions = document.createElement("div");
+    headerActions.className = "receiver-header-actions";
+    headerActions.append(statusBadge);
+    const refreshBtn = document.createElement("button");
+    refreshBtn.type = "button";
+    refreshBtn.className = "btn-tactical btn-tactical-secondary";
+    refreshBtn.textContent = "Refresh";
+    refreshBtn.addEventListener("click", () => this.loadMessages());
+    headerActions.append(refreshBtn);
+
+    header.append(contactInfo, headerActions);
 
     if (message.status === "LOCKED") {
       body.append(this.renderUnlockForm(message));
+      const burnButton = document.createElement("button");
+      burnButton.type = "button";
+      burnButton.className = "btn-tactical btn-tactical-secondary";
+      burnButton.textContent = "Sudah dibuka — hapus ciphertext";
+      burnButton.disabled = true;
+      burnButton.title = "Tombol aktif setelah pesan berhasil dibuka";
+      burnButton.addEventListener("click", () => this.burnMessage(message.id));
+      body.append(burnButton);
+      message._burnButton = burnButton;
+    } else if (message.status === "UNLOCKED") {
+      const cached = this._decryptedTexts.get(message.id);
+      if (cached) {
+        body.append(this.renderDecryptedBox(cached));
+      } else {
+        body.append(this.renderDecryptedNote());
+      }
+      const burnButton = document.createElement("button");
+      burnButton.type = "button";
+      burnButton.className = "btn-tactical btn-tactical-secondary";
+      burnButton.textContent = "Hapus ciphertext";
+      burnButton.addEventListener("click", () => this.burnMessage(message.id));
+      body.append(burnButton);
     } else if (message.status === "LEGACY") {
       const note = document.createElement("p");
       note.textContent = "Pesan lama tidak dapat dibuka dengan sistem kunci anggota yang baru.";
@@ -93,16 +279,25 @@ const Receiver = {
       note.textContent = "Ciphertext pesan telah dihapus.";
       body.append(note);
     }
-    if (message.status === "LOCKED") {
-      const burnButton = document.createElement("button");
-      burnButton.type = "button";
-      burnButton.className = "btn-tactical btn-tactical-secondary";
-      burnButton.textContent = "Hapus ciphertext";
-      burnButton.addEventListener("click", () => this.burnMessage(message.id));
-      body.append(burnButton);
-    }
-    card.append(header, body);
-    return card;
+  },
+
+  renderDecryptedBox(plaintext) {
+    const box = document.createElement("section");
+    box.className = "receiver-message-bubble incoming";
+    const heading = document.createElement("div");
+    heading.className = "bubble-heading";
+    heading.textContent = "Pesan berhasil dibuka di perangkat ini";
+    const text = document.createElement("p");
+    text.textContent = plaintext;
+    text.className = "bubble-text";
+    box.append(heading, text);
+    return box;
+  },
+
+  renderDecryptedNote() {
+    const note = document.createElement("p");
+    note.textContent = "Pesan ini sudah dibuka. Ciphertext tetap tersimpan sampai Anda menghapusnya. Buka kembali pesan untuk melihat isinya.";
+    return note;
   },
 
   renderUnlockForm(message) {
@@ -129,57 +324,141 @@ const Receiver = {
     }
 
     let passkeyInput = null;
-    if (message.passkey_challenge) {
+    const showSymbolPicker = passkeyOnly && message.passkey_challenge;
+    if (showSymbolPicker) {
       const challenge = document.createElement("p");
       challenge.className = "passkey-challenge";
       challenge.textContent = `Challenge passkey: ${message.passkey_challenge
-        .split("")
-        .map(letter => MessageCrypto.symbols[MessageCrypto.letters.indexOf(letter)])
-        .join(" ")}`;
+        ? message.passkey_challenge
+            .split("")
+            .map(letter => MessageCrypto.symbols[MessageCrypto.letters.indexOf(letter)])
+            .join(" ")
+        : "(otomatis)"}`;
       const passkeyHelp = document.createElement("p");
-      passkeyHelp.textContent = passkeyOnly
-        ? "Masukkan challenge ke perangkat passkey, lalu ketik respons 12 simbol yang muncul di perangkat."
-        : "Masukkan urutan 4 simbol challenge ke perangkat passkey. Ketik respons 12 simbol yang muncul di perangkat.";
-      const passkeyLabel = document.createElement("label");
-      passkeyLabel.className = "form-label";
+      passkeyHelp.className = "passkey-help";
+      passkeyHelp.textContent = "Masukkan challenge ke perangkat passkey, lalu ketuk 12 simbol respons yang tampil di bawah.";
       passkeyInput = document.createElement("input");
-      passkeyInput.type = "text";
-      passkeyInput.autocomplete = "off";
-      passkeyInput.className = "form-input";
-      passkeyInput.placeholder = "Respons dari perangkat";
+      passkeyInput.type = "hidden";
       passkeyInput.id = `receiver-passkey-${message.id}`;
-      passkeyLabel.htmlFor = passkeyInput.id;
-      const passkeyCount = document.createElement("output");
-      passkeyCount.className = "passkey-count";
-      passkeyCount.setAttribute("aria-live", "polite");
-      passkeyCount.textContent = "0/12 simbol";
-      passkeyInput.addEventListener("input", () => {
-        const compact = passkeyInput.value.toUpperCase().replace(/\s+/g, "");
-        const letters = Array.from(compact, character => {
-          const symbolIndex = MessageCrypto.symbols.indexOf(character);
-          return symbolIndex === -1 ? character : MessageCrypto.letters[symbolIndex];
-        }).join("");
-        const valid = /^[TCXS]*$/.test(letters);
-        passkeyCount.textContent = valid
-          ? `${letters.length}/12 simbol${letters.length === 12 ? " — siap diperiksa" : ""}`
-          : "Gunakan hanya T, C, X, S atau simbol perangkat.";
-        passkeyCount.dataset.valid = String(valid && letters.length === 12);
-      });
+      passkeyInput.name = "passkey_response";
       wrapper.append(challenge, passkeyHelp);
-      passkeyLabel.textContent = "Respons passkey 12 simbol";
-      passkeyLabel.append(passkeyInput);
-      wrapper.append(passkeyLabel, passkeyCount);
+      wrapper.append(this.renderSymbolPicker(message, passkeyOnly, passkeyInput, "", wrapper));
     }
 
     const button = document.createElement("button");
     button.type = "button";
     button.className = "btn-tactical btn-tactical-primary message-open-action";
     button.textContent = "Buka Pesan";
+    button.disabled = passkeyOnly;
     button.addEventListener("click", () =>
       this.unlockMessage(message, input, passkeyInput, wrapper)
     );
     wrapper.append(button);
     return wrapper;
+  },
+
+  renderSymbolPicker(message, passkeyOnly, passkeyInput, initialValue = "", wrapper) {
+    const container = document.createElement("div");
+    container.className = "passkey-symbol-picker";
+
+    const state = { letters: "" };
+    const totalSlots = 12;
+    const slotsGrid = document.createElement("div");
+    slotsGrid.className = "symbol-grid";
+    const slotElements = [];
+    for (let i = 0; i < totalSlots; i++) {
+      const slot = document.createElement("button");
+      slot.type = "button";
+      slot.className = "symbol-slot";
+      slot.dataset.slot = String(i);
+      slot.setAttribute("aria-label", `Simbol ${i + 1} dari 12`);
+      slot.innerHTML = "·";
+      slot.addEventListener("click", () => {
+        // Clicking a filled slot removes the last entered symbol (undo).
+        if (state.letters.length > 0) {
+          state.letters = state.letters.slice(0, -1);
+        }
+        render();
+      });
+      slotElements.push(slot);
+      slotsGrid.append(slot);
+    }
+    container.append(slotsGrid);
+
+    const render = () => {
+      slotElements.forEach((slot, i) => {
+        const letter = state.letters[i];
+        if (letter) {
+          slot.classList.add("filled");
+          slot.dataset.sym = letter;
+          slot.innerHTML = PASSKEY_SVG.icons[letter];
+        } else {
+          slot.classList.remove("filled");
+          slot.removeAttribute("data-sym");
+          slot.innerHTML = "·";
+        }
+      });
+      if (passkeyInput) passkeyInput.value = state.letters;
+      const count = container.querySelector(".passkey-count");
+      if (count) {
+        const full = state.letters.length === 12;
+        count.textContent = `${state.letters.length}/12 simbol${full ? " — siap dibuka" : ""}`;
+        count.dataset.valid = String(full);
+      }
+      const openBtn = wrapper && wrapper.querySelector(".message-open-action");
+      if (openBtn) {
+        openBtn.disabled = state.letters.length !== 12;
+      }
+    };
+
+    const palette = document.createElement("div");
+    palette.className = "symbol-palette";
+    for (let i = 0; i < 4; i++) {
+      const letter = MessageCrypto.letters[i];
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "palette-btn";
+      btn.dataset.sym = letter;
+      btn.setAttribute("aria-label", PASSKEY_SVG.label[letter] || letter);
+      btn.innerHTML = PASSKEY_SVG.icons[letter];
+      const label = document.createElement("span");
+      label.className = "palette-label";
+      label.textContent = PASSKEY_SVG.label[letter] || letter;
+      btn.append(label);
+      btn.addEventListener("click", () => {
+        if (state.letters.length >= 12) return;
+        state.letters += letter;
+        render();
+      });
+      palette.append(btn);
+    }
+    container.append(palette);
+
+    if (initialValue && passkeyInput) {
+      const letters = initialValue.replace(/\s+/g, "").toUpperCase().slice(0, 12);
+      if (MessageCrypto.isPasskeyValid(letters)) {
+        state.letters = letters;
+      }
+    }
+
+    const countEl = document.createElement("output");
+    countEl.className = "passkey-count";
+    countEl.setAttribute("aria-live", "polite");
+    countEl.textContent = `0/12 simbol`;
+    container.append(countEl);
+
+    const clearBtn = document.createElement("button");
+    clearBtn.type = "button";
+    clearBtn.className = "btn-tactical btn-tactical-secondary passkey-clear";
+    clearBtn.textContent = "Hapus semua";
+    clearBtn.addEventListener("click", () => {
+      state.letters = "";
+      render();
+    });
+    container.append(clearBtn);
+
+    render();
+    return container;
   },
 
   async unlockMessage(message, input, passkeyInput, wrapper) {
@@ -191,72 +470,47 @@ const Receiver = {
       showToast("Secret key harus minimal 32 karakter.", "warning");
       return;
     }
-    if (!passkeyInput?.value.trim() && passkeyOnly) {
-      showToast("Masukkan respons 12 simbol dari perangkat passkey.", "warning");
-      return;
+    const passkeyValue = (passkeyInput?.value || "").trim().toUpperCase();
+    if (passkeyOnly) {
+      if (!MessageCrypto.isPasskeyValid(passkeyValue)) {
+        showToast("Wajib memilih 12 simbol respons dari perangkat. Tekan 4 tombol palet secara berurutan.", "warning");
+        return;
+      }
     }
-    if (
-      passkeyOnly &&
-      passkeyInput &&
-      passkeyInput.parentElement.nextElementSibling?.dataset.valid !== "true"
-    ) {
-      const count = passkeyInput.value.toUpperCase().replace(/\s+/g, "").length;
-      showToast(`Respons passkey harus tepat 12 simbol; yang dimasukkan ${count}.`, "warning");
-      return;
-    }
-    const recipient = this.recipients.find(item => item.id === message.recipient_id);
-    if (!recipient) {
-      showToast("Kunci penerima tidak terdaftar di aplikasi ini.", "error");
-      return;
-    }
-    const button = wrapper.querySelector("button");
+    if (this._decrypting) return;
+    this._decrypting = true;
+    const button = wrapper.querySelector(".message-open-action");
     button.disabled = true;
     button.textContent = "Membuka pesan...";
     try {
-      if (requiresSecret) {
-        const verifier = await MessageCrypto.verifier(secret, recipient.salt);
-        const verification = await this.requestJSON(
-          `/api/recipients/${encodeURIComponent(recipient.id)}/verify`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ verifier }),
-          }
-        );
-        if (!verification.valid) {
-          throw new Error("Secret key tidak cocok dengan anggota penerima.");
-        }
-      }
-
-      const packet = await this.requestJSON(
-        `/api/messages/${encodeURIComponent(message.id)}/ciphertext`
-      );
-      if (packet.recipient_id !== recipient.id) {
-        throw new Error("Kunci ini bukan milik penerima pesan.");
-      }
-      const plaintext = await MessageCrypto.decrypt(
-        packet.paket,
-        secret,
-        recipient.id,
-        passkeyInput?.value.trim()
-      );
-      const content = document.createElement("section");
-      content.className = "decrypted-intel-box";
-      const heading = document.createElement("strong");
-      heading.textContent = "Pesan berhasil dibuka di perangkat ini";
-      const text = document.createElement("p");
-      text.textContent = plaintext;
-      content.append(heading, text);
+      // Use backend decrypt endpoint (fast, PBKDF2 runs on server, owner-check included)
+      const passkeyForDecrypt = passkeyValue;
+      const decryptRes = await this.requestJSON("/api/messages/decrypt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message_id: message.id,
+          passkey_letters: passkeyForDecrypt,
+        }),
+      });
+      const decryptedText = decryptRes.plaintext;
+      this._decryptedTexts.set(message.id, decryptedText);
+      const content = this.renderDecryptedBox(decryptedText);
       wrapper.replaceChildren(content);
       if (input) input.value = "";
       secret = "";
       AudioSys.accessGranted();
       showToast(
         passkeyOnly
-          ? "Passkey cocok. Pesan dibuka di browser ini."
-          : "Kunci cocok. Pesan didekripsi di browser ini.",
+          ? "Passkey cocok. Pesan dibuka di perangkat ini."
+          : "Kunci cocok. Pesan didekripsi di perangkat ini.",
         "success"
       );
+      if (message._burnButton) {
+        message._burnButton.disabled = false;
+        message._burnButton.textContent = "Hapus ciphertext";
+      }
+      message.status = "UNLOCKED";
     } catch (error) {
       console.error("Message decryption error:", error);
       if (input) input.value = "";
@@ -269,6 +523,7 @@ const Receiver = {
       AudioSys.accessDenied();
     } finally {
       secret = "";
+      this._decrypting = false;
     }
   },
 
@@ -279,6 +534,7 @@ const Receiver = {
         method: "POST",
       });
       if (result.success) {
+        this._decryptedTexts.delete(messageId);
         showToast("Ciphertext pesan telah dihapus.", "success");
         await this.loadMessages();
       }

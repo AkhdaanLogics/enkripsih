@@ -19,7 +19,7 @@ from psycopg.rows import dict_row
 
 from .key_protection import seal, unseal
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "enkripsih.db")
+DB_PATH = os.environ.get("ENKRIPSIH_DB_PATH") or os.path.join(os.path.dirname(__file__), "enkripsih.db")
 DB_KEY_PURPOSE = b"EKY1"
 LEGACY_DPAPI_KEY_SUFFIX = ".key.dpapi"
 PASSPHRASE_KEY_SUFFIX = ".key.argon2"
@@ -344,6 +344,7 @@ def init_db(
     *,
     confirm_plaintext_migration: bool = False,
     passphrase: str | None = None,
+    reset_data: bool = False,
 ):
     if os.environ.get("DATABASE_URL"):
         conn = get_connection()
@@ -368,12 +369,17 @@ def init_db(
                     recipient_id TEXT NOT NULL,
                     paket TEXT NOT NULL,
                     status TEXT NOT NULL,
-                    created_at TEXT NOT NULL
+                    created_at TEXT NOT NULL,
+                    decrypted_at TEXT
                 )
             """)
             conn.execute("""
                 ALTER TABLE messages
                 ADD COLUMN IF NOT EXISTS recipient_id TEXT NOT NULL DEFAULT ''
+            """)
+            conn.execute("""
+                ALTER TABLE messages
+                ADD COLUMN IF NOT EXISTS decrypted_at TEXT
             """)
             conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_messages_created_at
@@ -391,11 +397,12 @@ def init_db(
             conn.execute("""
                 UPDATE messages SET status = 'LOCKED'
                 WHERE status = 'UNLOCKED' AND recipient_id != ''
+                AND decrypted_at IS NULL
             """)
             conn.execute("UPDATE messages SET paket = '' WHERE status = 'BURNED'")
             for column in (
                 "expected_response", "plaintext", "subject", "priority",
-                "challenge_letters", "challenge_symbols", "decrypted_at",
+                "challenge_letters", "challenge_symbols",
             ):
                 conn.execute(f"ALTER TABLE messages DROP COLUMN IF EXISTS {column}")
             conn.execute("""
@@ -440,7 +447,8 @@ def init_db(
                     expires_at DOUBLE PRECISION NOT NULL,
                     principal_id TEXT NOT NULL DEFAULT 'CMD-01',
                     role TEXT NOT NULL DEFAULT 'COMMANDER',
-                    must_change_password INTEGER NOT NULL DEFAULT 0
+                    must_change_password INTEGER NOT NULL DEFAULT 0,
+                    face_verified INTEGER NOT NULL DEFAULT 0
                 )
             """)
             conn.execute("""
@@ -454,6 +462,10 @@ def init_db(
             conn.execute("""
                 ALTER TABLE auth_sessions
                 ADD COLUMN IF NOT EXISTS must_change_password INTEGER NOT NULL DEFAULT 0
+            """)
+            conn.execute("""
+                ALTER TABLE auth_sessions
+                ADD COLUMN IF NOT EXISTS face_verified INTEGER NOT NULL DEFAULT 0
             """)
             conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_auth_sessions_principal
@@ -511,7 +523,8 @@ def init_db(
         recipient_id TEXT NOT NULL,
         paket TEXT NOT NULL,
         status TEXT NOT NULL,
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        decrypted_at TEXT
     )
     """)
     message_columns = {
@@ -536,6 +549,7 @@ def init_db(
     cursor.execute("""
     UPDATE messages SET status = 'LOCKED'
     WHERE status = 'UNLOCKED' AND recipient_id != ''
+      AND decrypted_at IS NULL
     """)
     cursor.execute("UPDATE messages SET paket = '' WHERE status = 'BURNED'")
     message_columns = {
@@ -543,7 +557,7 @@ def init_db(
     }
     for column in (
         "expected_response", "plaintext", "subject", "priority",
-        "challenge_letters", "challenge_symbols", "decrypted_at",
+        "challenge_letters", "challenge_symbols",
     ):
         if column in message_columns:
             cursor.execute(f"ALTER TABLE messages DROP COLUMN {column}")
@@ -573,7 +587,8 @@ def init_db(
         expires_at REAL NOT NULL,
         principal_id TEXT NOT NULL DEFAULT 'CMD-01',
         role TEXT NOT NULL DEFAULT 'COMMANDER',
-        must_change_password INTEGER NOT NULL DEFAULT 0
+        must_change_password INTEGER NOT NULL DEFAULT 0,
+        face_verified INTEGER NOT NULL DEFAULT 0
     )
     """)
     auth_session_columns = {
@@ -583,6 +598,7 @@ def init_db(
         ("principal_id", "TEXT NOT NULL DEFAULT 'CMD-01'"),
         ("role", "TEXT NOT NULL DEFAULT 'COMMANDER'"),
         ("must_change_password", "INTEGER NOT NULL DEFAULT 0"),
+        ("face_verified", "INTEGER NOT NULL DEFAULT 0"),
     ):
         if column not in auth_session_columns:
             cursor.execute(f"ALTER TABLE auth_sessions ADD COLUMN {column} {declaration}")
@@ -633,15 +649,16 @@ def save_auth_session(
     principal_id: str = "CMD-01",
     role: str = "COMMANDER",
     must_change_password: bool = False,
+    face_verified: bool = False,
 ) -> None:
     with _managed_connection() as conn:
         conn.execute(
             """
             INSERT INTO auth_sessions (
-                token, expires_at, principal_id, role, must_change_password
-            ) VALUES (?, ?, ?, ?, ?)
+                token, expires_at, principal_id, role, must_change_password, face_verified
+            ) VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (token, expires_at, principal_id, role, int(must_change_password)),
+            (token, expires_at, principal_id, role, int(must_change_password), int(face_verified)),
         )
 
 
@@ -649,7 +666,7 @@ def get_auth_session(token: str) -> dict | None:
     with _managed_connection() as conn:
         row = conn.execute(
             """
-            SELECT token, expires_at, principal_id, role, must_change_password
+            SELECT token, expires_at, principal_id, role, must_change_password, face_verified
             FROM auth_sessions WHERE token = ?
             """,
             (token,),
@@ -685,6 +702,14 @@ def update_auth_session_expiry(token: str, expires_at: float) -> None:
         conn.execute(
             "UPDATE auth_sessions SET expires_at = ? WHERE token = ?",
             (expires_at, token),
+        )
+
+
+def mark_face_verified(token: str) -> None:
+    with _managed_connection() as conn:
+        conn.execute(
+            "UPDATE auth_sessions SET face_verified = 1 WHERE token = ?",
+            (token,),
         )
 
 
@@ -876,6 +901,57 @@ def burn_message(msg_id: str):
             paket = ''
         WHERE id = ?
         """, (msg_id,))
+
+
+def mark_message_decrypted(msg_id: str, recipient_id: str) -> bool:
+    """Marks a message as successfully decrypted by a receiver."""
+    with _managed_connection() as conn:
+        row = conn.execute(
+            "SELECT id, recipient_id FROM messages WHERE id = ?", (msg_id,)
+        ).fetchone()
+        if row is None:
+            return False
+        if row["recipient_id"] != recipient_id:
+            return False
+        conn.execute("""
+            UPDATE messages
+            SET status = 'UNLOCKED', decrypted_at = ?
+            WHERE id = ?
+        """, (datetime.now().isoformat(), msg_id))
+        return True
+
+
+def delete_recipient(recipient_id: str) -> int:
+    """Delete a recipient and cascade delete all their messages and accounts.
+    Returns the number of messages deleted."""
+    with _managed_connection() as conn:
+        try:
+            msg_count = conn.execute(
+                "SELECT COUNT(*) FROM messages WHERE recipient_id = ?", (recipient_id,)
+            ).fetchone()[0]
+        except Exception:
+            msg_count = 0
+        conn.execute("DELETE FROM messages WHERE recipient_id = ?", (recipient_id,))
+        conn.execute("DELETE FROM receiver_accounts WHERE recipient_id = ?", (recipient_id,))
+        conn.execute("DELETE FROM recipient_keys WHERE id = ?", (recipient_id,))
+        return msg_count
+
+
+def reissue_recipient_key(recipient_id: str, new_salt: str, new_verifier: str) -> bool:
+    """Update a recipient's salt and verifier (key rotation). Old ciphertext still decryptable
+    with the old key because the envelope stores salt+verifier."""
+    with _managed_connection() as conn:
+        cursor = conn.execute("""
+            UPDATE recipient_keys SET salt = ?, verifier = ? WHERE id = ?
+        """, (new_salt, new_verifier, recipient_id))
+        return cursor.rowcount == 1
+
+
+def get_messages_count_for_recipient(recipient_id: str) -> int:
+    with _managed_connection() as conn:
+        return conn.execute(
+            "SELECT COUNT(*) FROM messages WHERE recipient_id = ?", (recipient_id,)
+        ).fetchone()[0]
 
 
 def get_commander_profile(user_id: str = "CMD-01"):

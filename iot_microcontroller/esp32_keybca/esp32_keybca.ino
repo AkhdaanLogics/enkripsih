@@ -24,7 +24,7 @@
 Adafruit_SSD1306 display(128, 64, &Wire, -1);
 
 // ===== Kunci rahasia: HARUS sama dengan di Backend Enkripsih =====
-const char SECRET_KEY[] = "GANTI_KUNCI_RAHASIA_INI";
+const char SECRET_KEY[] = "ugCC-4DHQ8fXxcAJ7hkO17TWkp2oi3-s6AUc1GVzf0w";
 const int CHAL_LEN = 4;    // panjang challenge
 const int RESP_LEN = 12;   // panjang response
 

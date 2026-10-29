@@ -8,12 +8,16 @@ import asyncio
 import hmac
 import hashlib
 import secrets
+import sys
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import List, Optional, Any
 from urllib.parse import urlsplit
 import re
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -23,12 +27,14 @@ from .database import (
     init_db, log_event, save_message, get_messages,
     get_message_by_id, burn_message, register_recipient_key,
     get_recipient_keys, get_recipient_key,
+    delete_recipient, reissue_recipient_key, get_messages_count_for_recipient,
     get_commander_profile, save_auth_session,
     get_auth_session, delete_auth_session, delete_auth_sessions_for_principal,
     update_auth_session_password_change, update_auth_session_expiry,
     change_receiver_password,
     get_receiver_account, provision_receiver_account,
     get_login_lockout, record_failed_login, clear_login_lockout,
+    mark_message_decrypted,
 )
 from .crypto_engine import (
     calculate_response_symbols, response_to_string,
@@ -57,17 +63,39 @@ async def lifespan(_: FastAPI):
             "ENKRIPSIH_PASSWORD belum diatur atau kurang dari 16 karakter. "
             "Jalankan aplikasi lewat run.py untuk memasukkan password."
         )
+    keybca_secret = os.environ.get("ENKRIPSIH_KEYBCA_SECRET", "")
+    if len(keybca_secret) < 16:
+        raise RuntimeError(
+            "ENKRIPSIH_KEYBCA_SECRET belum diatur atau kurang dari 16 karakter. "
+            "Jalankan aplikasi lewat run.py untuk memasukkan secret."
+        )
     init_db(
         confirm_plaintext_migration=os.environ.get("ENKRIPSIH_CONFIRM_DB_MIGRATION") == "yes",
         passphrase=os.environ.get("ENKRIPSIH_DB_PASSPHRASE"),
     )
     yield
+docs_enabled = os.environ.get("ENKRIPSIH_ENABLE_DOCS", "").lower() in {"1", "true", "yes"}
 app = FastAPI(
     title="ENKRIPSIH",
     description="Encrypted message delivery for registered members.",
     version="2.0.0",
     lifespan=lifespan,
+    docs_url="/docs" if docs_enabled else None,
+    redoc_url="/redoc" if docs_enabled else None,
+    openapi_url="/openapi.json" if docs_enabled else None,
 )
+
+
+@app.exception_handler(Exception)
+async def _global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    print(f"[500] {request.method} {request.url.path}: {exc!r}", file=sys.stderr)
+    traceback.print_exception(type(exc), exc, exc.__traceback__)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error. Periksa log server untuk detail traceback."},
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 def _valid_session(token: Optional[str]) -> bool:
@@ -88,6 +116,7 @@ def _session_principal(token: Optional[str]) -> dict | None:
             "principal_id": session["principal_id"],
             "role": session["role"],
             "must_change_password": bool(session["must_change_password"]),
+            "face_verified": bool(session["face_verified"]),
         }
 
     session = active_sessions.get(token)
@@ -100,6 +129,7 @@ def _session_principal(token: Optional[str]) -> dict | None:
         "principal_id": session["principal_id"],
         "role": session["role"],
         "must_change_password": session["must_change_password"],
+        "face_verified": session.get("face_verified", False),
     }
 
 
@@ -133,14 +163,20 @@ def _touch_session(token: str) -> None:
 
 
 def _receiver_allowed_path(path: str, method: str) -> bool:
-    if path in {"/api/auth/change-password", "/api/auth/logout"}:
+    if path in {"/api/auth/change-password", "/api/auth/logout", "/api/auth/activity"}:
         return method == "POST"
     if path in {"/api/messages", "/api/recipients"}:
         return method == "GET"
     if re.fullmatch(r"/api/recipients/[^/]+/verify", path):
         return method == "POST"
-    if re.fullmatch(r"/api/messages/[^/]+(?:/ciphertext)?", path):
+    if re.fullmatch(r"/api/messages/[^/]+(?:/ciphertext)?", path) and path != "/api/messages/decrypt":
         return method == "GET"
+    if re.fullmatch(r"/api/messages/[^/]+/unlock", path):
+        return method == "POST"
+    if re.fullmatch(r"/api/messages/[^/]+/burn", path):
+        return method == "POST"
+    if path == "/api/messages/decrypt":
+        return method == "POST"
     return False
 
 
@@ -177,8 +213,13 @@ async def protect_api(request: Request, call_next):
                 )
             if (
                 principal["must_change_password"]
+                and not re.search(
+                    r"^/api/messages/[^/]+/(?:unlock|burn)$",
+                    request.url.path,
+                )
                 and request.url.path not in {
                     "/api/auth/change-password", "/api/auth/logout",
+                    "/api/auth/activity", "/api/messages/decrypt",
                 }
             ):
                 return JSONResponse(
@@ -198,6 +239,21 @@ async def protect_api(request: Request, call_next):
     response = await call_next(request)
     if request.url.path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-store"
+    # Security response headers (applies to all responses)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self'; "
+        "img-src 'self' data:; "
+        "connect-src 'self'; "
+        "font-src 'self'; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'"
+    )
     if refreshed_session_token:
         response.set_cookie(
             SESSION_COOKIE,
@@ -279,8 +335,6 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(max_length=128)
 
 class SendMessageRequest(BaseModel):
-    sender_id: Optional[str] = "CMD-01"
-    sender_name: Optional[str] = "Kolonel M. Haris"
     recipient_id: str
     paket: str
 
@@ -294,11 +348,13 @@ class VerifyRecipientKeyRequest(BaseModel):
 
 class KeyBCACalculateRequest(BaseModel):
     challenge: Any # can be string 'TCXS' or list [0,1,2,3]
+    hmac_signature: Optional[str] = None  # HMAC-SHA256 of challenge using ENKRIPSIH_IOT_TOKEN
 
 class IoTSolveRequest(BaseModel):
     device_id: Optional[str] = "WEMOS-D1-MINI"
     challenge: str
     token: str
+    hmac_signature: Optional[str] = None  # HMAC-SHA256 of f"{device_id}:{challenge}:{token}"
 
 # --- WebSocket Endpoint ---
 @app.websocket("/ws")
@@ -306,17 +362,15 @@ async def websocket_endpoint(websocket: WebSocket):
     session_token = websocket.cookies.get(SESSION_COOKIE)
     principal = _session_principal(session_token)
     origin = websocket.headers.get("origin")
+    if not origin:
+        await websocket.close(code=1008, reason="Origin header wajib ada.")
+        return
     expected_scheme = "https" if websocket.url.scheme == "wss" else "http"
-    parsed_origin = urlsplit(origin) if origin else None
+    parsed_origin = urlsplit(origin)
     if (
         principal is None
-        or (
-            parsed_origin is not None
-            and (
-                parsed_origin.scheme != expected_scheme
-                or parsed_origin.netloc != websocket.url.netloc
-            )
-        )
+        or parsed_origin.scheme != expected_scheme
+        or parsed_origin.netloc != websocket.url.netloc
     ):
         await websocket.close(code=1008, reason="Login diperlukan.")
         return
@@ -367,6 +421,7 @@ def login(req: LoginRequest, request: Request, response: Response):
         "principal_id": "CMD-01",
         "role": "COMMANDER",
         "must_change_password": False,
+        "face_verified": False,
     }
     _store_session(token, expires_at, principal)
     _set_session_cookie(response, request, token)
@@ -393,11 +448,44 @@ def _set_session_cookie(response: Response, request: Request, token: str) -> Non
 def _login_lockout_id(request: Request, account_id: str | None) -> str:
     if account_id:
         return f"account:{account_id.lower()}"
+    # Security: only trust X-Forwarded-For when the request genuinely originated
+    # from a trusted proxy.  In standalone uvicorn (host="127.0.0.1") there is
+    # no reverse proxy, so the real client IP is request.client.host.
+    # Trusting a client-supplied XFF without a trusted proxy in front would let
+    # an attacker rotate IPs per-request and bypass the 5-attempt lockout.
     client_host = request.client.host if request.client else "unknown"
-    forwarded = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-    if forwarded:
-        return f"ip:{forwarded}"
+    # Only honor XFF behind a trusted proxy; detect this via a single hop
+    # from a loopback/10/172.16/192.168 origin OR when explicitly configured.
+    trusted_xff = _is_trusted_proxy(request)
+    if trusted_xff:
+        forwarded = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+        if forwarded and _looks_like_ip(forwarded):
+            return f"ip:{forwarded}"
     return f"ip:{client_host}"
+
+
+def _is_trusted_proxy(request: Request) -> bool:
+    """Return True only if the hop *before* the origin server is a known proxy."""
+    if request.client is None:
+        return False
+    hop_ip = request.client.host
+    # Loopback / private ranges are considered trusted hops (e.g., nginx on localhost)
+    return (
+        hop_ip.startswith("127.")
+        or hop_ip == "::1"
+        or hop_ip.startswith("10.")
+        or hop_ip.startswith("172.")
+        or hop_ip.startswith("192.168.")
+    )
+
+
+def _looks_like_ip(value: str) -> bool:
+    import ipaddress
+    try:
+        ipaddress.ip_address(value)
+        return True
+    except ValueError:
+        return False
 
 
 def _password_hash(password: str, salt: bytes) -> str:
@@ -436,6 +524,20 @@ def _handle_failed_login(
 
 def _new_receiver_password() -> str:
     return secrets.token_urlsafe(18)
+
+
+def _iot_shared_secret() -> str:
+    """Shared secret for authenticating IoT device / serial-bridge HMAC calls."""
+    return os.environ.get("ENKRIPSIH_IOT_TOKEN", "")
+
+
+def _verify_iot_hmac(payload: str, provided: str) -> bool:
+    """Verify HMAC-SHA256(payload, ENKRIPSIH_IOT_TOKEN) == provided."""
+    secret = _iot_shared_secret()
+    if not secret or not provided:
+        return False
+    expected = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, provided.lower())
 
 
 def _issue_receiver_account(recipient_id: str, username: str) -> str:
@@ -526,8 +628,19 @@ def change_password(req: ChangePasswordRequest, request: Request):
 
 
 @app.get("/api/auth/session")
-def get_session(request: Request):
-    principal = _session_principal(request.cookies.get(SESSION_COOKIE))
+def get_session(request: Request, response: Response):
+    token = request.cookies.get(SESSION_COOKIE)
+    principal = _session_principal(token)
+    if token and principal is not None:
+        response.set_cookie(
+            SESSION_COOKIE,
+            token,
+            max_age=SESSION_IDLE_TIMEOUT_SECONDS,
+            httponly=True,
+            samesite="strict",
+            secure=request.url.scheme == "https",
+            path="/",
+        )
     return {
         "authenticated": principal is not None,
         "idle_timeout_seconds": SESSION_IDLE_TIMEOUT_SECONDS,
@@ -536,7 +649,19 @@ def get_session(request: Request):
 
 
 @app.post("/api/auth/activity", status_code=204)
-def record_activity():
+def record_activity(request: Request, response: Response):
+    token = request.cookies.get(SESSION_COOKIE)
+    if token:
+        _touch_session(token)
+        response.set_cookie(
+            SESSION_COOKIE,
+            token,
+            max_age=SESSION_IDLE_TIMEOUT_SECONDS,
+            httponly=True,
+            samesite="strict",
+            secure=request.url.scheme == "https",
+            path="/",
+        )
     return Response(status_code=204)
 
 
@@ -567,10 +692,20 @@ def get_commander_status():
     }
 
 @app.post("/api/auth/verify-face")
-def verify_face_endpoint(req: FaceAuthRequest):
+def verify_face_endpoint(req: FaceAuthRequest, request: Request):
+    principal = request.state.principal
+    if principal["role"] != "COMMANDER":
+        raise HTTPException(status_code=403, detail="Hanya komandan yang dapat verifikasi wajah.")
     from .face_auth import verify_commander_face
-
-    return verify_commander_face(req.image_base64, req.user_id or "CMD-01")
+    result = verify_commander_face(req.image_base64, req.user_id or "CMD-01")
+    if result.get("success"):
+        token = request.cookies.get(SESSION_COOKIE)
+        if token and token in active_sessions:
+            active_sessions[token]["face_verified"] = True
+        if os.environ.get("DATABASE_URL"):
+            mark_face_verified(token)
+        log_event("AUTH", "SUCCESS", f"Verifikasi wajah komandan {principal['principal_id']} BERHASIL.")
+    return result
 
 @app.post("/api/auth/register-face")
 def register_face_endpoint(req: FaceAuthRequest):
@@ -651,6 +786,72 @@ async def reset_receiver_account(recipient_id: str):
     }
 
 
+@app.delete("/api/recipients/{recipient_id}")
+async def delete_recipient_endpoint(recipient_id: str, request: Request):
+    principal = getattr(request.state, "principal", None) if request else None
+    if not principal or principal["role"] != "COMMANDER":
+        raise HTTPException(status_code=403, detail="Hanya komandan yang dapat menghapus anggota.")
+    recipient = get_recipient_key(recipient_id)
+    if not recipient:
+        raise HTTPException(status_code=404, detail="Anggota tidak ditemukan.")
+
+    deleted_msgs = delete_recipient(recipient_id)
+    log_event("KEY", "WARNING", f"Anggota [{recipient_id}] dihapus beserta {deleted_msgs} pesan terkait.")
+
+    await manager.broadcast(
+        {"type": "RECIPIENT_DELETED", "recipient_id": recipient_id},
+        recipient_id=recipient_id,
+    )
+
+    return {
+        "success": True,
+        "recipient_id": recipient_id,
+        "deleted_messages": deleted_msgs,
+    }
+
+
+@app.post("/api/recipients/{recipient_id}/reissue")
+async def reissue_recipient_key_endpoint(recipient_id: str, request: Request):
+    principal = getattr(request.state, "principal", None) if request else None
+    if not principal or principal["role"] != "COMMANDER":
+        raise HTTPException(status_code=403, detail="Hanya komandan yang dapat me-reissue kunci anggota.")
+    recipient = get_recipient_key(recipient_id)
+    if not recipient:
+        raise HTTPException(status_code=404, detail="Anggota tidak ditemukan.")
+
+    new_secret_key = secrets.token_urlsafe(24)
+    new_salt = secrets.token_hex(16)
+
+    loop = asyncio.get_event_loop()
+    new_verifier = await loop.run_in_executor(
+        None,
+        lambda: hashlib.pbkdf2_hmac(
+            "sha256",
+            new_secret_key.encode("utf-8"),
+            b"enkripsih:recipient:v1:" + bytes.fromhex(new_salt),
+            600_000,
+            32,
+        ).hex(),
+    )
+
+    if not reissue_recipient_key(recipient_id, new_salt, new_verifier):
+        raise HTTPException(status_code=409, detail="Gagal me-reissue kunci.")
+
+    log_event("KEY", "WARNING", f"Kunci anggota [{recipient_id}] di-reissue. Kunci lama tidak lagi valid untuk pesan baru.")
+
+    await manager.broadcast(
+        {"type": "RECIPIENT_KEY_REISSUED", "recipient_id": recipient_id},
+        recipient_id=recipient_id,
+    )
+
+    return {
+        "success": True,
+        "recipient_id": recipient_id,
+        "new_secret_key": new_secret_key,
+        "note": "Kunci baru hanya ditampilkan sekali. Bagikan ke anggota lewat jalur aman.",
+    }
+
+
 @app.post("/api/recipients/{recipient_id}/verify")
 def verify_recipient_key(
     recipient_id: str,
@@ -682,8 +883,222 @@ def _require_receiver_message_access(msg: dict, request: Request = None) -> None
         raise HTTPException(status_code=404, detail="Pesan tidak ditemukan.")
 
 
+class EncryptMessageRequest(BaseModel):
+    plaintext: str
+    recipient_id: str
+    secret_key: str
+    save: bool = True
+
+def _verify_secret_key(recipient: dict, secret_key: str) -> bool:
+    """Verify a secret key by recomputing its PBKDF2 verifier against the stored value.
+    Runs in a thread-pool via verify_recipient_secret().
+    """
+    salt = bytes.fromhex(recipient["salt"].lower())
+    computed = hashlib.pbkdf2_hmac(
+        "sha256",
+        secret_key.encode("utf-8"),
+        b"enkripsih:recipient:v1:" + salt,
+        600_000,
+        32,
+    ).hex()
+    return hmac.compare_digest(computed, recipient["verifier"].lower())
+
+
+async def verify_recipient_secret(recipient: dict, secret_key: str) -> bool:
+    """Wrapper for verify logic so callers can use await (thread-pool safe)."""
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _verify_secret_key, recipient, secret_key)
+
+
+async def _compute_encrypt_work(recipient: dict, secret_key: str, plaintext: str):
+    """Run the heavy, blocking crypto (PBKDF2 x2 + AES-GCM) off the event loop.
+
+    Kept in one coroutine so the browser sees a single fast request instead of
+    the event loop stalling for ~15s.
+    """
+    loop = asyncio.get_event_loop()
+
+    def _work():
+        import hashlib as _hl
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+        salt = bytes.fromhex(recipient["salt"].lower())
+        computed_verifier = _hl.pbkdf2_hmac(
+            "sha256",
+            secret_key.encode("utf-8"),
+            b"enkripsih:recipient:v1:" + salt,
+            600_000,
+            32,
+        ).hex()
+        if not hmac.compare_digest(computed_verifier, recipient["verifier"].lower()):
+            return {"error": "mismatch"}
+
+        challenge_indices = [secrets.randbelow(4) for _ in range(4)]
+        challenge_bytes = bytes(challenge_indices)
+        mac = hmac.new(secret_key.encode("utf-8"), challenge_bytes, hashlib.sha256).digest()
+        resp_indices = [(mac[i // 4] >> ((i % 4) * 2)) & 3 for i in range(12)]
+        response_letters = "".join(LETTERS[r] for r in resp_indices)
+
+        aes_salt = os.urandom(16)
+        iv = os.urandom(12)
+        aes_key = _hl.pbkdf2_hmac("sha256", bytes(resp_indices), aes_salt, 200_000, 32)
+        ciphertext = AESGCM(aes_key).encrypt(iv, plaintext.encode("utf-8"), None)
+
+        def b64url(data: bytes) -> str:
+            return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+
+        return {
+            "challenge_indices": challenge_indices,
+            "response_letters": response_letters,
+            "resp_indices": resp_indices,
+            "salt": b64url(aes_salt),
+            "iv": b64url(iv),
+            "ciphertext": b64url(ciphertext),
+        }
+
+    return await loop.run_in_executor(None, _work)
+
+
+@app.post("/api/messages/encrypt")
+async def encrypt_message_endpoint(req: EncryptMessageRequest, request: Request = None):
+    principal = getattr(getattr(request, "state", None), "principal", None) if request else None
+    if not principal or principal["role"] != "COMMANDER":
+        raise HTTPException(status_code=403, detail="Hanya komandan yang dapat mengenkripsi pesan.")
+    recipient = get_recipient_key(req.recipient_id)
+    if not recipient:
+        raise HTTPException(status_code=404, detail="Anggota belum terdaftar.")
+    if len(req.plaintext) > 50_000:
+        raise HTTPException(status_code=413, detail="Pesan terlalu panjang.")
+
+    work = await _compute_encrypt_work(recipient, req.secret_key, req.plaintext)
+    if work.get("error"):
+        raise HTTPException(status_code=400, detail="Secret key tidak cocok dengan anggota yang terdaftar.")
+
+    challenge_indices = work["challenge_indices"]
+
+    envelope = {
+        "v": 5,
+        "salt": work["salt"],
+        "iv": work["iv"],
+        "ciphertext": work["ciphertext"],
+        "challenge": "".join(LETTERS[c] for c in challenge_indices),
+    }
+    paket = json.dumps(envelope)
+
+    sent_data = None
+    if req.save:
+        profile = get_commander_profile(principal["principal_id"])
+        sender_name = profile["name"] if profile else principal["principal_id"]
+        msg_id = f"MSG-{datetime.now().strftime('%m%d')}-{os.urandom(2).hex().upper()}"
+        msg_record = {
+            "id": msg_id,
+            "sender_id": principal["principal_id"],
+            "sender_name": sender_name,
+            "target_unit": recipient["name"],
+            "recipient_id": recipient["id"],
+            "paket": paket,
+            "status": "LOCKED",
+            "created_at": datetime.now().isoformat()
+        }
+        save_message(msg_record)
+        log_event("TRANSMIT", "SUCCESS", f"Ciphertext [{msg_id}] ditransmisikan ke {recipient['name']}.")
+        await manager.broadcast({
+            "type": "NEW_MESSAGE",
+            "message": {
+                "id": msg_id,
+                "target_unit": recipient["name"],
+                "status": "LOCKED",
+                "created_at": msg_record["created_at"]
+            }
+        }, recipient_id=recipient["id"])
+        sent_data = {
+            "message_id": msg_id,
+            "target_unit": recipient["name"],
+            "status": "LOCKED"
+        }
+
+    return {
+        "success": True,
+        "paket": paket,
+        "challenge_indices": challenge_indices,
+        "challenge_letters": "".join(LETTERS[c] for c in challenge_indices),
+        "challenge_symbols": " ".join(NAMES[c] for c in challenge_indices),
+        "saved": sent_data,
+    }
+
+@app.post("/api/messages/decrypt")
+async def decrypt_message_endpoint(request: Request):
+    """Receiver decrypts a message using the 12-symbol passkey response (or secret key for legacy).
+
+    Body: { message_id, passkey_letters? }
+    Returns: { success, plaintext, message_id }
+    PBKDF2 (200k) runs on server — fast, non-blocking for the browser.
+    """
+    principal = getattr(request.state, "principal", None)
+    if not principal:
+        raise HTTPException(status_code=401, detail="Sesi tidak valid.")
+    if principal["role"] != "RECEIVER":
+        raise HTTPException(status_code=403, detail="Hanya anggota receiver yang dapat membuka pesan.")
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    message_id = body.get("message_id", "").strip()
+    passkey_letters = (body.get("passkey_letters") or "").strip().upper()
+
+    msg = get_message_by_id(message_id)
+    if not msg:
+        raise HTTPException(status_code=404, detail="Pesan tidak ditemukan.")
+    if msg["recipient_id"] != principal["principal_id"]:
+        raise HTTPException(status_code=404, detail="Pesan ini bukan untuk akun Anda.")
+
+    try:
+        envelope = json.loads(msg["paket"])
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Format ciphertext tidak valid.")
+
+    if envelope.get("v") != 5:
+        raise HTTPException(status_code=400, detail="Format pesan lama — gunakan aplikasi lama untuk membuka.")
+
+    if not passkey_letters or not re.fullmatch(r"[TCXS]{12}", passkey_letters):
+        raise HTTPException(status_code=400, detail="Respons passkey 12 simbol wajib diisi. Masukkan respons dari perangkat KeyBCA Anda.")
+
+    resp_indices = [LETTERS.find(ch) for ch in passkey_letters]
+
+    salt = base64.urlsafe_b64decode(envelope["salt"] + "=" * (-len(envelope["salt"]) % 4))
+    iv = base64.urlsafe_b64decode(envelope["iv"] + "=" * (-len(envelope["iv"]) % 4))
+    ciphertext = base64.urlsafe_b64decode(envelope["ciphertext"] + "=" * (-len(envelope["ciphertext"]) % 4))
+
+    # PBKDF2 200k — same as frontend deriveBitsFromDeviceResponse
+    aes_key = hashlib.pbkdf2_hmac("sha256", bytes(resp_indices), salt, 200_000, 32)
+
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    from cryptography.exceptions import InvalidTag
+    try:
+        plaintext_bytes = AESGCM(aes_key).decrypt(iv, ciphertext, None)
+        plaintext = plaintext_bytes.decode("utf-8")
+    except InvalidTag:
+        raise HTTPException(status_code=400, detail="Respons passkey salah — pesan tidak dapat dibuka.")
+
+    # Mark as decrypted
+    mark_message_decrypted(message_id, principal["principal_id"])
+
+    return {
+        "success": True,
+        "message_id": message_id,
+        "plaintext": plaintext,
+    }
+
 @app.post("/api/messages/send")
-async def send_message_endpoint(req: SendMessageRequest):
+async def send_message_endpoint(req: SendMessageRequest, request: Request = None):
+    principal = getattr(getattr(request, "state", None), "principal", None) if request else None
+    if not principal or principal["role"] != "COMMANDER":
+        raise HTTPException(status_code=403, detail="Hanya komandan yang dapat mengirim pesan.")
+    profile = get_commander_profile(principal["principal_id"])
+    sender_id = principal["principal_id"]
+    sender_name = profile["name"] if profile else principal["principal_id"]
     recipient = get_recipient_key(req.recipient_id)
     if not recipient:
         raise HTTPException(status_code=404, detail="Anggota belum terdaftar.")
@@ -730,8 +1145,8 @@ async def send_message_endpoint(req: SendMessageRequest):
     msg_id = f"MSG-{datetime.now().strftime('%m%d')}-{os.urandom(2).hex().upper()}"
     msg_record = {
         "id": msg_id,
-        "sender_id": req.sender_id or "CMD-01",
-        "sender_name": req.sender_name or "Kolonel M. Haris",
+        "sender_id": sender_id,
+        "sender_name": sender_name,
         "target_unit": recipient["name"],
         "recipient_id": recipient["id"],
         "paket": req.paket,
@@ -760,20 +1175,39 @@ async def send_message_endpoint(req: SendMessageRequest):
     }
 
 @app.get("/api/messages")
-def get_all_messages(request: Request = None):
-    principal = getattr(request.state, "principal", None) if request else None
+def api_get_all_messages(request: Request):
+    principal = getattr(request.state, "principal", None)
+    is_receiver = bool(principal and principal["role"] == "RECEIVER")
     messages = get_messages()
-    if principal and principal["role"] == "RECEIVER":
+    if is_receiver:
         messages = [
             message for message in messages
             if message["recipient_id"] == principal["principal_id"]
         ]
-    return {"messages": [_message_summary(msg) for msg in messages]}
+    # expected_response is never surfaced in the list view: the receiver must
+    # derive it from their device, so it stays out of the summary payload.
+    return {
+        "messages": [
+            _message_summary(msg, include_expected_response=False)
+            for msg in messages
+        ]
+    }
 
 
-def _message_summary(msg: dict) -> dict:
+def get_all_messages(include_expected_response: bool = False):
+    messages = get_messages()
+    return {
+        "messages": [
+            _message_summary(msg, include_expected_response=include_expected_response)
+            for msg in messages
+        ]
+    }
+
+
+def _message_summary(msg: dict, include_expected_response: bool = True) -> dict:
     passkey_challenge = None
     encryption_version = None
+    expected_response = None
     if msg["status"] != "BURNED" and msg["paket"]:
         try:
             envelope = json.loads(msg["paket"])
@@ -783,6 +1217,9 @@ def _message_summary(msg: dict) -> dict:
             challenge = envelope.get("challenge") if isinstance(envelope, dict) else None
             if isinstance(challenge, str) and re.fullmatch(r"[TCXS]{4}", challenge):
                 passkey_challenge = challenge
+            response = envelope.get("expected_response") if isinstance(envelope, dict) else None
+            if isinstance(response, str) and re.fullmatch(r"[TCXS]{12}", response) and encryption_version == 5:
+                expected_response = response
         except json.JSONDecodeError:
             pass
     summary = {
@@ -793,10 +1230,13 @@ def _message_summary(msg: dict) -> dict:
         "recipient_id": msg["recipient_id"],
         "status": msg["status"],
         "created_at": msg["created_at"],
-        "encrypted": bool(msg["paket"]) and msg["status"] != "BURNED",
+        "decrypted_at": msg.get("decrypted_at"),
+        "encrypted": bool(msg["paket"]) and msg["status"] not in {"BURNED", "UNLOCKED"},
         "passkey_challenge": passkey_challenge,
         "encryption_version": encryption_version,
     }
+    if include_expected_response:
+        summary["expected_response"] = expected_response
     return summary
 
 @app.get("/api/messages/{msg_id}")
@@ -805,7 +1245,9 @@ def get_message_detail(msg_id: str, request: Request = None):
     if not msg:
         raise HTTPException(status_code=404, detail="Pesan tidak ditemukan.")
     _require_receiver_message_access(msg, request)
-    return _message_summary(msg)
+    principal = getattr(request.state, "principal", None) if request else None
+    is_receiver = bool(principal and principal["role"] == "RECEIVER")
+    return _message_summary(msg, include_expected_response=is_receiver)
 
 @app.get("/api/messages/{msg_id}/ciphertext")
 def get_message_ciphertext(msg_id: str, request: Request = None):
@@ -826,12 +1268,49 @@ def get_message_ciphertext(msg_id: str, request: Request = None):
         "paket": msg["paket"],
     }
 
-@app.post("/api/messages/{msg_id}/burn")
-async def burn_message_endpoint(msg_id: str):
+@app.post("/api/messages/{msg_id}/unlock")
+async def unlock_message_endpoint(msg_id: str, request: Request):
     msg = get_message_by_id(msg_id)
     if not msg:
         raise HTTPException(status_code=404, detail="Pesan tidak ditemukan.")
-    
+    principal = getattr(request.state, "principal", None)
+    if not principal or principal["role"] != "RECEIVER":
+        raise HTTPException(status_code=403, detail="Hanya receiver yang dapat membuka pesan.")
+    if msg["recipient_id"] != principal["principal_id"]:
+        raise HTTPException(status_code=404, detail="Pesan tidak ditemukan.")
+    if msg["status"] in {"BURNED", "UNLOCKED"}:
+        return {"success": True, "already": True}
+    mark_message_decrypted(msg_id, principal["principal_id"])
+    log_event("DECRYPT", "SUCCESS", f"Pesan [{msg_id}] berhasil dibuka oleh receiver.")
+    await manager.broadcast(
+        {"type": "MESSAGE_UNLOCKED", "message_id": msg_id},
+        recipient_id=principal["principal_id"],
+    )
+    return {"success": True}
+
+
+@app.post("/api/messages/{msg_id}/burn")
+async def burn_message_endpoint(msg_id: str, request: Request):
+    msg = get_message_by_id(msg_id)
+    if not msg:
+        raise HTTPException(status_code=404, detail="Pesan tidak ditemukan.")
+    principal = getattr(request.state, "principal", None)
+    if not principal:
+        raise HTTPException(status_code=401, detail="Login diperlukan.")
+    # Commander can burn any message; receiver can only burn their own decrypted message
+    if principal["role"] == "COMMANDER":
+        pass
+    elif principal["role"] == "RECEIVER":
+        if msg["recipient_id"] != principal["principal_id"]:
+            raise HTTPException(status_code=404, detail="Pesan tidak ditemukan.")
+        if not msg.get("decrypted_at"):
+            raise HTTPException(
+                status_code=403,
+                detail="Pesan belum dibuka. Buka pesan terlebih dahulu sebelum menghapus."
+            )
+    else:
+        raise HTTPException(status_code=403, detail="Akses ditolak.")
+
     burn_message(msg_id)
     log_event("DECRYPT", "WARNING", f"Pesan [{msg_id}] dihancurkan secara permanen.")
     
@@ -848,7 +1327,11 @@ def calculate_token_endpoint(req: KeyBCACalculateRequest):
     """
     Computes a 12-symbol Lexa response from a 4-symbol challenge.
     Accepts letters (e.g. 'TCXS') or symbol indices.
+    Requires hmac_signature (HMAC-SHA256 of challenge) when ENKRIPSIH_IOT_TOKEN is set.
     """
+    if os.environ.get("ENKRIPSIH_IOT_TOKEN"):
+        if not _verify_iot_hmac(str(req.challenge), req.hmac_signature or ""):
+            raise HTTPException(status_code=401, detail="HMAC signature tidak valid.")
     input_str = str(req.challenge).strip()
     indices = [SYMBOL_MAP[c] for c in input_str.upper() if c in SYMBOL_MAP]
     
@@ -875,7 +1358,12 @@ def calculate_token_endpoint(req: KeyBCACalculateRequest):
 async def iot_solve_endpoint(req: IoTSolveRequest):
     """
     Called by Wemos D1 Mini / ESP32 or serial bridge to broadcast solved token.
+    Requires hmac_signature (HMAC of 'device_id:challenge:token') when ENKRIPSIH_IOT_TOKEN is set.
     """
+    if os.environ.get("ENKRIPSIH_IOT_TOKEN"):
+        payload = f"{req.device_id}:{req.challenge}:{req.token}"
+        if not _verify_iot_hmac(payload, req.hmac_signature or ""):
+            raise HTTPException(status_code=401, detail="HMAC signature tidak valid.")
     log_event("KEYBCA", "SUCCESS", f"IoT [{req.device_id}] mengirim token untuk challenge {req.challenge}.")
     
     await manager.broadcast({

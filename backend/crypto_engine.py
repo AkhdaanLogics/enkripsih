@@ -13,11 +13,10 @@ import secrets
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.exceptions import InvalidTag
 
-# Secret Key shared between Server and Microcontroller Token
-SECRET_KEY = b"GANTI_KUNCI_RAHASIA_INI"
-
 CHAL_LEN = 4
 RESP_LEN = 12
+KEYBCA_SECRET_ENV = "ENKRIPSIH_KEYBCA_SECRET"
+KEYBCA_SECRET_MIN_LENGTH = 16
 
 NAMES = ["△", "○", "✕", "□"]   # 0=T 1=C 2=X 3=S
 LETTERS = "TCXS"
@@ -42,12 +41,23 @@ def generate_tactical_challenge():
         "symbols": challenge_symbols
     }
 
+def _get_keybca_secret() -> bytes:
+    secret = os.environ.get(KEYBCA_SECRET_ENV, "")
+    if not secret or len(secret) < KEYBCA_SECRET_MIN_LENGTH:
+        raise RuntimeError(
+            f"{KEYBCA_SECRET_ENV} belum diatur atau kurang dari {KEYBCA_SECRET_MIN_LENGTH} karakter. "
+            "Jalankan aplikasi lewat run.py untuk memasukkan secret KeyBCA."
+        )
+    return secret.encode("utf-8")
+
+
 def calculate_response_symbols(challenge_indices: list) -> list:
     """
-    Menghitung respon 12 simbol dari 4 simbol challenge menggunakan HMAC-SHA256.
+    Menghitung respon 12 simbol dari 4 simbol challenge menggunakan HMAC-SHA-256.
     Sesuai persis dengan sketch C++ mikrokontroler.
     """
-    digest = hmac.new(SECRET_KEY, bytes(challenge_indices), hashlib.sha256).digest()
+    secret_key = _get_keybca_secret()
+    digest = hmac.new(secret_key, bytes(challenge_indices), hashlib.sha256).digest()
     return [(digest[i // 4] >> (2 * (i % 4))) & 3 for i in range(RESP_LEN)]
 
 def response_to_string(resp_indices: list) -> dict:

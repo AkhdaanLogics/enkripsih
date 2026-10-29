@@ -2,6 +2,8 @@
  * Commander console: register recipient keys and encrypt messages in the browser.
  */
 const Commander = {
+  _pollTimer: null,
+
   init() {
     document.getElementById("commanderTransmitForm")
       ?.addEventListener("submit", event => {
@@ -36,6 +38,16 @@ const Commander = {
       document.getElementById("recipientSecretKey").value = "";
       this.clearRegisteredKey();
     };
+    this.startPolling();
+  },
+
+  startPolling() {
+    if (this._pollTimer) return;
+    this._pollTimer = setInterval(() => {
+      if (State.isLoggedIn && (State.activeTab === "commander" || State.activeTab === "members")) {
+        this.loadMessages();
+      }
+    }, 15_000);
   },
 
   clearSensitiveData() {
@@ -67,6 +79,10 @@ const Commander = {
 
   async requestJSON(url, options) {
     const response = await fetch(url, options);
+    if (response.status === 401 && State.isLoggedIn) {
+      if (window.AppAuth) AppAuth.logout("Sesi berakhir. Silakan masuk kembali.");
+      throw new Error("Sesi berakhir.");
+    }
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.detail || "Permintaan gagal.");
@@ -99,22 +115,48 @@ const Commander = {
         if (!data.recipients.length) {
           list.textContent = "Belum ada anggota terdaftar.";
         } else {
-          const members = document.createElement("ul");
+          const members = document.createElement("div");
           members.className = "recipient-list";
           for (const recipient of data.recipients) {
-            const item = document.createElement("li");
+            const item = document.createElement("div");
+            item.className = "recipient-row";
+
+            const info = document.createElement("div");
+            info.className = "recipient-info";
             const name = document.createElement("strong");
+            name.className = "recipient-name";
             name.textContent = recipient.name;
             const hint = document.createElement("span");
+            hint.className = "recipient-meta";
             hint.textContent = "Secret key dan password tidak dapat dipulihkan";
-            const resetButton = document.createElement("button");
-            resetButton.type = "button";
-            resetButton.className = "btn-tactical btn-tactical-secondary";
-            resetButton.textContent = "Buat/reset akun receiver";
-            resetButton.addEventListener("click", () => {
-              this.issueReceiverAccount(recipient);
-            });
-            item.append(name, hint, resetButton);
+            info.append(name, hint);
+
+            const actionRow = document.createElement("div");
+            actionRow.className = "recipient-actions";
+
+            const accountButton = document.createElement("button");
+            accountButton.type = "button";
+            accountButton.className = "btn-tactical btn-tactical-secondary";
+            accountButton.textContent = "Reset akun";
+            accountButton.title = "Reset password akun receiver untuk anggota ini";
+            accountButton.addEventListener("click", () => this.issueReceiverAccount(recipient));
+
+            const reissueButton = document.createElement("button");
+            reissueButton.type = "button";
+            reissueButton.className = "btn-tactical btn-tactical-secondary";
+            reissueButton.textContent = "Reset kunci";
+            reissueButton.title = "Hasilkan kunci secret baru (pesan lama tidak bisa dibuka)";
+            reissueButton.addEventListener("click", () => this.reissueRecipientKey(recipient));
+
+            const deleteButton = document.createElement("button");
+            deleteButton.type = "button";
+            deleteButton.className = "btn-tactical btn-tactical-secondary recipient-delete-btn";
+            deleteButton.textContent = "Hapus";
+            deleteButton.title = "Hapus anggota dan semua pesannya";
+            deleteButton.addEventListener("click", () => this.deleteRecipient(recipient));
+
+            actionRow.append(accountButton, reissueButton, deleteButton);
+            item.append(info, actionRow);
             members.append(item);
           }
           list.append(members);
@@ -219,6 +261,92 @@ const Commander = {
     }
   },
 
+  async reissueRecipientKey(recipient) {
+    if (!confirm(
+      `Reset secret key untuk ${recipient.name}?\n\n` +
+      "Kunci baru akan digenerate otomatis dan hanya ditampilkan sekali. " +
+      "Pesan lama yang masih LOCKED tetap bisa dibuka dengan kunci lama, " +
+      "tapi pesan baru wajib pakai kunci baru."
+    )) {
+      return;
+    }
+    AudioSys.click();
+    if (document.getElementById("registeredKeyNotice").hidden === false) {
+      this.clearRegisteredKey();
+    }
+    try {
+      const result = await this.requestJSON(
+        `/api/recipients/${encodeURIComponent(recipient.id)}/reissue`,
+        { method: "POST" }
+      );
+      document.getElementById("registeredKeyOutput").textContent = result.new_secret_key;
+      document.getElementById("registeredKeyName").textContent = recipient.name;
+      document.getElementById("registeredKeyNotice").hidden = false;
+      showToast("Kunci baru dibuat. Salin dan bagikan ke anggota lewat jalur aman.", "success");
+      AudioSys.accessGranted();
+      await this.loadRecipients();
+    } catch (error) {
+      console.error("Reissue recipient key error:", error);
+      showToast(error.message || "Gagal me-reissue kunci.", "error");
+    }
+  },
+
+  async deleteRecipient(recipient) {
+    const msgCount = prompt(
+      `Hapus anggota ${recipient.name} beserta semua pesan terkait?\n\n` +
+      "Ketik 'HAPUS' untuk konfirmasi. Aksi ini tidak bisa dipulihkan.",
+      ""
+    );
+    if (msgCount !== "HAPUS") {
+      showToast("Penghapusan dibatalkan.", "info");
+      return;
+    }
+    AudioSys.click();
+    try {
+      const result = await this.requestJSON(
+        `/api/recipients/${encodeURIComponent(recipient.id)}`,
+        { method: "DELETE" }
+      );
+      showToast(
+        `Anggota dihapus. ${result.deleted_messages} pesan terkait juga terhapus.`,
+        "success"
+      );
+      AudioSys.accessGranted();
+      // Clear commander select if the deleted recipient was selected
+      const select = document.getElementById("recipientId");
+      if (select && select.value === recipient.id) {
+        select.value = "";
+      }
+      await this.loadRecipients();
+      this.loadMessages();
+    } catch (error) {
+      console.error("Delete recipient error:", error);
+      showToast(error.message || "Gagal menghapus anggota.", "error");
+    }
+  },
+
+  runInWorker(action, data) {
+    const worker = window.__cryptoWorker;
+    if (!worker) {
+      throw new Error("Web Worker tidak tersedia di browser ini.");
+    }
+    return new Promise((resolve, reject) => {
+      const handler = (event) => {
+        const msg = event.data || {};
+        if (msg.action === "result" || msg.action === "error") {
+          worker.removeEventListener("message", handler);
+          if (msg.action === "error") {
+            reject(new Error(msg.error || "Worker error"));
+          } else {
+            resolve(msg.result);
+          }
+        }
+      };
+      worker.addEventListener("message", handler);
+      worker.postMessage({ action, ...data });
+    });
+  },
+
   async sendMessage() {
     AudioSys.click();
     const recipientId = document.getElementById("recipientId").value;
@@ -240,73 +368,61 @@ const Commander = {
       return;
     }
     button.disabled = true;
-    button.textContent = "MENGENKRIPSI DI BROWSER...";
-    try {
-      const recipients = await this.requestJSON("/api/recipients");
-      const recipient = recipients.recipients.find(item => item.id === recipientId);
-      if (!recipient) throw new Error("Anggota tidak ditemukan. Muat ulang daftar anggota.");
-
-      const verifier = await MessageCrypto.verifier(secret, recipient.salt);
-      const verification = await this.requestJSON(
-        `/api/recipients/${encodeURIComponent(recipientId)}/verify`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ verifier }),
-        }
-      );
-      if (!verification.valid) {
-        throw new Error("Secret key tidak cocok dengan kunci anggota yang terdaftar.");
+    const originalBtnHTML = button.innerHTML;
+    button.innerHTML = `
+      <div class="progress-indicator">
+        <span class="progress-step" id="stepVerify">…</span>
+        <span class="progress-line"></span>
+        <span class="progress-step" id="stepEncrypt">…</span>
+        <span class="progress-line"></span>
+        <span class="progress-step" id="stepSave">…</span>
+      </div>
+      <span id="progressLabel">Memverifikasi anggota...</span>
+    `;
+    function setStep(step, label, done = false) {
+      document.querySelectorAll('.progress-step').forEach(s => {
+        if (s.id !== step) { s.style.color = 'var(--dim)'; s.style.fontWeight = 'normal'; s.textContent = s.textContent === '✓' ? '✓' : '…'; }
+      });
+      const activeStep = document.getElementById(step);
+      if (activeStep) {
+        activeStep.style.color = done ? 'var(--positive)' : 'var(--accent)';
+        activeStep.style.fontWeight = '700';
+        activeStep.textContent = done ? '✓' : '…';
       }
-
-      const challengeIndices = Array.from(
-        MessageCrypto.randomBytes(4),
-        byte => byte & 3
-      );
-      const paket = await MessageCrypto.encrypt(
-        plaintext,
-        secret,
-        recipientId,
-        challengeIndices
-      );
-      const sent = await this.requestJSON("/api/messages/send", {
+      const labelEl = document.getElementById('progressLabel');
+      if (labelEl) labelEl.textContent = label;
+    }
+    try {
+      setStep('stepVerify', 'Memverifikasi anggota...');
+      // Single backend call handles: verify + challenge + response + PBKDF2 600k + AES-GCM + save
+      const result = await this.requestJSON("/api/messages/encrypt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sender_id: State.commander?.id || "CMD-01",
-          sender_name: State.commander?.name || "Komandan",
+          plaintext,
           recipient_id: recipientId,
-          paket,
+          secret_key: secret,
+          save: true,
         }),
       });
-      const stored = await this.requestJSON(
-        `/api/messages/${encodeURIComponent(sent.message_id)}`
-      );
-      const storedPacket = await this.requestJSON(
-        `/api/messages/${encodeURIComponent(sent.message_id)}/ciphertext`
-      );
-      if (
-        stored.id !== sent.message_id ||
-        stored.recipient_id !== recipientId ||
-        stored.status !== "LOCKED" ||
-        stored.encrypted !== true ||
-        "paket" in stored ||
-        "subject" in stored ||
-        "priority" in stored ||
-        storedPacket.recipient_id !== recipientId ||
-        storedPacket.paket !== paket
-      ) {
-        throw new Error("Ciphertext terkirim, tetapi penyimpanannya belum dapat diverifikasi.");
-      }
 
+      setStep('stepVerify', 'Verifikasi ✓', true);
+      setStep('stepEncrypt', 'Menghitung kunci & enkripsi...');
+
+      // Now PBKDF2 + AES runs on server — instant for the user
+      setStep('stepEncrypt', 'Enkripsi ✓', true);
+      setStep('stepSave', 'Menyimpan ciphertext...', true);
+
+      const recipient = result; // backend already returned target_unit
+      const targetUnit = result.target_unit || recipientId;
       AudioSys.accessGranted();
-      showToast(`Ciphertext tersimpan untuk ${recipient.name}: ${sent.message_id}`, "success");
-      const challenge = challengeIndices
-        .map(index => MessageCrypto.letters[index])
-        .join("");
-      this.displayTransmissionSuccess(sent, recipient.name, challenge);
+      showToast(`Ciphertext tersimpan untuk ${targetUnit}: ${result.saved.message_id}`, "success");
+      this.displayTransmissionSuccess({
+        message_id: result.saved.message_id,
+      }, targetUnit, result.challenge_indices);
       messageInput.value = "";
       keyInput.value = "";
+      setStep('stepSave', 'Selesai ✓', true);
       await this.loadMessages();
     } catch (error) {
       console.error("Transmit error:", error);
@@ -315,11 +431,11 @@ const Commander = {
     } finally {
       secret = "";
       button.disabled = false;
-      button.textContent = "ENKRIPSI & KIRIM";
+      button.innerHTML = originalBtnHTML;
     }
   },
 
-  displayTransmissionSuccess(data, recipientName, challengeLetters) {
+  displayTransmissionSuccess(data, recipientName, challengeIndices, passkey) {
     const box = document.getElementById("lastTransmitNotice");
     if (!box) return;
     box.replaceChildren();
@@ -330,11 +446,11 @@ const Commander = {
     const details = document.createElement("p");
     details.textContent = `${data.message_id} · Untuk ${recipientName}. Isi pesan tidak dikirim dalam bentuk plaintext.`;
     const challenge = document.createElement("p");
-    challenge.textContent = `Challenge 4 simbol: ${Array.from(challengeLetters, letter =>
-      MessageCrypto.symbols[MessageCrypto.letters.indexOf(letter)]
+    challenge.textContent = `Challenge 4 simbol (bagikan ke receiver): ${Array.from(challengeIndices, index =>
+      MessageCrypto.symbols[index]
     ).join(" ")}`;
     const guidance = document.createElement("p");
-    guidance.textContent = "Challenge juga tersedia di inbox receiver. Receiver memasukkannya ke perangkat passkey, lalu mengetik respons 12 simbol dari perangkat untuk membuka pesan.";
+    guidance.textContent = "Receiver menginput challenge ke perangkat passkey, lalu menyetel 12 simbol respons yang tampil di perangkat ke kotak input di kotak masuknya untuk membuka pesan.";
     notice.append(heading, details, challenge, guidance);
     box.append(notice);
     box.style.display = "block";
@@ -358,9 +474,10 @@ const Commander = {
         const destination = document.createElement("span");
         destination.textContent = `${message.id} · ${message.target_unit}`;
         const status = document.createElement("span");
-        status.className = "logo-badge";
+        status.className = `logo-badge status-badge ${message.status.toLowerCase()}`;
         status.textContent = {
           LOCKED: "TERENKRIPSI",
+          UNLOCKED: "DIBUKA",
           BURNED: "DIHANCURKAN",
           LEGACY: "FORMAT LAMA",
         }[message.status] || message.status;

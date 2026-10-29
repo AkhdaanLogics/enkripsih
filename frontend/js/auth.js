@@ -1,7 +1,4 @@
 const AppAuth = {
-  idleTimeoutMs: 5 * 60 * 1000,
-  idleTimer: null,
-  lastActivitySyncAt: 0,
   lockoutTimer: null,
   lockoutDeadline: 0,
 
@@ -22,9 +19,6 @@ const AppAuth = {
       this.changePassword();
     });
     document.getElementById('btnLogout').addEventListener('click', () => this.logout());
-    for (const eventName of ['pointerdown', 'keydown', 'touchstart', 'scroll']) {
-      window.addEventListener(eventName, () => this.recordActivity(), { passive: true });
-    }
     this.updateLoginFields();
     this.restoreLoginError();
     this.restoreLockout();
@@ -221,7 +215,6 @@ const AppAuth = {
     State.isLoggedIn = true;
     State.role = session.role;
     State.principalId = session.principal_id;
-    this.startIdleMonitor(session.idle_timeout_seconds);
     document.getElementById('authGate').style.display = 'none';
     document.getElementById('passwordChangeGate').style.display = 'block';
     document.getElementById('appLayout').classList.remove('is-visible');
@@ -288,7 +281,6 @@ const AppAuth = {
     document.getElementById('mobileNavToggle').hidden = false;
     document.getElementById('mobileNavToggle').setAttribute('aria-expanded', 'false');
     document.getElementById('btnLogout').style.display = 'inline-flex';
-    this.startIdleMonitor(session.idle_timeout_seconds);
 
     document.querySelectorAll('.tab-btn').forEach((tab) => {
       tab.hidden = State.role === 'RECEIVER' && tab.dataset.tab !== 'receiver';
@@ -303,43 +295,7 @@ const AppAuth = {
     if (!State.ws) initWebSocket();
   },
 
-  startIdleMonitor(timeoutSeconds = 300) {
-    this.idleTimeoutMs = Math.max(1, Number(timeoutSeconds) || 300) * 1000;
-    this.lastActivitySyncAt = Date.now();
-    clearTimeout(this.idleTimer);
-    this.idleTimer = setTimeout(
-      () => this.logout('Sesi berakhir karena tidak ada aktivitas. Silakan masuk kembali.'),
-      this.idleTimeoutMs
-    );
-  },
-
-  recordActivity() {
-    if (!State.isLoggedIn) return;
-
-    const now = Date.now();
-    clearTimeout(this.idleTimer);
-    this.idleTimer = setTimeout(
-      () => this.logout('Sesi berakhir karena tidak ada aktivitas. Silakan masuk kembali.'),
-      this.idleTimeoutMs
-    );
-
-    const syncIntervalMs = Math.min(30_000, this.idleTimeoutMs / 3);
-    if (now - this.lastActivitySyncAt < syncIntervalMs) return;
-    this.lastActivitySyncAt = now;
-    fetch('/api/auth/activity', { method: 'POST' })
-      .then((response) => {
-        if (response.status === 401) {
-          this.logout('Sesi berakhir. Silakan masuk kembali.');
-        } else if (!response.ok) {
-          throw new Error(`Pembaruan sesi gagal (HTTP ${response.status}).`);
-        }
-      })
-      .catch((error) => console.error('Session activity update failed:', error));
-  },
-
   async logout(message = '') {
-    clearTimeout(this.idleTimer);
-    this.idleTimer = null;
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch (error) {

@@ -21,6 +21,15 @@ def configure_local_security():
         raise SystemExit("Password harus minimal 16 karakter. Server tidak dijalankan.")
     os.environ["ENKRIPSIH_PASSWORD"] = password
 
+    keybca_secret = os.environ.get("ENKRIPSIH_KEYBCA_SECRET")
+    if not keybca_secret:
+        keybca_secret = getpass(
+            "Buat/masukkan secret KeyBCA (minimal 16 karakter, sama dengan perangkat firmware): "
+        )
+    if len(keybca_secret) < 16:
+        raise SystemExit("Secret KeyBCA harus minimal 16 karakter. Server tidak dijalankan.")
+    os.environ["ENKRIPSIH_KEYBCA_SECRET"] = keybca_secret
+
     if not os.environ.get("DATABASE_URL"):
         database_passphrase = os.environ.get("ENKRIPSIH_DB_PASSPHRASE")
         is_new_database_passphrase = database_needs_passphrase_setup()
@@ -50,24 +59,30 @@ def configure_local_security():
 
 def main():
     configure_local_security()
-    print("""
+    banner = """
     ====================================================================
       ███████╗███╗   ██╗██╗  ██╗██████╗ ██╗██████╗ ███████╗██╗██╗  ██╗
       ██╔════╝████╗  ██║██║ ██╔╝██╔══██╗██║██╔══██╗██╔════╝██║██║  ██║
       █████╗  ██╔██╗ ██║█████═╝ ██████╔╝██║██████╔╝███████╗██║███████║
       ██╔══╝  ██║╚██╗██║██╔═██╗ ██╔══██╗██║██╔═══╝ ╚════██║██║██╔══██║
       ███████╗██║ ╚████║██║ ╚██╗██║  ██║██║██║     ███████║██║██║  ██║
-      ╚══════╝╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝     ╚══════╝╚═╝╚═╝  ╚═╝
+      ╚══════╝╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝╚═╝  ╚═╝
     ====================================================================
       Tactical Intelligence IoT Hub & KeyBCA Token Decoder System
       Hardware Target : Wemos D1 Mini (ESP8266)
     ====================================================================
       [+] Frontend & Backend  : http://localhost:8000
-      [+] Interactive API Docs: http://localhost:8000/docs
       [+] WebSocket Server    : ws://localhost:8000/ws
     ====================================================================
+      Catatan: Swagger /docs dinonaktifkan secara default.
+      Aktifkan dengan ENKRIPSIH_ENABLE_DOCS=1 jika diperlukan.
+    ====================================================================
     Tekan CTRL + C untuk menghentikan server.
-    """)
+    """
+    import sys
+    if sys.stdout.encoding != "utf-8":
+        sys.stdout.reconfigure(encoding="utf-8")
+    print(banner)
     uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=False)
 
 if __name__ == "__main__":
