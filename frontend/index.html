@@ -130,12 +130,11 @@
               <select class="form-select" id="recipientId" required>
                 <option value="">Memuat anggota...</option>
               </select>
+              <span class="agent-hint" id="agentHint" style="display:none;">✓ Kunci agen tersedia — akan diisi otomatis</span>
             </div>
 
-            <div class="form-group">
-              <label class="form-label" for="senderSecretKey">Secret key anggota</label>
-              <input type="password" class="form-input" id="senderSecretKey" autocomplete="off" minlength="32" required />
-            </div>
+            <!-- Secret key is auto-resolved server-side; no manual input needed -->
+            <input type="hidden" id="senderSecretKey" value="" />
 
             <div class="form-group">
               <label class="form-label" for="intelMessage">Pesan yang akan dienkripsi</label>

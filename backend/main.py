@@ -73,6 +73,9 @@ async def lifespan(_: FastAPI):
         confirm_plaintext_migration=os.environ.get("ENKRIPSIH_CONFIRM_DB_MIGRATION") == "yes",
         passphrase=os.environ.get("ENKRIPSIH_DB_PASSPHRASE"),
     )
+    global _AGENT_SECRET_KEYS
+    _AGENT_SECRET_KEYS = _pre_register_agent_keys()
+    print(f"[AGENT] Registered {len(_AGENT_SECRET_KEYS)} agent keys: {list(_AGENT_SECRET_KEYS.keys())}", file=sys.stderr)
     yield
 docs_enabled = os.environ.get("ENKRIPSIH_ENABLE_DOCS", "").lower() in {"1", "true", "yes"}
 app = FastAPI(
@@ -713,7 +716,84 @@ def register_face_endpoint(req: FaceAuthRequest):
 
     return register_commander_face(req.image_base64, req.user_id or "CMD-01")
 
-# --- Messages (Transmission & Decryption) ---
+# --- Pre-registered agent keys from .env ---
+def _read_agent_env_keys() -> dict[str, str]:
+    """
+    Reads AGENT_<NAME>_SECRET_KEY env vars (e.g. AGENT_TOBY_SECRET_KEY,
+    AGENT_FIKI_SECRET_KEY). Returns {name: key} where key length >= 32.
+    """
+    keys: dict[str, str] = {}
+    prefix = "AGENT_"
+    suffix = "_SECRET_KEY"
+    for var, val in os.environ.items():
+        if not var.startswith(prefix) or not var.endswith(suffix):
+            continue
+        name = var[len(prefix):len(var) - len(suffix)]
+        if not name or len(val) < 32:
+            continue
+        keys[name] = val
+    return keys
+
+
+def _pre_register_agent_keys() -> dict[str, str]:
+    """
+    On startup, registers any env-configured agents that are not yet in the
+    database. Returns {recipient_id: key} for all env agents present in DB.
+    """
+    agent_keys = _read_agent_env_keys()
+    registered: dict[str, str] = {}  # recipient_id -> key
+
+    for name, key in agent_keys.items():
+        salt = secrets.token_hex(16)
+        verifier = hashlib.pbkdf2_hmac(
+            "sha256",
+            key.encode("utf-8"),
+            b"enkripsih:recipient:v1:" + bytes.fromhex(salt),
+            600_000,
+            32,
+        ).hex()
+
+        username = name.lower()
+        # Look up recipient by name (case-insensitive) so that "TODY" in .env
+        # matches "Tody" in the DB.
+        all_recipients = get_recipient_keys()
+        existing = next(
+            (r for r in all_recipients if r["name"].lower() == name.lower()),
+            None,
+        )
+        if existing:
+            recipient_id = existing["id"]
+            # Refresh verifier so the env key is authoritative.
+            reissue_recipient_key(recipient_id, salt, verifier)
+            registered[recipient_id] = key
+            log_event("KEY", "SUCCESS", f"Kunci env [{name}] di-update untuk [{recipient_id}] (verifier di-refresh).")
+        else:
+            # New agent: generate recipient_id and insert both tables.
+            recipient_id = secrets.token_urlsafe(12)
+            password_salt = secrets.token_bytes(16)
+            try:
+                register_recipient_key(
+                    recipient_id, name, salt, verifier,
+                    username,
+                    password_salt.hex(),
+                    _password_hash("enkripsih-" + username, password_salt),
+                )
+                log_event("KEY", "SUCCESS", f"Anggota env [{name}] didaftarkan otomatis (id={recipient_id}).")
+            except Exception:
+                # receiver_accounts.username might already exist from a prior
+                # UI registration under the same name — skip creating the account
+                # but still store the key mapping if the recipient was created.
+                pass
+            registered[recipient_id] = key
+
+    return registered
+
+
+# Module-level cache: recipient_id -> plaintext key (only set after pre-reg).
+_AGENT_SECRET_KEYS: dict[str, str] = {}
+
+
+# --- Endpoints that depend on agent keys ---
 @app.get("/api/recipients")
 def list_recipients(request: Request = None):
     principal = getattr(request.state, "principal", None) if request else None
@@ -874,6 +954,29 @@ def verify_recipient_key(
     return {"valid": is_valid}
 
 
+@app.get("/api/agent-keys")
+def agent_keys_endpoint(request: Request):
+    """
+    Returns the plaintext secret key for each env-configured agent.
+    Commander-only: receiver or unauthenticated callers get 403.
+    """
+    principal = getattr(request.state, "principal", None) if request else None
+    if not principal or principal["role"] != "COMMANDER":
+        raise HTTPException(status_code=403, detail="Hanya komandan yang dapat melihat kunci agen.")
+    # Build response: list of {recipient_id, name, key}
+    keys = _AGENT_SECRET_KEYS
+    recipients = get_recipient_keys()
+    result = []
+    for rid, key in keys.items():
+        rec = next((r for r in recipients if r["id"] == rid), None)
+        result.append({
+            "recipient_id": rid,
+            "name": rec["name"] if rec else rid,
+            "key": key,
+        })
+    return {"agent_keys": result}
+
+
 def _require_receiver_message_access(msg: dict, request: Request = None) -> None:
     principal = getattr(request.state, "principal", None) if request else None
     if (
@@ -887,6 +990,15 @@ class EncryptMessageRequest(BaseModel):
     plaintext: str
     recipient_id: str
     secret_key: str
+    save: bool = True
+
+
+class EncryptAgentMessageRequest(BaseModel):
+    """Commander only: encrypt to an agent whose key is stored server-side.
+    No secret_key needed in the body — the server resolves it from .env cache.
+    """
+    plaintext: str
+    recipient_id: str
     save: bool = True
 
 def _verify_secret_key(recipient: dict, secret_key: str) -> bool:
@@ -1025,6 +1137,86 @@ async def encrypt_message_endpoint(req: EncryptMessageRequest, request: Request 
         "challenge_symbols": " ".join(NAMES[c] for c in challenge_indices),
         "saved": sent_data,
     }
+
+
+@app.post("/api/messages/encrypt-agent")
+async def encrypt_agent_message_endpoint(req: EncryptAgentMessageRequest, request: Request = None):
+    """Encrypt a message to an agent whose secret key is pre-registered in .env.
+    The commander does not need to know or type the secret key — the server
+    resolves it from the in-memory cache.
+    """
+    principal = getattr(getattr(request, "state", None), "principal", None) if request else None
+    if not principal or principal["role"] != "COMMANDER":
+        raise HTTPException(status_code=403, detail="Hanya komandan yang dapat mengenkripsi pesan.")
+    recipient = get_recipient_key(req.recipient_id)
+    if not recipient:
+        raise HTTPException(status_code=404, detail="Anggota belum terdaftar.")
+    if len(req.plaintext) > 50_000:
+        raise HTTPException(status_code=413, detail="Pesan terlalu panjang.")
+
+    secret_key = _AGENT_SECRET_KEYS.get(recipient["id"])
+    if not secret_key:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Anggota '{recipient['name']}' tidak memiliki kunci agen yang teregistrasi di server. Daftarkan via UI biasa atau tambahkan AGENT_<NAMA>_SECRET_KEY ke .env.",
+        )
+
+    work = await _compute_encrypt_work(recipient, secret_key, req.plaintext)
+    if work.get("error"):
+        raise HTTPException(status_code=400, detail="Secret key tidak cocok dengan anggota yang terdaftar.")
+
+    challenge_indices = work["challenge_indices"]
+
+    envelope = {
+        "v": 5,
+        "salt": work["salt"],
+        "iv": work["iv"],
+        "ciphertext": work["ciphertext"],
+        "challenge": "".join(LETTERS[c] for c in challenge_indices),
+    }
+    paket = json.dumps(envelope)
+
+    sent_data = None
+    if req.save:
+        profile = get_commander_profile(principal["principal_id"])
+        sender_name = profile["name"] if profile else principal["principal_id"]
+        msg_id = f"MSG-{datetime.now().strftime('%m%d')}-{os.urandom(2).hex().upper()}"
+        msg_record = {
+            "id": msg_id,
+            "sender_id": principal["principal_id"],
+            "sender_name": sender_name,
+            "target_unit": recipient["name"],
+            "recipient_id": recipient["id"],
+            "paket": paket,
+            "status": "LOCKED",
+            "created_at": datetime.now().isoformat()
+        }
+        save_message(msg_record)
+        log_event("TRANSMIT", "SUCCESS", f"Ciphertext [{msg_id}] ditransmisikan ke {recipient['name']}.")
+        await manager.broadcast({
+            "type": "NEW_MESSAGE",
+            "message": {
+                "id": msg_id,
+                "target_unit": recipient["name"],
+                "status": "LOCKED",
+                "created_at": msg_record["created_at"]
+            }
+        }, recipient_id=recipient["id"])
+        sent_data = {
+            "message_id": msg_id,
+            "target_unit": recipient["name"],
+            "status": "LOCKED"
+        }
+
+    return {
+        "success": True,
+        "paket": paket,
+        "challenge_indices": challenge_indices,
+        "challenge_letters": "".join(LETTERS[c] for c in challenge_indices),
+        "challenge_symbols": " ".join(NAMES[c] for c in challenge_indices),
+        "saved": sent_data,
+    }
+
 
 @app.post("/api/messages/decrypt")
 async def decrypt_message_endpoint(request: Request):

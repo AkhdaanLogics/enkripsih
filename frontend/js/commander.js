@@ -3,6 +3,7 @@
  */
 const Commander = {
   _pollTimer: null,
+  _agentKeys: null,
 
   init() {
     document.getElementById("commanderTransmitForm")
@@ -30,6 +31,8 @@ const Commander = {
       ?.addEventListener("click", () => this.loadMessages());
     document.getElementById("btnRefreshRecipients")
       ?.addEventListener("click", () => this.loadRecipients());
+    document.getElementById("recipientId")
+      ?.addEventListener("change", () => this._onRecipientChange());
     window.loadCommanderMessages = () => this.loadMessages();
     window.loadCommanderRecipients = () => this.loadRecipients();
     window.clearCommanderSensitiveData = () => this.clearSensitiveData();
@@ -38,6 +41,7 @@ const Commander = {
       document.getElementById("recipientSecretKey").value = "";
       this.clearRegisteredKey();
     };
+    this._fetchAgentKeys();
     this.startPolling();
   },
 
@@ -52,7 +56,6 @@ const Commander = {
 
   clearSensitiveData() {
     document.getElementById("recipientSecretKey").value = "";
-    document.getElementById("senderSecretKey").value = "";
     document.getElementById("intelMessage").value = "";
     this.clearRegisteredKey();
     document.getElementById("lastTransmitNotice").replaceChildren();
@@ -166,6 +169,44 @@ const Commander = {
       console.error("Load recipient keys error:", error);
       showToast(error.message || "Gagal memuat daftar anggota.", "error");
     }
+    this._refreshAgentKeyHint();
+    // If agent keys are already loaded, trigger a visual update (badge if any)
+    if (select && select.value && this._agentKeys) {
+      this._onRecipientChange();
+    }
+  },
+
+  async _fetchAgentKeys() {
+    try {
+      const data = await this.requestJSON("/api/agent-keys");
+      this._agentKeys = {};
+      for (const entry of data.agent_keys || []) {
+        this._agentKeys[entry.recipient_id] = entry.key;
+      }
+      this._refreshAgentKeyHint();
+      // If a recipient is already selected, trigger auto-fill now that keys are ready
+      const select = document.getElementById("recipientId");
+      if (select && select.value) {
+        this._onRecipientChange();
+      }
+    } catch (e) {
+      console.warn("Tidak dapat memuat kunci agen, auto-fill tidak tersedia.", e);
+    }
+  },
+
+  _onRecipientChange() {
+    const select = document.getElementById("recipientId");
+    if (!select) return;
+    this._refreshAgentKeyHint();
+  },
+
+  _refreshAgentKeyHint() {
+    const select = document.getElementById("recipientId");
+    const hint = document.getElementById("agentHint");
+    if (!select || !hint) return;
+    const rid = select.value;
+    const isAgent = this._agentKeys && rid && this._agentKeys[rid];
+    hint.style.display = isAgent ? "block" : "none";
   },
 
   async registerRecipient() {
@@ -350,10 +391,8 @@ const Commander = {
   async sendMessage() {
     AudioSys.click();
     const recipientId = document.getElementById("recipientId").value;
-    const keyInput = document.getElementById("senderSecretKey");
     const messageInput = document.getElementById("intelMessage");
     const plaintext = messageInput.value;
-    let secret = keyInput.value.trim();
     const button = document.getElementById("btnTransmitIntel");
     if (!recipientId) {
       showToast("Pilih anggota penerima yang sudah terdaftar.", "warning");
@@ -361,10 +400,6 @@ const Commander = {
     }
     if (!plaintext.trim()) {
       showToast("Isi pesan tidak boleh kosong.", "warning");
-      return;
-    }
-    if (secret.length < 32) {
-      showToast("Masukkan secret key anggota minimal 32 karakter.", "warning");
       return;
     }
     button.disabled = true;
@@ -394,26 +429,24 @@ const Commander = {
     }
     try {
       setStep('stepVerify', 'Memverifikasi anggota...');
-      // Single backend call handles: verify + challenge + response + PBKDF2 600k + AES-GCM + save
-      const result = await this.requestJSON("/api/messages/encrypt", {
+      // Use agent-key endpoint when the selected recipient has a server-side key.
+      const agentKey = this._agentKeys && this._agentKeys[recipientId];
+      const isAgent = !!agentKey;
+      const endpoint = isAgent ? "/api/messages/encrypt-agent" : "/api/messages/encrypt";
+      const body = isAgent
+        ? JSON.stringify({ plaintext, recipient_id: recipientId, save: true })
+        : JSON.stringify({ plaintext, recipient_id: recipientId, secret_key: "", save: true });
+      const result = await this.requestJSON(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          plaintext,
-          recipient_id: recipientId,
-          secret_key: secret,
-          save: true,
-        }),
+        body,
       });
 
       setStep('stepVerify', 'Verifikasi ✓', true);
       setStep('stepEncrypt', 'Menghitung kunci & enkripsi...');
-
-      // Now PBKDF2 + AES runs on server — instant for the user
       setStep('stepEncrypt', 'Enkripsi ✓', true);
       setStep('stepSave', 'Menyimpan ciphertext...', true);
 
-      const recipient = result; // backend already returned target_unit
       const targetUnit = result.target_unit || recipientId;
       AudioSys.accessGranted();
       showToast(`Ciphertext tersimpan untuk ${targetUnit}: ${result.saved.message_id}`, "success");
@@ -421,7 +454,6 @@ const Commander = {
         message_id: result.saved.message_id,
       }, targetUnit, result.challenge_indices);
       messageInput.value = "";
-      keyInput.value = "";
       setStep('stepSave', 'Selesai ✓', true);
       await this.loadMessages();
     } catch (error) {
@@ -429,7 +461,6 @@ const Commander = {
       AudioSys.accessDenied();
       showToast(error.message || "Gagal mengenkripsi atau mengirim pesan.", "error");
     } finally {
-      secret = "";
       button.disabled = false;
       button.innerHTML = originalBtnHTML;
     }
