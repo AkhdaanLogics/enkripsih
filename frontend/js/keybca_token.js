@@ -127,6 +127,7 @@ const KeyBCAToken = {
   },
 
   async computeResponse() {
+    ProcessingModal.show("Menghitung respons Lexa…", 30);
     try {
       const chalStr = this.currentChal.map(i => this.LETTERS[i]).join('');
       const res = await fetch('/api/iot/keybca/calculate', {
@@ -148,6 +149,8 @@ const KeyBCAToken = {
     } catch (e) {
       console.error(e);
       showToast("Gagal menghitung respon Lexa.", "error");
+    } finally {
+      ProcessingModal.hide();
     }
   },
 
@@ -159,6 +162,7 @@ const KeyBCAToken = {
     }
 
     const chalStr = this.currentChal.map(i => this.LETTERS[i]).join('');
+    ProcessingModal.show("Menyinkronkan token ke receiver…", 40);
     try {
       const res = await fetch('/api/iot/keybca/solve', {
         method: 'POST',
@@ -176,6 +180,8 @@ const KeyBCAToken = {
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      ProcessingModal.hide();
     }
   },
 

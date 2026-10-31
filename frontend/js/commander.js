@@ -28,7 +28,7 @@ const Commander = {
     document.getElementById("btnDismissReceiverAccount")
       ?.addEventListener("click", () => this.clearReceiverAccountNotice());
     document.getElementById("btnRefreshCommanderMsgs")
-      ?.addEventListener("click", () => this.loadMessages());
+      ?.addEventListener("click", () => this.loadMessages({ trigger: "manual" }));
     document.getElementById("btnRefreshRecipients")
       ?.addEventListener("click", () => this.loadRecipients());
     document.getElementById("recipientId")
@@ -96,6 +96,7 @@ const Commander = {
   async loadRecipients(selectedId = "") {
     const select = document.getElementById("recipientId");
     if (!select) return;
+    ProcessingModal.show("Memuat daftar anggota…", 30);
     try {
       const data = await this.requestJSON("/api/recipients");
       const list = document.getElementById("recipientList");
@@ -165,9 +166,11 @@ const Commander = {
           list.append(members);
         }
       }
-    } catch (error) {
+     } catch (error) {
       console.error("Load recipient keys error:", error);
       showToast(error.message || "Gagal memuat daftar anggota.", "error");
+    } finally {
+      ProcessingModal.hide();
     }
     this._refreshAgentKeyHint();
     // If agent keys are already loaded, trigger a visual update (badge if any)
@@ -177,6 +180,10 @@ const Commander = {
   },
 
   async _fetchAgentKeys(retries = 2, delayMs = 500) {
+    // Agent keys are commander-only. Receivers (and the unauthenticated
+    // pre-login page load) must not hit /api/agent-keys: it just produces
+    // avoidable 401/403 noise in the receiver console.
+    if (State.role !== "COMMANDER") return;
     for (let i = 0; i <= retries; i++) {
       try {
         const data = await this.requestJSON("/api/agent-keys");
@@ -233,6 +240,7 @@ const Commander = {
 
     this.clearRegisteredKey();
     button.disabled = true;
+    ProcessingModal.show("Mendaftarkan anggota…", 30);
     try {
       const salt = MessageCrypto.toHex(MessageCrypto.randomBytes(16));
       const verifier = await MessageCrypto.verifier(secret, salt);
@@ -262,12 +270,13 @@ const Commander = {
       keyInput.value = "";
       showToast("Anggota terdaftar. Salin kunci dan bagikan melalui jalur aman.", "success");
       AudioSys.accessGranted();
+      ProcessingModal.update("Menyimpan data akun receiver…", 80);
       await this.loadRecipients(result.recipient_id);
     } catch (error) {
       console.error("Register recipient key error:", error);
       showToast(error.message || "Pendaftaran anggota gagal.", "error");
     } finally {
-      secret = "";
+      ProcessingModal.hide();
       button.disabled = false;
     }
   },
@@ -291,6 +300,7 @@ const Commander = {
       this.clearRegisteredKey();
     }
     this.clearReceiverAccountNotice();
+    ProcessingModal.show("Membuat akun receiver…", 50);
     try {
       const result = await this.requestJSON(
         `/api/recipients/${encodeURIComponent(recipient.id)}/account`,
@@ -305,6 +315,8 @@ const Commander = {
     } catch (error) {
       console.error("Receiver account provisioning error:", error);
       showToast(error.message || "Akun receiver tidak dapat dibuat.", "error");
+    } finally {
+      ProcessingModal.hide();
     }
   },
 
@@ -318,6 +330,7 @@ const Commander = {
       return;
     }
     AudioSys.click();
+    ProcessingModal.show("Me-reset kunci anggota…", 40);
     if (document.getElementById("registeredKeyNotice").hidden === false) {
       this.clearRegisteredKey();
     }
@@ -335,6 +348,8 @@ const Commander = {
     } catch (error) {
       console.error("Reissue recipient key error:", error);
       showToast(error.message || "Gagal me-reissue kunci.", "error");
+    } finally {
+      ProcessingModal.hide();
     }
   },
 
@@ -349,6 +364,7 @@ const Commander = {
       return;
     }
     AudioSys.click();
+    ProcessingModal.show("Menghapus anggota & pesan terkait…", 50);
     try {
       const result = await this.requestJSON(
         `/api/recipients/${encodeURIComponent(recipient.id)}`,
@@ -369,6 +385,8 @@ const Commander = {
     } catch (error) {
       console.error("Delete recipient error:", error);
       showToast(error.message || "Gagal menghapus anggota.", "error");
+    } finally {
+      ProcessingModal.hide();
     }
   },
 
@@ -409,41 +427,10 @@ const Commander = {
       return;
     }
     button.disabled = true;
-    const originalBtnHTML = button.innerHTML;
-    button.innerHTML = `
-      <div class="progress-indicator">
-        <span class="progress-step" id="stepVerify">…</span>
-        <span class="progress-line"></span>
-        <span class="progress-step" id="stepEncrypt">…</span>
-        <span class="progress-line"></span>
-        <span class="progress-step" id="stepSave">…</span>
-      </div>
-      <span id="progressLabel">Memverifikasi anggota...</span>
-    `;
-      function setStep(step, label, done = false) {
-        document.querySelectorAll('.progress-step').forEach(s => {
-          if (s.id !== step) {
-            s.classList.remove('step-active', 'step-complete');
-            s.classList.add('progress-step');
-            if (s.textContent !== '✓') s.textContent = '…';
-          }
-        });
-        const activeStep = document.getElementById(step);
-        if (activeStep) {
-          if (done) {
-            activeStep.classList.remove('step-active');
-            activeStep.classList.add('step-complete');
-          } else {
-            activeStep.classList.remove('step-complete');
-            activeStep.classList.add('step-active');
-          }
-          activeStep.textContent = done ? '✓' : '…';
-        }
-        const labelEl = document.getElementById('progressLabel');
-        if (labelEl) labelEl.textContent = label;
-      }
+    ProcessingModal.show("Memverifikasi anggota…", 20);
+
     try {
-      setStep('stepVerify', 'Memverifikasi anggota...');
+      ProcessingModal.update("Memverifikasi anggota…", 35);
       // Use agent-key endpoint when the selected recipient has a server-side key.
       const agentKey = this._agentKeys && this._agentKeys[recipientId];
       const isAgent = !!agentKey;
@@ -459,28 +446,28 @@ const Commander = {
           endpoint = "/api/messages/encrypt-agent";
           body = JSON.stringify({ plaintext, recipient_id: recipientId, save: true });
         } else {
-          // No agent key available — require manual key entry
+          // No agent key available - require manual key entry
           const keyInput = document.getElementById("senderSecretKey");
           const secret = keyInput ? keyInput.value.trim() : "";
           if (secret.length < 32) {
+            ProcessingModal.hide();
             showToast("Kunci agen tidak tersedia. Masukkan secret key manual atau refresh halaman.", "warning");
+            button.disabled = false;
             return;
           }
           endpoint = "/api/messages/encrypt";
           body = JSON.stringify({ plaintext, recipient_id: recipientId, secret_key: secret, save: true });
         }
       }
+
+      ProcessingModal.update("Mengenkripsi & mengirim ke receiver…", 60);
       const result = await this.requestJSON(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body,
       });
 
-      setStep('stepVerify', 'Verifikasi ✓', true);
-      setStep('stepEncrypt', 'Menghitung kunci & enkripsi...');
-      setStep('stepEncrypt', 'Enkripsi ✓', true);
-      setStep('stepSave', 'Menyimpan ciphertext...', true);
-
+      ProcessingModal.update("Menyimpan ciphertext…", 90);
       const targetUnit = result.target_unit || recipientId;
       AudioSys.accessGranted();
       showToast(`Ciphertext tersimpan untuk ${targetUnit}: ${result.saved.message_id}`, "success");
@@ -488,15 +475,15 @@ const Commander = {
         message_id: result.saved.message_id,
       }, targetUnit, result.challenge_indices);
       messageInput.value = "";
-      setStep('stepSave', 'Selesai ✓', true);
+      ProcessingModal.update("Selesai!", 100);
       await this.loadMessages();
     } catch (error) {
       console.error("Transmit error:", error);
       AudioSys.accessDenied();
       showToast(error.message || "Gagal mengenkripsi atau mengirim pesan.", "error");
     } finally {
+      ProcessingModal.hide();
       button.disabled = false;
-      button.innerHTML = originalBtnHTML;
     }
   },
 
@@ -521,9 +508,11 @@ const Commander = {
     box.hidden = false;
   },
 
-  async loadMessages() {
+  async loadMessages({ trigger = "poll" } = {}) {
     const list = document.getElementById("commanderSentList");
     if (!list) return;
+    const showProgress = trigger === "manual";
+    if (showProgress) ProcessingModal.show("Memuat riwayat pesan…", 30);
     try {
       const data = await this.requestJSON("/api/messages");
       list.replaceChildren();
@@ -562,6 +551,8 @@ const Commander = {
     } catch (error) {
       console.error("Load messages error:", error);
       showToast(error.message || "Gagal memuat riwayat pesan.", "error");
+    } finally {
+      if (showProgress) ProcessingModal.hide();
     }
   },
 };

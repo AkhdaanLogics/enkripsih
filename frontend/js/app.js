@@ -115,6 +115,42 @@ function showToast(message, type = 'info') {
   }, 4000);
 }
 
+  // Processing Modal - shows overlay during long-running operations
+const ProcessingModal = {
+  overlay: null,
+  titleEl: null,
+  progressFill: null,
+
+  init() {
+    this.overlay = document.getElementById('processingOverlay');
+    this.titleEl = document.getElementById('processingTitle');
+    this.progressFill = document.getElementById('processingProgressFill');
+  },
+
+  show(title, progress = 0) {
+    if (!this.overlay) this.init();
+    if (this.titleEl) this.titleEl.textContent = title;
+    if (this.progressFill) {
+      this.progressFill.style.width = `${Math.min(100, Math.max(0, progress))}%`;
+    }
+    this.overlay.hidden = false;
+  },
+
+  update(title, progress) {
+    if (!this.overlay) this.init();
+    if (this.titleEl) this.titleEl.textContent = title;
+    if (this.progressFill) {
+      this.progressFill.style.width = `${Math.min(100, Math.max(0, progress))}%`;
+    }
+  },
+
+  hide() {
+    if (!this.overlay) return;
+    this.overlay.hidden = true;
+    if (this.progressFill) this.progressFill.style.width = '0%';
+  }
+};
+
 // WebSocket Connection
 function initWebSocket() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';

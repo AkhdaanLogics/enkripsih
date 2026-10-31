@@ -6,12 +6,10 @@
   <meta name="theme-color" content="#101216">
   <meta name="description" content="Kirim pesan terenkripsi kepada anggota terdaftar.">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-  <title>ENKRIPSIH — Pesan terenkripsi</title>
+  <title>ENKRIPSIH: Pesan terenkripsi</title>
   
-  <!-- Typography: Public Sans -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Typography: system sans stack (--font-sans in CSS). External font hosts
+       are intentionally avoided to keep the strict style-src/style CSP clean. -->
 
   <!-- Stylesheet served by the FastAPI static mount -->
   <link rel="stylesheet" href="/static/css/style.css?v=ui-v2-whatsapp">
@@ -65,7 +63,7 @@
     </section>
   </main>
 
-  <main class="main-content" id="passwordChangeGate" style="display:none;">
+  <main class="main-content" id="passwordChangeGate" hidden>
     <section class="tactical-card auth-gate">
       <h2 class="card-title">Ganti password sementara</h2>
       <p class="card-subtitle">Buat password baru minimal 16 karakter sebelum membuka kotak masuk.</p>
@@ -127,7 +125,7 @@
               <select class="form-select" id="recipientId" required>
                 <option value="">Memuat anggota...</option>
               </select>
-              <span class="agent-hint" id="agentHint" hidden>✓ Kunci agen tersedia — akan diisi otomatis</span>
+              <span class="agent-hint" id="agentHint" hidden>Kunci agen tersedia, akan diisi otomatis</span>
             </div>
 
             <!-- Secret key is auto-resolved server-side; no manual input needed -->
@@ -138,7 +136,7 @@
               <textarea class="form-textarea" id="intelMessage" placeholder="Tulis pesan yang akan dienkripsi..." required></textarea>
             </div>
 
-            <button type="submit" class="btn-tactical btn-tactical-primary" id="btnTransmitIntel" style="width:100%;">
+            <button type="submit" class="btn-tactical btn-tactical-primary btn-transmit" id="btnTransmitIntel">
               <span>Enkripsi dan kirim</span>
             </button>
           </form>
@@ -265,19 +263,26 @@
 
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Processing Overlay Modal -->
+  <div class="processing-overlay" id="processingOverlay" hidden>
+    <div class="processing-modal">
+      <div class="processing-spinner"></div>
+      <div>
+        <div class="processing-title" id="processingTitle">Memproses…</div>
+        <div class="processing-progress">
+          <div class="processing-progress-fill" id="processingProgressFill"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts served by the FastAPI static mount -->
   <script src="/static/js/app.js?v=antislop-v3"></script>
   <script src="/static/js/auth.js?v=antislop-v3"></script>
   <script src="/static/js/commander.js?v=ui-v2"></script>
   <script src="/static/js/message_crypto.js?v=passkey-svg1"></script>
   <script src="/static/js/receiver.js?v=ui-v2-whatsapp"></script>
-  <script>
-    // Feature-detect Web Worker, create instance for crypto operations
-    if (window.Worker) {
-      window.__cryptoWorker = new Worker('/static/js/crypto_worker.js?v=1');
-      window.__cryptoWorker.onerror = (e) => console.error("Worker error:", e.message);
-    }
-  </script>
 
 </body>
 </html>

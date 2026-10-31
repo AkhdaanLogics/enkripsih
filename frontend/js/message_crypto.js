@@ -247,7 +247,7 @@ const MessageCrypto = {
       ciphertext: this.toBase64Url(new Uint8Array(ciphertext)),
       challenge: challengeLetters,
     };
-    // v5: do NOT embed expected_response — receiver must supply passkey from hardware token.
+    // v5: do NOT embed expected_response - receiver must supply passkey from hardware token.
     if (typeof expectedResponse === "string" && envelope.v === 3) {
       envelope.expected_response = expectedResponse;
     }
@@ -276,7 +276,7 @@ const MessageCrypto = {
         throw new Error("Challenge passkey pada pesan tidak valid.");
       }
       // Passkey-only mode: user MUST supply the 12-symbol response from their
-      // hardware passkey device. No embedded fallback — the device response
+      // hardware passkey device. No embedded fallback - the device response
       // is the only authorised decryption path.
       if (typeof passkey !== "string" || !passkey.trim()) {
         throw new Error("Respons perangkat passkey 12 simbol wajib dimasukkan.");

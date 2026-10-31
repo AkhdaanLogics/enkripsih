@@ -127,6 +127,7 @@ const AppAuth = {
       : { password };
     button.disabled = true;
     this.clearLoginError();
+    ProcessingModal.show("Masuk ke aplikasi…", 30);
 
     try {
       const response = await fetch(endpoint, {
@@ -155,9 +156,12 @@ const AppAuth = {
         this.showWorkspace(data);
       }
     } catch (error) {
+      if (!this.isLocked()) button.disabled = false;
+      ProcessingModal.hide();
       this.showLoginError(error.message || 'Tidak dapat masuk ke aplikasi.');
     } finally {
       if (!this.isLocked()) button.disabled = false;
+      ProcessingModal.hide();
     }
   },
 
@@ -248,7 +252,7 @@ const AppAuth = {
     }
     if (mobileNavToggle) mobileNavToggle.hidden = isReceiver;
 
-    // Hide the receiver (inbox) tab for commanders — they send, not receive.
+    // Hide the receiver (inbox) tab for commanders - they send, not receive.
     // Commander message history is already shown in the transmit card.
     document.querySelectorAll('.tab-btn').forEach((tab) => {
       const isReceiverTab = tab.dataset.tab === 'receiver';

@@ -7,13 +7,14 @@ const Receiver = {
   _decrypting: false,
   _decryptedTexts: new Map(),
   _messages: [],
+  _renderedDetailStatus: null,
   currentMessageId: null,
 
   init() {
     document.getElementById("btnRefreshReceiverMsgs")
       ?.addEventListener("click", () => {
         AudioSys.click();
-        this.loadMessages();
+        this.loadMessages({ trigger: "manual" });
       });
     window.loadMessages = () => this.loadMessages();
     window.clearReceiverSensitiveData = () => this.clearSensitiveData();
@@ -59,8 +60,10 @@ const Receiver = {
     return data;
   },
 
-  async loadMessages() {
+  async loadMessages({ trigger = "poll" } = {}) {
     if (this._decrypting || this._loading) return;
+    const showProgress = trigger === "manual";
+    if (showProgress) ProcessingModal.show("Memuat kotak masuk…", 30);
     const preserveSelection = !!this.currentMessageId;
     const wasEditing = this.isEditingPasskey();
     this._loading = true;
@@ -75,8 +78,9 @@ const Receiver = {
         return;
       }
       this.recipients = recipients.recipients;
-      const prevIds = (this._messages || []).map(m => m.id).join("|");
-      const nextIds = messages.messages.map(m => m.id).join("|");
+      const ids = list => list.map(m => `${m.id}|${m.status}`).join(",");
+      const prevIds = ids(this._messages || []);
+      const nextIds = ids(messages.messages);
       this._messages = messages.messages;
 
       const badge = document.getElementById("receiverBadge");
@@ -86,7 +90,7 @@ const Receiver = {
       }
 
       // If the user is actively typing a passkey into the open form, do NOT
-      // rebuild the list or the detail pane — that would wipe their input.
+      // rebuild the list or the detail pane - that would wipe their input.
       if (wasEditing) {
         this._loading = false;
         return;
@@ -116,7 +120,10 @@ const Receiver = {
         }
       }
 
-      if (!messages.messages.length) return;
+      if (!messages.messages.length) {
+        this._resetDetailPane();
+        return;
+      }
       const stillThere = messages.messages.some(m => m.id === this.currentMessageId);
       if (preserveSelection && stillThere) {
         this.selectMessage(this.currentMessageId);
@@ -128,6 +135,7 @@ const Receiver = {
       showToast(error.message || "Gagal memuat kotak masuk.", "error");
     } finally {
       this._loading = false;
+      if (showProgress) ProcessingModal.hide();
     }
   },
 
@@ -135,7 +143,9 @@ const Receiver = {
     const item = document.createElement("div");
     item.className = `receiver-chat-item ${message.status === "LOCKED" ? "has-unread" : ""}`;
     item.dataset.messageId = message.id;
-    item.role = "button";
+    item.setAttribute("role", "button");
+    item.setAttribute("tabindex", "0");
+    item.setAttribute("aria-selected", "false");
 
     const statusLabel = {
       LOCKED: "TERENKRIPSI",
@@ -168,41 +178,73 @@ const Receiver = {
     sender.append(nameEl, meta);
     item.append(sender);
 
-    item.addEventListener("click", () => this.selectMessage(message.id));
+    const activate = () => this.selectMessage(message.id);
+    item.addEventListener("click", activate);
+    item.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        activate();
+      }
+    });
     return item;
   },
 
   selectMessage(messageId) {
     const messages = this._messages || [];
     const message = messages.find(m => m.id === messageId);
-    if (!message) return;
+    if (!message) {
+      this._resetDetailPane();
+      return;
+    }
 
     const noChat = document.getElementById("receiverNoChat");
     const container = document.getElementById("receiverMessageContainer");
 
-    // If the same message is already open, don't wipe and rebuild the detail
-    // pane (that causes the flicker). Just make sure it is visible.
-    const alreadyOpen =
+    // If the same message is already open and its status hasn't changed, don't
+    // wipe and rebuild the detail pane (that causes the flicker). Re-render when
+    // the status changed server-side (e.g. LOCKED -> UNLOCKED -> BURNED) so the
+    // view actually updates after a burn/decrypt that arrived over polling.
+    const sameSelection =
       this.currentMessageId === messageId &&
       container &&
-      container.style.display !== "none" &&
+      !container.hidden &&
       noChat &&
-      noChat.style.display === "none";
-    if (alreadyOpen) {
+      noChat.hidden;
+    const statusChanged = this._renderedDetailStatus !== message.status;
+    if (sameSelection && !statusChanged) {
       this.currentMessageId = messageId;
       return;
     }
 
     this.currentMessageId = messageId;
+    this._renderedDetailStatus = message.status;
 
     document.querySelectorAll(".receiver-chat-item").forEach(item => {
-      item.classList.toggle("active", item.dataset.messageId === messageId);
+      const isActive = item.dataset.messageId === messageId;
+      item.classList.toggle("active", isActive);
+      item.setAttribute("aria-selected", String(isActive));
     });
 
-    if (noChat) noChat.style.display = "none";
-    if (container) container.style.display = "flex";
+    if (noChat) noChat.hidden = true;
+    if (container) container.hidden = false;
 
     this.renderMessageDetail(message);
+  },
+
+  _resetDetailPane() {
+    this.currentMessageId = null;
+    this._renderedDetailStatus = null;
+    const container = document.getElementById("receiverMessageContainer");
+    const noChat = document.getElementById("receiverNoChat");
+    const header = document.getElementById("receiverMessageHeader");
+    const body = document.getElementById("receiverMessageBody");
+    const footer = document.getElementById("receiverMessageFooter");
+    if (container) container.hidden = true;
+    if (noChat) noChat.hidden = false;
+    if (header) header.replaceChildren();
+    if (body) body.replaceChildren();
+    if (footer) footer.replaceChildren();
+    document.querySelectorAll(".receiver-chat-item").forEach(item => item.classList.remove("active"));
   },
 
   renderMessageDetail(message) {
@@ -219,12 +261,13 @@ const Receiver = {
     contactInfo.className = "contact-info";
     const avatar = document.createElement("div");
     avatar.className = "contact-avatar";
-    avatar.textContent = "★";
+    const contactName = message.target_unit || message.id.slice(0, 8).toUpperCase();
+    avatar.textContent = contactName.slice(0, 1);
     const nameWrap = document.createElement("div");
     nameWrap.className = "contact-name-wrap";
     const nameEl = document.createElement("div");
     nameEl.className = "contact-name";
-    nameEl.textContent = message.target_unit || message.id.slice(0, 8).toUpperCase();
+    nameEl.textContent = contactName;
     const metaEl = document.createElement("div");
     metaEl.className = "contact-meta";
     metaEl.textContent = `ID: ${message.id.slice(0, 12)}... · ${new Date(message.created_at).toLocaleString("id-ID")}`;
@@ -243,13 +286,6 @@ const Receiver = {
     const headerActions = document.createElement("div");
     headerActions.className = "receiver-header-actions";
     headerActions.append(statusBadge);
-    const refreshBtn = document.createElement("button");
-    refreshBtn.type = "button";
-    refreshBtn.className = "btn-tactical btn-tactical-secondary";
-    refreshBtn.textContent = "Refresh";
-    refreshBtn.addEventListener("click", () => this.loadMessages());
-    headerActions.append(refreshBtn);
-
     header.append(contactInfo, headerActions);
 
     if (message.status === "LOCKED") {
@@ -257,7 +293,7 @@ const Receiver = {
       const burnButton = document.createElement("button");
       burnButton.type = "button";
       burnButton.className = "btn-tactical btn-tactical-secondary";
-      burnButton.textContent = "Sudah dibuka — hapus ciphertext";
+      burnButton.textContent = "Sudah dibuka, hapus ciphertext";
       burnButton.disabled = true;
       burnButton.title = "Tombol aktif setelah pesan berhasil dibuka";
       burnButton.addEventListener("click", () => this.burnMessage(message.id));
@@ -408,7 +444,7 @@ const Receiver = {
       const count = container.querySelector(".passkey-count");
       if (count) {
         const full = state.letters.length === 12;
-        count.textContent = `${state.letters.length}/12 simbol${full ? " — siap dibuka" : ""}`;
+        count.textContent = `${state.letters.length}/12 simbol${full ? ", siap dibuka" : ""}`;
         count.dataset.valid = String(full);
       }
       const openBtn = wrapper && wrapper.querySelector(".message-open-action");
@@ -487,7 +523,7 @@ const Receiver = {
     this._decrypting = true;
     const button = wrapper.querySelector(".message-open-action");
     button.disabled = true;
-    button.textContent = "Membuka pesan...";
+    ProcessingModal.show("Membuka pesan…", 30);
     try {
       // Use backend decrypt endpoint (fast, PBKDF2 runs on server, owner-check included)
       const passkeyForDecrypt = passkeyValue;
@@ -525,9 +561,9 @@ const Receiver = {
         : error.message || "Kunci salah atau ciphertext rusak.";
       showToast(detail, "error");
       button.disabled = false;
-      button.textContent = "Buka Pesan";
       AudioSys.accessDenied();
     } finally {
+      ProcessingModal.hide();
       secret = "";
       this._decrypting = false;
     }
@@ -535,6 +571,7 @@ const Receiver = {
 
   async burnMessage(messageId) {
     if (!confirm("Hapus ciphertext pesan ini secara permanen?")) return;
+    ProcessingModal.show("Menghapus ciphertext…", 50);
     try {
       const result = await this.requestJSON(`/api/messages/${encodeURIComponent(messageId)}/burn`, {
         method: "POST",
@@ -547,6 +584,8 @@ const Receiver = {
     } catch (error) {
       console.error("Burn message error:", error);
       showToast(error.message || "Gagal menghapus pesan.", "error");
+    } finally {
+      ProcessingModal.hide();
     }
   },
 };
