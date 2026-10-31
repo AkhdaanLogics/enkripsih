@@ -12,6 +12,42 @@
       "sourceType": "github",
       "skillPath": "skills/security-audit/SKILL.md",
       "computedHash": "e6b2e317de75da97e9de18d842982994803f3a67a4a6d8154a82323dc3de8528"
+    },
+    "antislop": {
+      "source": "miqdadbadjuber/anti-slop",
+      "sourceType": "github",
+      "skillPath": "skills/antislop/SKILL.md",
+      "computedHash": "f41b30da1602e936f88ac62c13193a52dac6db1c92c77eb68ce7af42857f1280"
+    },
+    "antislop-code": {
+      "source": "miqdadbadjuber/anti-slop",
+      "sourceType": "github",
+      "skillPath": "skills/antislop-code/SKILL.md",
+      "computedHash": "004933009d352710dbea7817101d5c18847a442e3ece26a6e0c18d3223898f"
+    },
+    "antislop-ui": {
+      "source": "miqdadbadjuber/anti-slop",
+      "sourceType": "github",
+      "skillPath": "skills/antislop-ui/SKILL.md",
+      "computedHash": "e8cb54f3d436de9253e0e66e0a31b18be80b6054d67b3ad50a4f61fb9f4557f2"
+    },
+    "antislop-human": {
+      "source": "miqdadbadjuber/anti-slop",
+      "sourceType": "github",
+      "skillPath": "skills/antislop-human/SKILL.md",
+      "computedHash": "49421878e0c014fa03deea8dcfbfcfae526a8423a43bb517ebfa3ef2cb4a80ef"
+    },
+    "antislop-copywriting": {
+      "source": "miqdadbadjuber/anti-slop",
+      "sourceType": "github",
+      "skillPath": "skills/antislop-copywriting/SKILL.md",
+      "computedHash": "2434a6fb0603dea1e62d4c1968382def47af779bd0e43b2130edd49df41ba444"
+    },
+    "antislop-layoutmobile": {
+      "source": "miqdadbadjuber/anti-slop",
+      "sourceType": "github",
+      "skillPath": "skills/antislop-layoutmobile/SKILL.md",
+      "computedHash": "8613395a5109f637837f5c24f0ce5e58a96df1c2567a9f7666fcaecc47ff39cd"
     }
   }
 }

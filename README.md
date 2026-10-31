@@ -72,3 +72,17 @@ Tes transmisi memeriksa endpoint pengiriman, penyimpanan ciphertext tanpa metada
 - Secret key tidak dikirim sebagai field API, tetapi verifier dikirim untuk verifikasi. Kode frontend disajikan oleh aplikasi, sehingga server yang dikompromikan dapat mengubah kode enkripsi/dekripsi.
 - Jangan mencatat, menempelkan, atau mengirim secret key maupun connection string ke log, chat, issue publik, atau repositori.
 - Endpoint token IoT lama bukan bagian dari alur UI pesan dan bukan pengganti autentikasi perangkat yang aman.
+
+## Antislop
+
+Setiap kali bekerja di frontend (HTML, CSS, JS di `frontend/`), load **semua**
+skill antislop berikut secara otomatis, tanpa perlu diminta:
+
+- `antislop` — filter inti: desain harus terasa karya desainer, bukan AI
+- `antislop-ui` — layout, komponen, warna, dekorasi, motion
+- `antislop-code` — code style & anti-patterns
+- `antislop-human` — accessibility & contrast (WCAG)
+- `antislop-copywriting` — headline, CTA, teks UI
+- `antislop-layoutmobile` — mobile layout & responsive
+
+Skill terpasang di `.agents/skills/` (sumber: `miqdadbadjuber/anti-slop`).

@@ -34,7 +34,7 @@ from .database import (
     change_receiver_password,
     get_receiver_account, provision_receiver_account,
     get_login_lockout, record_failed_login, clear_login_lockout,
-    mark_message_decrypted,
+    mark_message_decrypted, mark_face_verified,
 )
 from .crypto_engine import (
     calculate_response_symbols, response_to_string,
@@ -73,9 +73,6 @@ async def lifespan(_: FastAPI):
         confirm_plaintext_migration=os.environ.get("ENKRIPSIH_CONFIRM_DB_MIGRATION") == "yes",
         passphrase=os.environ.get("ENKRIPSIH_DB_PASSPHRASE"),
     )
-    global _AGENT_SECRET_KEYS
-    _AGENT_SECRET_KEYS = _pre_register_agent_keys()
-    print(f"[AGENT] Registered {len(_AGENT_SECRET_KEYS)} agent keys: {list(_AGENT_SECRET_KEYS.keys())}", file=sys.stderr)
     yield
 docs_enabled = os.environ.get("ENKRIPSIH_ENABLE_DOCS", "").lower() in {"1", "true", "yes"}
 app = FastAPI(
@@ -91,12 +88,12 @@ app = FastAPI(
 
 @app.exception_handler(Exception)
 async def _global_exception_handler(request: Request, exc: Exception):
-    import traceback
-    print(f"[500] {request.method} {request.url.path}: {exc!r}", file=sys.stderr)
-    traceback.print_exception(type(exc), exc, exc.__traceback__)
+    import logging
+    _logger = logging.getLogger("enkripsih.errors")
+    _logger.error("[500] %s %s: %r", request.method, request.url.path, exc, exc_info=False)
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error. Periksa log server untuk detail traceback."},
+        content={"detail": "Internal server error. Periksa log server untuk detail."},
         headers={"Cache-Control": "no-store"},
     )
 
@@ -246,6 +243,7 @@ async def protect_api(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "script-src 'self'; "
@@ -345,6 +343,7 @@ class RegisterRecipientRequest(BaseModel):
     name: str
     salt: str
     verifier: str
+    secret_key: Optional[str] = None  # Plain secret key — if provided, auto-written to .env
 
 class VerifyRecipientKeyRequest(BaseModel):
     verifier: str
@@ -716,81 +715,7 @@ def register_face_endpoint(req: FaceAuthRequest):
 
     return register_commander_face(req.image_base64, req.user_id or "CMD-01")
 
-# --- Pre-registered agent keys from .env ---
-def _read_agent_env_keys() -> dict[str, str]:
-    """
-    Reads AGENT_<NAME>_SECRET_KEY env vars (e.g. AGENT_TOBY_SECRET_KEY,
-    AGENT_FIKI_SECRET_KEY). Returns {name: key} where key length >= 32.
-    """
-    keys: dict[str, str] = {}
-    prefix = "AGENT_"
-    suffix = "_SECRET_KEY"
-    for var, val in os.environ.items():
-        if not var.startswith(prefix) or not var.endswith(suffix):
-            continue
-        name = var[len(prefix):len(var) - len(suffix)]
-        if not name or len(val) < 32:
-            continue
-        keys[name] = val
-    return keys
-
-
-def _pre_register_agent_keys() -> dict[str, str]:
-    """
-    On startup, registers any env-configured agents that are not yet in the
-    database. Returns {recipient_id: key} for all env agents present in DB.
-    """
-    agent_keys = _read_agent_env_keys()
-    registered: dict[str, str] = {}  # recipient_id -> key
-
-    for name, key in agent_keys.items():
-        salt = secrets.token_hex(16)
-        verifier = hashlib.pbkdf2_hmac(
-            "sha256",
-            key.encode("utf-8"),
-            b"enkripsih:recipient:v1:" + bytes.fromhex(salt),
-            600_000,
-            32,
-        ).hex()
-
-        username = name.lower()
-        # Look up recipient by name (case-insensitive) so that "TODY" in .env
-        # matches "Tody" in the DB.
-        all_recipients = get_recipient_keys()
-        existing = next(
-            (r for r in all_recipients if r["name"].lower() == name.lower()),
-            None,
-        )
-        if existing:
-            recipient_id = existing["id"]
-            # Refresh verifier so the env key is authoritative.
-            reissue_recipient_key(recipient_id, salt, verifier)
-            registered[recipient_id] = key
-            log_event("KEY", "SUCCESS", f"Kunci env [{name}] di-update untuk [{recipient_id}] (verifier di-refresh).")
-        else:
-            # New agent: generate recipient_id and insert both tables.
-            recipient_id = secrets.token_urlsafe(12)
-            password_salt = secrets.token_bytes(16)
-            try:
-                register_recipient_key(
-                    recipient_id, name, salt, verifier,
-                    username,
-                    password_salt.hex(),
-                    _password_hash("enkripsih-" + username, password_salt),
-                )
-                log_event("KEY", "SUCCESS", f"Anggota env [{name}] didaftarkan otomatis (id={recipient_id}).")
-            except Exception:
-                # receiver_accounts.username might already exist from a prior
-                # UI registration under the same name — skip creating the account
-                # but still store the key mapping if the recipient was created.
-                pass
-            registered[recipient_id] = key
-
-    return registered
-
-
-# Module-level cache: recipient_id -> plaintext key (only set after pre-reg).
-_AGENT_SECRET_KEYS: dict[str, str] = {}
+# --- Agent key helpers (reads .env directly, no in-memory cache) ---
 
 
 # --- Endpoints that depend on agent keys ---
@@ -839,6 +764,21 @@ def register_recipient(req: RegisterRecipientRequest):
             status_code=409,
             detail="Nama anggota sudah terdaftar. Gunakan nama berbeda atau hubungi admin untuk rotasi kunci.",
         )
+
+    # Auto-write the agent secret key into .env so the commander can use
+    # the /api/messages/encrypt-agent flow for this new member.
+    # We need the plaintext key, which the frontend already has in
+    # "secret_key" of the request body. However, RegisterRecipientRequest
+    # only carries salt+verifier. To support auto-env, extend the request
+    # with an optional `secret_key` field.
+    if getattr(req, "secret_key", None):
+        try:
+            from .env_agents import upsert_agent_secret_key
+            upsert_agent_secret_key(name, req.secret_key)
+            log_event("KEY", "INFO", f"Kunci agen [{name}] ditambahkan ke .env otomatis.")
+        except Exception as e:
+            log_event("KEY", "WARNING", f"Gagal menulis .env untuk [{name}]: {e}")
+
     log_event("KEY", "SUCCESS", f"Kunci verifier anggota [{recipient_id}] didaftarkan.")
     return {
         "success": True,
@@ -846,6 +786,7 @@ def register_recipient(req: RegisterRecipientRequest):
         "name": name,
         "username": username,
         "temporary_password": temporary_password,
+        "agent_env": bool(getattr(req, "secret_key", None)),
     }
 
 
@@ -917,6 +858,14 @@ async def reissue_recipient_key_endpoint(recipient_id: str, request: Request):
     if not reissue_recipient_key(recipient_id, new_salt, new_verifier):
         raise HTTPException(status_code=409, detail="Gagal me-reissue kunci.")
 
+    # If this recipient has an agent key in .env, refresh the key in .env too
+    try:
+        from .env_agents import upsert_agent_secret_key_inplace
+        upsert_agent_secret_key_inplace(recipient["name"], new_secret_key)
+        log_event("KEY", "INFO", f"Kunci agen [{recipient['name']}] diperbarui di .env.")
+    except Exception as e:
+        log_event("KEY", "WARNING", f"Gagal menulis .env saat reissue [{recipient['name']}]: {e}")
+
     log_event("KEY", "WARNING", f"Kunci anggota [{recipient_id}] di-reissue. Kunci lama tidak lagi valid untuk pesan baru.")
 
     await manager.broadcast(
@@ -958,20 +907,26 @@ def verify_recipient_key(
 def agent_keys_endpoint(request: Request):
     """
     Returns the plaintext secret key for each env-configured agent.
+    Reads directly from .env on each call (no cache).
     Commander-only: receiver or unauthenticated callers get 403.
     """
     principal = getattr(request.state, "principal", None) if request else None
     if not principal or principal["role"] != "COMMANDER":
         raise HTTPException(status_code=403, detail="Hanya komandan yang dapat melihat kunci agen.")
-    # Build response: list of {recipient_id, name, key}
-    keys = _AGENT_SECRET_KEYS
+    # Read .env directly, match to DB recipients by name (case-insensitive).
+    from .env_agents import list_agent_env_keys
+    env_keys = list_agent_env_keys()
     recipients = get_recipient_keys()
     result = []
-    for rid, key in keys.items():
-        rec = next((r for r in recipients if r["id"] == rid), None)
+    for env_name, key in env_keys.items():
+        # Find the DB recipient matching this env agent name
+        rec = next(
+            (r for r in recipients if r.get("name") and r["name"].lower() == env_name.lower()),
+            None,
+        )
         result.append({
-            "recipient_id": rid,
-            "name": rec["name"] if rec else rid,
+            "recipient_id": rec["id"] if rec else None,
+            "name": rec["name"] if rec else env_name,
             "key": key,
         })
     return {"agent_keys": result}
@@ -1101,7 +1056,7 @@ async def encrypt_message_endpoint(req: EncryptMessageRequest, request: Request 
     if req.save:
         profile = get_commander_profile(principal["principal_id"])
         sender_name = profile["name"] if profile else principal["principal_id"]
-        msg_id = f"MSG-{datetime.now().strftime('%m%d')}-{os.urandom(2).hex().upper()}"
+        msg_id = f"MSG-{datetime.now().strftime('%m%d')}-{os.urandom(16).hex().upper()}"
         msg_record = {
             "id": msg_id,
             "sender_id": principal["principal_id"],
@@ -1141,10 +1096,9 @@ async def encrypt_message_endpoint(req: EncryptMessageRequest, request: Request 
 
 @app.post("/api/messages/encrypt-agent")
 async def encrypt_agent_message_endpoint(req: EncryptAgentMessageRequest, request: Request = None):
-    """Encrypt a message to an agent whose secret key is pre-registered in .env.
+    """Encrypt a message to an agent whose secret key is stored in .env.
     The commander does not need to know or type the secret key — the server
-    resolves it from the in-memory cache.
-    """
+    reads it directly from .env on every call (no cache)."""
     principal = getattr(getattr(request, "state", None), "principal", None) if request else None
     if not principal or principal["role"] != "COMMANDER":
         raise HTTPException(status_code=403, detail="Hanya komandan yang dapat mengenkripsi pesan.")
@@ -1154,16 +1108,21 @@ async def encrypt_agent_message_endpoint(req: EncryptAgentMessageRequest, reques
     if len(req.plaintext) > 50_000:
         raise HTTPException(status_code=413, detail="Pesan terlalu panjang.")
 
-    secret_key = _AGENT_SECRET_KEYS.get(recipient["id"])
+    # Read the agent secret key directly from .env (no in-memory cache).
+    from .env_agents import read_agent_secret_key
+    secret_key = read_agent_secret_key(recipient["name"])
     if not secret_key:
         raise HTTPException(
             status_code=400,
-            detail=f"Anggota '{recipient['name']}' tidak memiliki kunci agen yang teregistrasi di server. Daftarkan via UI biasa atau tambahkan AGENT_<NAMA>_SECRET_KEY ke .env.",
+            detail=f"Anggota '{recipient['name']}' tidak memiliki kunci agen di .env. "
+                   f"Tambahkan AGENT_{recipient['name'].upper().replace(' ', '_')}_SECRET_KEY ke file .env, "
+                   f"atau daftarkan anggota lewat form register.",
         )
 
-    work = await _compute_encrypt_work(recipient, secret_key, req.plaintext)
+    # Skip DB verifier check for agent keys — the .env key is authoritative.
+    work = await _compute_encrypt_work_agent(recipient, secret_key, req.plaintext)
     if work.get("error"):
-        raise HTTPException(status_code=400, detail="Secret key tidak cocok dengan anggota yang terdaftar.")
+        raise HTTPException(status_code=500, detail="Gagal mengenkripsi pesan.")
 
     challenge_indices = work["challenge_indices"]
 
@@ -1180,7 +1139,7 @@ async def encrypt_agent_message_endpoint(req: EncryptAgentMessageRequest, reques
     if req.save:
         profile = get_commander_profile(principal["principal_id"])
         sender_name = profile["name"] if profile else principal["principal_id"]
-        msg_id = f"MSG-{datetime.now().strftime('%m%d')}-{os.urandom(2).hex().upper()}"
+        msg_id = f"MSG-{datetime.now().strftime('%m%d')}-{os.urandom(16).hex().upper()}"
         msg_record = {
             "id": msg_id,
             "sender_id": principal["principal_id"],
@@ -1189,23 +1148,23 @@ async def encrypt_agent_message_endpoint(req: EncryptAgentMessageRequest, reques
             "recipient_id": recipient["id"],
             "paket": paket,
             "status": "LOCKED",
-            "created_at": datetime.now().isoformat()
+            "created_at": datetime.now().isoformat(),
         }
         save_message(msg_record)
-        log_event("TRANSMIT", "SUCCESS", f"Ciphertext [{msg_id}] ditransmisikan ke {recipient['name']}.")
+        log_event("TRANSMIT", "SUCCESS", f"Ciphertext [{msg_id}] ditransmisikan ke {recipient['name']} (agent .env key).")
         await manager.broadcast({
             "type": "NEW_MESSAGE",
             "message": {
                 "id": msg_id,
                 "target_unit": recipient["name"],
                 "status": "LOCKED",
-                "created_at": msg_record["created_at"]
-            }
+                "created_at": msg_record["created_at"],
+            },
         }, recipient_id=recipient["id"])
         sent_data = {
             "message_id": msg_id,
             "target_unit": recipient["name"],
-            "status": "LOCKED"
+            "status": "LOCKED",
         }
 
     return {
@@ -1216,6 +1175,39 @@ async def encrypt_agent_message_endpoint(req: EncryptAgentMessageRequest, reques
         "challenge_symbols": " ".join(NAMES[c] for c in challenge_indices),
         "saved": sent_data,
     }
+
+
+async def _compute_encrypt_work_agent(recipient: dict, secret_key: str, plaintext: str):
+    """Same as _compute_encrypt_work but skips the DB verifier check.
+    Used only for agents whose key is authoritative from .env."""
+    loop = asyncio.get_event_loop()
+
+    def _work():
+        import hashlib as _hl
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+        challenge_indices = [secrets.randbelow(4) for _ in range(4)]
+        challenge_bytes = bytes(challenge_indices)
+        mac = hmac.new(secret_key.encode("utf-8"), challenge_bytes, hashlib.sha256).digest()
+        resp_indices = [(mac[i // 4] >> ((i % 4) * 2)) & 3 for i in range(12)]
+
+        aes_salt = os.urandom(16)
+        iv = os.urandom(12)
+        aes_key = _hl.pbkdf2_hmac("sha256", bytes(resp_indices), aes_salt, 200_000, 32)
+        ciphertext = AESGCM(aes_key).encrypt(iv, plaintext.encode("utf-8"), None)
+
+        def b64url(data: bytes) -> str:
+            return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+
+        return {
+            "challenge_indices": challenge_indices,
+            "salt": b64url(aes_salt),
+            "salt_hex": aes_salt.hex(),
+            "iv": b64url(iv),
+            "ciphertext": b64url(ciphertext),
+        }
+
+    return await loop.run_in_executor(None, _work)
 
 
 @app.post("/api/messages/decrypt")
@@ -1334,7 +1326,7 @@ async def send_message_endpoint(req: SendMessageRequest, request: Request = None
     if len(salt) != 16 or len(iv) != 12 or len(ciphertext) < 16:
         raise HTTPException(status_code=400, detail="Paket terenkripsi tidak lengkap.")
 
-    msg_id = f"MSG-{datetime.now().strftime('%m%d')}-{os.urandom(2).hex().upper()}"
+    msg_id = f"MSG-{datetime.now().strftime('%m%d')}-{os.urandom(16).hex().upper()}"
     msg_record = {
         "id": msg_id,
         "sender_id": sender_id,
@@ -1514,16 +1506,39 @@ async def burn_message_endpoint(msg_id: str, request: Request):
     return {"success": True, "message": "Pesan berhasil dihancurkan secara permanen."}
 
 # --- Lexa Token IoT Endpoints (legacy /keybca route retained) ---
+IOT_TOKEN = os.environ.get("ENKRIPSIH_IOT_TOKEN", "")
+IOT_DEV_MODE = os.environ.get("ENKRIPSIH_IOT_DEV_MODE", "").lower() in {"1", "true", "yes"}
+
+
+def _require_iot_hmac(payload: str, provided: str) -> None:
+    """Enforce HMAC verification for IoT endpoints.
+
+    Fails closed: if the IoT token is not configured AND dev mode is not
+    explicitly enabled, the request is rejected with 503.
+
+    Dev mode (ENKRIPSIH_IOT_DEV_MODE=1) is opt-in only — it must be
+    explicitly set in the environment. By default, IoT HMAC is mandatory.
+    """
+    if not IOT_TOKEN:
+        if not IOT_DEV_MODE:
+            raise HTTPException(
+                status_code=503,
+                detail="IoT token authentication is not configured. "
+                       "Set ENKRIPSIH_IOT_TOKEN in the environment to enable IoT endpoints.",
+            )
+        return  # dev mode: skip HMAC
+    if not _verify_iot_hmac(payload, provided or ""):
+        raise HTTPException(status_code=401, detail="HMAC signature tidak valid.")
+
+
 @app.post("/api/iot/keybca/calculate")
 def calculate_token_endpoint(req: KeyBCACalculateRequest):
     """
     Computes a 12-symbol Lexa response from a 4-symbol challenge.
-    Accepts letters (e.g. 'TCXS') or symbol indices.
-    Requires hmac_signature (HMAC-SHA256 of challenge) when ENKRIPSIH_IOT_TOKEN is set.
+    Requires hmac_signature (HMAC-SHA256 of challenge) using ENKRIPSIH_IOT_TOKEN.
+    Fails closed when the token is not configured (opt-in dev mode only).
     """
-    if os.environ.get("ENKRIPSIH_IOT_TOKEN"):
-        if not _verify_iot_hmac(str(req.challenge), req.hmac_signature or ""):
-            raise HTTPException(status_code=401, detail="HMAC signature tidak valid.")
+    _require_iot_hmac(str(req.challenge), req.hmac_signature or "")
     input_str = str(req.challenge).strip()
     indices = [SYMBOL_MAP[c] for c in input_str.upper() if c in SYMBOL_MAP]
     
@@ -1550,12 +1565,11 @@ def calculate_token_endpoint(req: KeyBCACalculateRequest):
 async def iot_solve_endpoint(req: IoTSolveRequest):
     """
     Called by Wemos D1 Mini / ESP32 or serial bridge to broadcast solved token.
-    Requires hmac_signature (HMAC of 'device_id:challenge:token') when ENKRIPSIH_IOT_TOKEN is set.
+    Requires hmac_signature (HMAC of 'device_id:challenge:token') using ENKRIPSIH_IOT_TOKEN.
+    Fails closed when the token is not configured (opt-in dev mode only).
     """
-    if os.environ.get("ENKRIPSIH_IOT_TOKEN"):
-        payload = f"{req.device_id}:{req.challenge}:{req.token}"
-        if not _verify_iot_hmac(payload, req.hmac_signature or ""):
-            raise HTTPException(status_code=401, detail="HMAC signature tidak valid.")
+    payload = f"{req.device_id}:{req.challenge}:{req.token}"
+    _require_iot_hmac(payload, req.hmac_signature or "")
     log_event("KEYBCA", "SUCCESS", f"IoT [{req.device_id}] mengirim token untuk challenge {req.challenge}.")
     
     await manager.broadcast({

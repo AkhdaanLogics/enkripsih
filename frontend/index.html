@@ -34,14 +34,14 @@
         <span id="connectionStatus">Tidak terhubung</span>
       </div>
       <button class="mobile-nav-toggle btn-tactical btn-tactical-secondary" id="mobileNavToggle" type="button" aria-expanded="false" aria-controls="appNavigation" hidden>Menu</button>
-      <button class="btn-tactical btn-tactical-secondary" id="btnLogout" type="button" style="display:none;">Keluar</button>
+      <button class="btn-tactical btn-tactical-secondary" id="btnLogout" type="button" hidden>Keluar</button>
     </div>
   </header>
 
   <main class="main-content" id="authGate">
     <section class="tactical-card auth-gate">
       <h2 class="card-title">Masuk ke Enkripsih</h2>
-      <p class="card-subtitle">Komandan masuk dengan password aplikasi. Anggota masuk dengan akun receiver.</p>
+      <p class="card-subtitle">Pilih peranmu: komandan mengirim pesan terenkripsi, anggota menerima dan membukanya.</p>
       <form id="loginForm">
         <div class="form-group">
           <label class="form-label" for="loginRole">Jenis akun</label>
@@ -86,7 +86,7 @@
 
   <div class="app-layout" id="appLayout">
     <aside class="app-sidebar">
-      <nav class="tabs-container" id="appNavigation" aria-label="Navigasi utama" style="display:none;">
+      <nav class="tabs-container" id="appNavigation" aria-label="Navigasi utama" hidden>
         <button class="tab-btn active" type="button" data-tab="commander" aria-controls="view-commander">
           <span>Kirim pesan</span>
         </button>
@@ -97,15 +97,12 @@
         <button class="tab-btn" type="button" data-tab="members" aria-controls="view-members">
           <span>Kelola anggota</span>
         </button>
-        <button class="tab-btn" type="button" data-tab="architecture" aria-controls="view-architecture">
-          <span>Cara kerja</span>
-        </button>
       </nav>
     </aside>
 
     <!-- Main Workspace -->
-    <main class="main-content app-workspace" id="appWorkspace" style="display:none;">
-    <div class="screen-heading">
+    <main class="main-content app-workspace" id="appWorkspace" hidden>
+    <div class="screen-heading" id="workspaceHeading">
       <div>
         <h1 id="workspaceTitle">Kirim pesan</h1>
         <p id="workspaceDescription">Tulis pesan, pilih anggota, lalu kirim dengan enkripsi di browser.</p>
@@ -130,7 +127,7 @@
               <select class="form-select" id="recipientId" required>
                 <option value="">Memuat anggota...</option>
               </select>
-              <span class="agent-hint" id="agentHint" style="display:none;">✓ Kunci agen tersedia — akan diisi otomatis</span>
+              <span class="agent-hint" id="agentHint" hidden>✓ Kunci agen tersedia — akan diisi otomatis</span>
             </div>
 
             <!-- Secret key is auto-resolved server-side; no manual input needed -->
@@ -146,7 +143,7 @@
             </button>
           </form>
 
-          <div id="lastTransmitNotice" role="status" aria-live="polite" style="display:none;"></div>
+          <div id="lastTransmitNotice" role="status" aria-live="polite" hidden></div>
         </div>
 
         <div class="tactical-card">
@@ -160,9 +157,9 @@
             </button>
           </div>
 
-          <div id="commanderSentList" style="max-height:560px; overflow-y:auto; padding-right:4px;">
-            <div style="text-align:center; padding:30px; color:var(--muted); font-size:13px;">
-              Memuat riwayat transmisi...
+          <div id="commanderSentList" class="sent-list-scroll">
+            <div class="list-placeholder" id="commanderSentPlaceholder">
+              <span class="list-placeholder-text">Memuat riwayat transmisi…</span>
             </div>
           </div>
         </div>
@@ -224,7 +221,7 @@
     </section>
 
     <section class="view-section" id="view-receiver">
-      <div class="tactical-card receiver-card">
+      <div class="receiver-card">
         <div class="card-header">
           <div>
             <h2 class="card-title">Pesan masuk</h2>
@@ -243,8 +240,8 @@
               Transmisi masuk
             </div>
             <div class="receiver-chat-list-body" id="receiverMessageList">
-              <div style="text-align:center; padding:30px; color:var(--muted); font-size:13px;">
-                Memuat kotak masuk transmisi...
+              <div class="list-placeholder" id="receiverMsgPlaceholder">
+                <span class="list-placeholder-text">Memuat kotak masuk…</span>
               </div>
             </div>
           </div>
@@ -253,7 +250,7 @@
             <div class="receiver-no-chat" id="receiverNoChat">
               Pilih pesan untuk melihat isi
             </div>
-            <div class="receiver-message-container" id="receiverMessageContainer" style="display:none;">
+            <div class="receiver-message-container" id="receiverMessageContainer" hidden>
               <div class="receiver-message-header" id="receiverMessageHeader"></div>
               <div class="receiver-message-body" id="receiverMessageBody"></div>
               <div class="receiver-message-footer" id="receiverMessageFooter"></div>
@@ -263,33 +260,14 @@
       </div>
     </section>
 
-    <!-- Key registration and encryption guidance -->
-    <section class="view-section" id="view-architecture">
-      <div class="tactical-card">
-        <div class="card-header">
-          <div>
-            <h2 class="card-title">Cara kerja secret key anggota</h2>
-            <div class="card-subtitle">Kunci per anggota, tidak disimpan dalam bentuk asli</div>
-          </div>
-        </div>
-        <ol>
-          <li>Setiap anggota mendapat secret key acak yang unik. Server menyimpan salt dan verifier, bukan kunci asli.</li>
-          <li>Pengirim menulis pesan dan mengirimnya; aplikasi membuat challenge 4 simbol untuk pesan tersebut dan menampilkan challenge pada inbox receiver.</li>
-          <li>Receiver memasukkan challenge ke perangkat yang memakai secret key unik anggota, lalu mengetik respons 12 simbol. Pesan baru tidak meminta secret key di browser receiver.</li>
-          <li>HMAC-SHA-256 sesuai firmware membuat respons passkey. AES-GCM memakai PBKDF2-HMAC-SHA-256 atas 12 nilai simbol 0–3, salt mentah, dan 200.000 iterasi seperti backend crypto lama. Respons tersebut tetap hanya 24 bit, jadi gunakan data sintetis saja.</li>
-        </ol>
-        <p>Kunci tidak dapat dipulihkan dari server. Jika kunci hilang, pesan lama tidak dapat dibuka; daftarkan kunci baru untuk pesan berikutnya.</p>
-      </div>
-    </section>
-
     </main>
   </div>
 
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
   <!-- Scripts served by the FastAPI static mount -->
-  <script src="/static/js/app.js?v=ui-v2"></script>
-  <script src="/static/js/auth.js?v=receiver-accounts2"></script>
+  <script src="/static/js/app.js?v=antislop-v3"></script>
+  <script src="/static/js/auth.js?v=antislop-v3"></script>
   <script src="/static/js/commander.js?v=ui-v2"></script>
   <script src="/static/js/message_crypto.js?v=passkey-svg1"></script>
   <script src="/static/js/receiver.js?v=ui-v2-whatsapp"></script>

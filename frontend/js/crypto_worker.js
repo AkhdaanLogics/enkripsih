@@ -51,7 +51,7 @@ self.onmessage = async function (event) {
 async function deriveVerifier(secret, saltHex, hashName) {
   const salt = fromHex(saltHex);
   const key = await importKey("HMAC", secret, "SHA-256");
-  const verifierBytes = await crypto.subtle.sign("HMAC", key, enc.encode("enripisih:verifier:v1:"));
+  const verifierBytes = await crypto.subtle.sign("HMAC", key, enc.encode("enkripsih:verifier:v1:"));
   const verifier = Array.from(new Uint8Array(verifierBytes), b => b.toString(16).padStart(2, "0")).join("");
   return { verifier };
 }
@@ -70,7 +70,7 @@ async function deriveBits(secret, saltHex, hashName) {
 
 async function derivePasskey(secret, challengeIndices, responseLetters) {
   const salt = randomBytes(16);
-  const domainSalt = enc.encode("enripisih:passkey:v1");
+  const domainSalt = enc.encode("enkripsih:passkey:v1");
   const key = await crypto.subtle.importKey(
     "raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
   );
@@ -99,7 +99,7 @@ async function encryptMessage(secret, recipientId, challengeIndices, responseLet
 
   // Derive key from response indices
   const saltBytes = fromHex(toHex(salt));
-  const domainSalt = enc.encode("enripisih:messaging:passkey:v1");
+  const domainSalt = enc.encode("enkripsih:messaging:passkey:v1");
   const hmacKey = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const challengeBytes = new Uint8Array([...domainSalt, ...challengeIndices, ...responseIndices]);
   const rawDigest = await crypto.subtle.sign("HMAC", hmacKey, challengeBytes);
@@ -115,7 +115,7 @@ async function encryptMessage(secret, recipientId, challengeIndices, responseLet
     ["encrypt", "decrypt"]
   );
 
-  const additionalData = enc.encode(`enripisih:v1:${recipientId}`);
+  const additionalData = enc.encode(`enkripsih:v1:${recipientId}`);
   const encrypted = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv, additionalData, tagLength: 128 },
     keyBytes,

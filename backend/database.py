@@ -13,7 +13,10 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
-import sqlcipher3
+try:
+    import sqlcipher3
+except ImportError:
+    sqlcipher3 = None
 import psycopg
 from psycopg.rows import dict_row
 
@@ -143,6 +146,8 @@ def _dpapi_transform(data: bytes, *, protect: bool) -> bytes:
 
 
 def _cipher_connection(path: str, key: bytes):
+    if sqlcipher3 is None:
+        raise RuntimeError("sqlcipher3 tidak terpasang. Jalankan: pip install sqlcipher3")
     conn = sqlcipher3.connect(path)
     try:
         conn.execute(f"PRAGMA key = \"x'{key.hex()}'\"")
@@ -323,7 +328,8 @@ def get_connection(passphrase: str | None = None):
         passphrase=database_passphrase,
     )
     conn = _cipher_connection(DB_PATH, key)
-    conn.row_factory = sqlcipher3.Row
+    if sqlcipher3 is not None:
+        conn.row_factory = sqlcipher3.Row
     return conn
 
 

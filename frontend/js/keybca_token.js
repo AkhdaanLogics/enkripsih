@@ -187,15 +187,19 @@ const KeyBCAToken = {
     const logBox = document.getElementById('iotHardwareLogs');
     if (logBox) {
       const row = document.createElement('div');
-      row.style.padding = '8px 0';
-      row.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
-      row.style.fontFamily = 'var(--font-mono)';
-      row.style.fontSize = '12px';
-      row.innerHTML = `
-        <span style="color:var(--accent-green);">[${event.device_id}]</span> 
-        Challenge: <strong>${event.challenge}</strong> &rarr; 
-        Token: <strong style="color:var(--accent-amber);">${event.token}</strong>
-      `;
+      row.className = 'iot-log-row';
+      const deviceSpan = document.createElement('span');
+      deviceSpan.className = 'iot-log-device';
+      deviceSpan.textContent = `[${event.device_id}]`;
+      const challengeLabel = document.createTextNode(' Challenge: ');
+      const challengeStrong = document.createElement('strong');
+      challengeStrong.textContent = event.challenge;
+      const arrowLabel = document.createTextNode(' \u2192 ');
+      const tokenLabel = document.createTextNode(' Token: ');
+      const tokenStrong = document.createElement('strong');
+      tokenStrong.className = 'iot-log-token';
+      tokenStrong.textContent = event.token;
+      row.append(deviceSpan, challengeLabel, challengeStrong, arrowLabel, tokenLabel, tokenStrong);
       logBox.prepend(row);
     }
   },
@@ -223,15 +227,19 @@ const KeyBCAToken = {
       } else {
         const syms = this.currentChal.map(i => this.NAMES[i]).join(' ');
         const letters = this.currentChal.map(i => this.LETTERS[i]).join('');
-        l2.innerHTML = `<span style="font-size:22px; letter-spacing:4px;">${syms}</span> <span style="font-size:12px; opacity:0.7;">(${letters})</span>`;
+        l2.textContent = syms + ' (' + letters + ')';
       }
     } else if (this.currentState === this.STATE_RESULT) {
       l1.textContent = "Response (OK=baru)";
       const syms = this.responseIndices.map(i => this.NAMES[i]).join(' ');
-      l2.innerHTML = `
-        <div style="font-size:16px; letter-spacing:2px; margin-bottom:2px;">${syms}</div>
-        <div style="font-size:13px; font-weight:800; color:#0f1720; letter-spacing:1px;">${this.responseLetters}</div>
-      `;
+      l2.innerHTML = '';
+      const symsDiv = document.createElement('div');
+      symsDiv.className = 'lcd-symbols';
+      symsDiv.textContent = syms;
+      const lettersDiv = document.createElement('div');
+      lettersDiv.className = 'lcd-response';
+      lettersDiv.textContent = this.responseLetters;
+      l2.append(symsDiv, lettersDiv);
     }
   }
 };

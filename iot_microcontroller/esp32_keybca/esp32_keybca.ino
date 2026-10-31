@@ -24,7 +24,18 @@
 Adafruit_SSD1306 display(128, 64, &Wire, -1);
 
 // ===== Kunci rahasia: HARUS sama dengan di Backend Enkripsih =====
-const char SECRET_KEY[] = "ugCC-4DHQ8fXxcAJ7hkO17TWkp2oi3-s6AUc1GVzf0w";
+// Provisioning: compile with -DKEYBCA_SECRET='"<32+ char secret>"'
+// Contoh (PlatformIO ini):
+//   build_flags = -DKEYBCA_SECRET='"ugCC-4DHQ8fXxcAJ7hkO17TWkp2oi3-s6AUc1GVzf0w"',\
+//                 -DENKRIPSIH_IOT_TOKEN='"<hmac_shared_secret>"'
+// JANGAN hardcode secret di source. Gunakan build_flags atau secrets.h.
+#ifndef KEYBCA_SECRET
+  #define KEYBCA_SECRET ""
+#endif
+#if !defined(KEYBCA_SECRET) || KEYBCA_SECRET[0] == '\0'
+  #error "KEYBCA_SECRET must be defined at compile time (-DKEYBCA_SECRET='\"your_secret\"')"
+#endif
+const char SECRET_KEY[] = KEYBCA_SECRET;
 const int CHAL_LEN = 4;    // panjang challenge
 const int RESP_LEN = 12;   // panjang response
 

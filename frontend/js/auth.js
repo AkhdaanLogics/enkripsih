@@ -20,68 +20,27 @@ const AppAuth = {
     });
     document.getElementById('btnLogout').addEventListener('click', () => this.logout());
     this.updateLoginFields();
-    this.restoreLoginError();
-    this.restoreLockout();
     this.checkSession();
   },
 
-  restoreLoginError() {
-    try {
-      const message = sessionStorage.getItem('enkripsih_login_error');
-      if (message) this.showLoginError(message);
-    } catch (error) {
-      console.warn('Login error could not be restored:', error);
-    }
+  clearLoginError() {
+    const errorBox = document.getElementById('loginError');
+    errorBox.textContent = '';
+    errorBox.hidden = true;
   },
 
   showLoginError(message) {
     const errorBox = document.getElementById('loginError');
     errorBox.textContent = message;
     errorBox.hidden = false;
-    try {
-      sessionStorage.setItem('enkripsih_login_error', message);
-    } catch (error) {
-      console.warn('Login error could not be saved for refresh:', error);
-    }
-  },
-
-  clearLoginError() {
-    try {
-      sessionStorage.removeItem('enkripsih_login_error');
-    } catch (error) {
-      console.warn('Saved login error could not be cleared:', error);
-    }
-    const errorBox = document.getElementById('loginError');
-    errorBox.textContent = '';
-    errorBox.hidden = true;
   },
 
   isLocked() {
     return this.lockoutDeadline > Date.now();
   },
 
-  restoreLockout() {
-    let deadline = 0;
-    try {
-      deadline = Number(sessionStorage.getItem('enkripsih_lockout_until') || 0);
-    } catch (error) {
-      console.warn('Lockout state could not be restored:', error);
-    }
-    if (deadline > Date.now()) {
-      this.lockoutDeadline = deadline;
-      this.startLockoutCountdown();
-    } else {
-      this.clearLockoutState();
-    }
-  },
-
   applyLockout(retryAfterSeconds) {
     this.lockoutDeadline = Date.now() + Math.max(1, Number(retryAfterSeconds) || 0) * 1000;
-    try {
-      sessionStorage.setItem('enkripsih_lockout_until', String(this.lockoutDeadline));
-    } catch (error) {
-      console.warn('Lockout state could not be saved:', error);
-    }
     this.startLockoutCountdown();
   },
 
@@ -127,15 +86,6 @@ const AppAuth = {
     button.disabled = false;
     notice.hidden = true;
     notice.textContent = '';
-    this.clearLockoutState();
-  },
-
-  clearLockoutState() {
-    try {
-      sessionStorage.removeItem('enkripsih_lockout_until');
-    } catch (error) {
-      console.warn('Lockout state could not be cleared:', error);
-    }
   },
 
   updateLoginFields() {
@@ -215,12 +165,15 @@ const AppAuth = {
     State.isLoggedIn = true;
     State.role = session.role;
     State.principalId = session.principal_id;
-    document.getElementById('authGate').style.display = 'none';
-    document.getElementById('passwordChangeGate').style.display = 'block';
+    document.getElementById('authGate').hidden = true;
+    document.getElementById('passwordChangeGate').hidden = false;
     document.getElementById('appLayout').classList.remove('is-visible');
-    document.getElementById('appWorkspace').style.display = 'none';
-    document.getElementById('mobileNavToggle').hidden = true;
-    document.getElementById('btnLogout').style.display = 'inline-flex';
+    const workspace = document.getElementById('appWorkspace');
+    if (workspace) workspace.hidden = true;
+    const mobileNavToggle = document.getElementById('mobileNavToggle');
+    if (mobileNavToggle) mobileNavToggle.hidden = true;
+    const btnLogout = document.getElementById('btnLogout');
+    if (btnLogout) btnLogout.hidden = false;
   },
 
   async changePassword() {
@@ -271,21 +224,41 @@ const AppAuth = {
     State.isLoggedIn = true;
     State.role = session.role || 'COMMANDER';
     State.principalId = session.principal_id || 'CMD-01';
-    document.getElementById('authGate').style.display = 'none';
-    document.getElementById('passwordChangeGate').style.display = 'none';
+    document.getElementById('authGate').hidden = true;
+    document.getElementById('passwordChangeGate').hidden = true;
     document.getElementById('appLayout').classList.add('is-visible');
-    document.getElementById('appNavigation').style.display = 'flex';
-    document.getElementById('appNavigation').classList.remove('is-open');
-    document.querySelector('.app-sidebar').classList.remove('is-open');
-    document.getElementById('appWorkspace').style.display = 'block';
-    document.getElementById('mobileNavToggle').hidden = false;
-    document.getElementById('mobileNavToggle').setAttribute('aria-expanded', 'false');
-    document.getElementById('btnLogout').style.display = 'inline-flex';
+    const workspace = document.getElementById('appWorkspace');
+    if (!workspace) return console.error('appWorkspace not found');
+    workspace.hidden = false;
+    const btnLogout = document.getElementById('btnLogout');
+    if (btnLogout) btnLogout.hidden = false;
+    const mobileNavToggle = document.getElementById('mobileNavToggle');
+    if (mobileNavToggle) mobileNavToggle.setAttribute('aria-expanded', 'false');
 
+    const isReceiver = State.role === 'RECEIVER';
+    const sidebar = document.querySelector('.app-sidebar');
+    const appNavigation = document.getElementById('appNavigation');
+    if (isReceiver) {
+      if (sidebar) sidebar.hidden = true;
+      if (appNavigation) appNavigation.hidden = true;
+    } else {
+      if (sidebar) sidebar.hidden = false;
+      if (appNavigation) appNavigation.hidden = false;
+      if (appNavigation) appNavigation.style.display = 'flex';
+    }
+    if (mobileNavToggle) mobileNavToggle.hidden = isReceiver;
+
+    // Hide the receiver (inbox) tab for commanders — they send, not receive.
+    // Commander message history is already shown in the transmit card.
     document.querySelectorAll('.tab-btn').forEach((tab) => {
-      tab.hidden = State.role === 'RECEIVER' && tab.dataset.tab !== 'receiver';
+      const isReceiverTab = tab.dataset.tab === 'receiver';
+      if (isReceiver) {
+        tab.hidden = !isReceiverTab;
+      } else {
+        tab.hidden = isReceiverTab;
+      }
     });
-    if (State.role === 'RECEIVER') {
+    if (isReceiver) {
       switchTab('receiver');
     } else {
       if (window.loadCommanderRecipients) window.loadCommanderRecipients();
@@ -308,16 +281,17 @@ const AppAuth = {
     State.role = null;
     State.principalId = null;
     if (State.ws) State.ws.close();
-    document.getElementById('authGate').style.display = 'block';
-    document.getElementById('passwordChangeGate').style.display = 'none';
-    document.getElementById('appNavigation').style.display = 'none';
-    document.getElementById('appNavigation').classList.remove('is-open');
+    document.getElementById('authGate').hidden = false;
+    document.getElementById('passwordChangeGate').hidden = true;
+    const nav = document.getElementById('appNavigation');
+    if (nav) nav.hidden = true;
     document.getElementById('appLayout').classList.remove('is-visible');
-    document.querySelector('.app-sidebar').classList.remove('is-open');
-    document.getElementById('appWorkspace').style.display = 'none';
-    document.getElementById('mobileNavToggle').hidden = true;
-    document.getElementById('mobileNavToggle').setAttribute('aria-expanded', 'false');
-    document.getElementById('btnLogout').style.display = 'none';
+    const workspace = document.getElementById('appWorkspace');
+    if (workspace) workspace.hidden = true;
+    const mobileNavToggle = document.getElementById('mobileNavToggle');
+    if (mobileNavToggle) mobileNavToggle.setAttribute('aria-expanded', 'false');
+    const btnLogout = document.getElementById('btnLogout');
+    if (btnLogout) btnLogout.hidden = true;
     if (message) showToast(message, 'warning');
   }
 };

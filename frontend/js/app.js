@@ -102,7 +102,7 @@ function showToast(message, type = 'info') {
   if (type === 'warning') label = '[WARN]';
 
   const labelElement = document.createElement('span');
-  labelElement.style.cssText = 'font-size:10px; font-weight:700; color:var(--muted);';
+  labelElement.className = 'toast-label';
   labelElement.textContent = label;
   const messageElement = document.createElement('span');
   messageElement.textContent = message;
@@ -110,9 +110,7 @@ function showToast(message, type = 'info') {
   container.appendChild(toast);
 
   setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateY(4px)';
-    toast.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+    toast.classList.add('toast-exit');
     setTimeout(() => toast.remove(), 200);
   }, 4000);
 }
@@ -215,15 +213,17 @@ function switchTab(tabName) {
     members: {
       title: 'Kelola anggota',
       description: 'Daftarkan penerima dan kelola akses akunnya.'
-    },
-    architecture: {
-      title: 'Cara kerja',
-      description: 'Ringkasan alur enkripsi dan batasan prototipe.'
     }
   }[tabName];
-  if (screen) {
-    document.getElementById('workspaceTitle').textContent = screen.title;
-    document.getElementById('workspaceDescription').textContent = screen.description;
+  const heading = document.getElementById('workspaceHeading');
+  if (heading) {
+    if (screen && tabName !== 'receiver') {
+      document.getElementById('workspaceTitle').textContent = screen.title;
+      document.getElementById('workspaceDescription').textContent = screen.description;
+      heading.hidden = false;
+    } else {
+      heading.hidden = true;
+    }
   }
 
   document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -234,7 +234,6 @@ function switchTab(tabName) {
       btn.removeAttribute('aria-current');
     }
   });
-  document.getElementById('appNavigation')?.classList.remove('is-open');
   document.querySelector('.app-sidebar')?.classList.remove('is-open');
   document.getElementById('mobileNavToggle')?.setAttribute('aria-expanded', 'false');
 
@@ -245,7 +244,6 @@ function switchTab(tabName) {
   document.body.classList.toggle('view-receiver', tabName === 'receiver');
   document.body.classList.toggle('view-commander', tabName === 'commander');
   document.body.classList.toggle('view-members', tabName === 'members');
-  document.body.classList.toggle('view-architecture', tabName === 'architecture');
 
   if (tabName === 'receiver' && window.loadMessages) {
     window.loadMessages();

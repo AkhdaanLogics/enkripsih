@@ -20,13 +20,33 @@
 #include <bearssl/bearssl_hmac.h>
 
 // --- KONFIGURASI MASTER SECRET TOKEN ---
-// Kunci rahasia ini sama persis dengan yang ada di backend enkripsih (crypto_engine.py)
-const char* MASTER_SECRET = "ENKRIPSIH_KEYBCA_TACTICAL_SEED_2026";
+// Provisioning: compile with -DKEYBCA_SECRET='"<32+ char secret>"'
+// Harus sama dengan ENKRIPSIH_KEYBCA_SECRET di backend.
+// JANGAN hardcode secret di source. Gunakan build_flags.
+#ifndef KEYBCA_SECRET
+  #define KEYBCA_SECRET ""
+#endif
+#if KEYBCA_SECRET[0] == '\0'
+  #error "KEYBCA_SECRET must be defined at compile time"
+#endif
+const char* MASTER_SECRET = KEYBCA_SECRET;
 
 // --- OPSI KONEKSI WIFI KE BACKEND (Opsional / Bisa jalan tanpa WiFi) ---
-const bool ENABLE_WIFI = false; // Ubah ke true jika ingin kirim otomatis ke backend
-const char* WIFI_SSID = "WiFi-Taktis";
-const char* WIFI_PASS = "rahasia123";
+// Provisioning WiFi: -DWIFI_SSID_VALUE='"ssid"', -DWIFI_PASS_VALUE='"password"'
+// JANGAN hardcode WiFi credentials di source. Gunakan build_flags.
+#ifndef WIFI_SSID_VALUE
+  #define WIFI_SSID_VALUE ""
+#endif
+#ifndef WIFI_PASS_VALUE
+  #define WIFI_PASS_VALUE ""
+#endif
+const char* WIFI_SSID = WIFI_SSID_VALUE;
+const char* WIFI_PASS = WIFI_PASS_VALUE;
+
+// Enable WiFi backend sync (compile with -DENABLE_WIFI=1)
+#ifndef ENABLE_WIFI
+  #define ENABLE_WIFI 0
+#endif
 const char* SERVER_URL = "http://192.168.1.100:8000/api/iot/keybca/solve";
 
 // --- PINOUT WEMOS D1 MINI ---

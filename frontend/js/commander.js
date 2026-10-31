@@ -176,22 +176,28 @@ const Commander = {
     }
   },
 
-  async _fetchAgentKeys() {
-    try {
-      const data = await this.requestJSON("/api/agent-keys");
-      this._agentKeys = {};
-      for (const entry of data.agent_keys || []) {
-        this._agentKeys[entry.recipient_id] = entry.key;
+  async _fetchAgentKeys(retries = 2, delayMs = 500) {
+    for (let i = 0; i <= retries; i++) {
+      try {
+        const data = await this.requestJSON("/api/agent-keys");
+        this._agentKeys = {};
+        for (const entry of data.agent_keys || []) {
+          this._agentKeys[entry.recipient_id] = entry.key;
+        }
+        this._refreshAgentKeyHint();
+        // If a recipient is already selected, trigger auto-fill now that keys are ready
+        const select = document.getElementById("recipientId");
+        if (select && select.value) {
+          this._onRecipientChange();
+        }
+        return;
+      } catch (e) {
+        if (i < retries) {
+          await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
+        }
       }
-      this._refreshAgentKeyHint();
-      // If a recipient is already selected, trigger auto-fill now that keys are ready
-      const select = document.getElementById("recipientId");
-      if (select && select.value) {
-        this._onRecipientChange();
-      }
-    } catch (e) {
-      console.warn("Tidak dapat memuat kunci agen, auto-fill tidak tersedia.", e);
     }
+    console.warn("Gagal memuat kunci agen setelah", retries + 1, "percobaan.");
   },
 
   _onRecipientChange() {
@@ -233,7 +239,7 @@ const Commander = {
       const result = await this.requestJSON("/api/recipients/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, salt, verifier }),
+        body: JSON.stringify({ name, salt, verifier, secret_key: secret }),
       });
       if (
         typeof result.username !== "string"
@@ -414,28 +420,56 @@ const Commander = {
       </div>
       <span id="progressLabel">Memverifikasi anggota...</span>
     `;
-    function setStep(step, label, done = false) {
-      document.querySelectorAll('.progress-step').forEach(s => {
-        if (s.id !== step) { s.style.color = 'var(--dim)'; s.style.fontWeight = 'normal'; s.textContent = s.textContent === '✓' ? '✓' : '…'; }
-      });
-      const activeStep = document.getElementById(step);
-      if (activeStep) {
-        activeStep.style.color = done ? 'var(--positive)' : 'var(--accent)';
-        activeStep.style.fontWeight = '700';
-        activeStep.textContent = done ? '✓' : '…';
+      function setStep(step, label, done = false) {
+        document.querySelectorAll('.progress-step').forEach(s => {
+          if (s.id !== step) {
+            s.classList.remove('step-active', 'step-complete');
+            s.classList.add('progress-step');
+            if (s.textContent !== '✓') s.textContent = '…';
+          }
+        });
+        const activeStep = document.getElementById(step);
+        if (activeStep) {
+          if (done) {
+            activeStep.classList.remove('step-active');
+            activeStep.classList.add('step-complete');
+          } else {
+            activeStep.classList.remove('step-complete');
+            activeStep.classList.add('step-active');
+          }
+          activeStep.textContent = done ? '✓' : '…';
+        }
+        const labelEl = document.getElementById('progressLabel');
+        if (labelEl) labelEl.textContent = label;
       }
-      const labelEl = document.getElementById('progressLabel');
-      if (labelEl) labelEl.textContent = label;
-    }
     try {
       setStep('stepVerify', 'Memverifikasi anggota...');
       // Use agent-key endpoint when the selected recipient has a server-side key.
       const agentKey = this._agentKeys && this._agentKeys[recipientId];
       const isAgent = !!agentKey;
-      const endpoint = isAgent ? "/api/messages/encrypt-agent" : "/api/messages/encrypt";
-      const body = isAgent
-        ? JSON.stringify({ plaintext, recipient_id: recipientId, save: true })
-        : JSON.stringify({ plaintext, recipient_id: recipientId, secret_key: "", save: true });
+      let endpoint, body;
+      if (isAgent) {
+        endpoint = "/api/messages/encrypt-agent";
+        body = JSON.stringify({ plaintext, recipient_id: recipientId, save: true });
+      } else {
+        // Fallback: retry agent-key fetch in case it hasn't loaded yet.
+        await this._fetchAgentKeys();
+        const retryKey = this._agentKeys && this._agentKeys[recipientId];
+        if (retryKey) {
+          endpoint = "/api/messages/encrypt-agent";
+          body = JSON.stringify({ plaintext, recipient_id: recipientId, save: true });
+        } else {
+          // No agent key available — require manual key entry
+          const keyInput = document.getElementById("senderSecretKey");
+          const secret = keyInput ? keyInput.value.trim() : "";
+          if (secret.length < 32) {
+            showToast("Kunci agen tidak tersedia. Masukkan secret key manual atau refresh halaman.", "warning");
+            return;
+          }
+          endpoint = "/api/messages/encrypt";
+          body = JSON.stringify({ plaintext, recipient_id: recipientId, secret_key: secret, save: true });
+        }
+      }
       const result = await this.requestJSON(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -484,7 +518,7 @@ const Commander = {
     guidance.textContent = "Receiver menginput challenge ke perangkat passkey, lalu menyetel 12 simbol respons yang tampil di perangkat ke kotak input di kotak masuknya untuk membuka pesan.";
     notice.append(heading, details, challenge, guidance);
     box.append(notice);
-    box.style.display = "block";
+    box.hidden = false;
   },
 
   async loadMessages() {
@@ -494,7 +528,13 @@ const Commander = {
       const data = await this.requestJSON("/api/messages");
       list.replaceChildren();
       if (!data.messages.length) {
-        list.textContent = "Belum ada pesan terkirim.";
+        const empty = document.createElement("div");
+        empty.className = "list-placeholder";
+        const txt = document.createElement("span");
+        txt.className = "list-placeholder-text";
+        txt.textContent = "Belum ada pesan terkirim.";
+        empty.appendChild(txt);
+        list.appendChild(empty);
         return;
       }
       for (const message of data.messages) {

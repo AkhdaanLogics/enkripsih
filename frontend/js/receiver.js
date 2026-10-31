@@ -102,7 +102,13 @@ const Receiver = {
         list.dataset.loadedIds = nextIds;
         list.replaceChildren();
         if (!messages.messages.length) {
-          list.textContent = "Belum ada pesan untuk anggota.";
+          const empty = document.createElement("div");
+          empty.className = "list-placeholder";
+          const txt = document.createElement("span");
+          txt.className = "list-placeholder-text";
+          txt.textContent = "Belum ada pesan untuk anggota.";
+          empty.appendChild(txt);
+          list.appendChild(empty);
         } else {
           for (const message of messages.messages) {
             list.append(this.renderChatItem(message));
@@ -155,7 +161,7 @@ const Receiver = {
       minute: "2-digit",
     });
     const statusEl = document.createElement("span");
-    statusEl.className = "sender-status";
+    statusEl.className = `status-badge--compact ${message.status.toLowerCase()}`;
     statusEl.textContent = statusLabel;
     meta.append(timeEl, statusEl);
 
