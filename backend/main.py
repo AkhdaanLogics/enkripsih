@@ -49,6 +49,7 @@ if not 1 <= SESSION_IDLE_TIMEOUT_SECONDS <= 86_400:
     raise RuntimeError(
         "ENKRIPSIH_SESSION_IDLE_TIMEOUT_SECONDS harus antara 1 dan 86400."
     )
+SESSION_COOKIE_MAX_AGE = 7200
 active_sessions: dict[str, dict] = {}
 PASSWORD_HASH_ITERATIONS = 600_000
 LOGIN_MAX_ATTEMPTS = 5
@@ -184,6 +185,7 @@ def _receiver_allowed_path(path: str, method: str) -> bool:
 async def protect_api(request: Request, call_next):
     public_auth_routes = {
         "/api/auth/login", "/api/auth/receiver-login", "/api/auth/session",
+        "/api/health",
     }
     refreshed_session_token = None
     if request.url.path.startswith("/api/"):
@@ -259,10 +261,10 @@ async def protect_api(request: Request, call_next):
         response.set_cookie(
             SESSION_COOKIE,
             refreshed_session_token,
-            max_age=SESSION_IDLE_TIMEOUT_SECONDS,
+            max_age=SESSION_COOKIE_MAX_AGE,
             httponly=True,
             secure=request.url.scheme == "https",
-            samesite="strict",
+            samesite="lax",
             path="/",
         )
     return response
@@ -393,6 +395,47 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
+# --- Diagnostics ---
+@app.get("/api/health")
+def api_health(request: Request):
+    """Liveness + configuration probe. No auth.
+
+    Surfaces whether the request landed on a server where the required
+    env vars are present and where the session store (in-memory or DB)
+    is reachable. Useful for Vercel: a 200 here with ``session_store:
+    "in_memory"`` means login works but is wiped on cold start, which
+    is the classic Vercel 401-after-login symptom.
+    """
+    import traceback
+    db_url = os.environ.get("DATABASE_URL")
+    has_password = len(os.environ.get("ENKRIPSIH_PASSWORD", "")) >= 16
+    has_keybca = len(os.environ.get("ENKRIPSIH_KEYBCA_SECRET", "")) >= 16
+    payload: dict = {
+        "ok": bool(db_url) or has_password,
+        "session_store": "database" if db_url else "in_memory",
+        "database_configured": bool(db_url),
+        "database_host": (urlsplit(db_url).hostname if db_url else None),
+        "password_configured": has_password,
+        "keybca_configured": has_keybca,
+        "idle_timeout_seconds": SESSION_IDLE_TIMEOUT_SECONDS,
+    }
+    if db_url:
+        # A live DB is the only thing that makes sessions survive across
+        # Vercel cold-starts, so this check is the single most useful
+        # one on Vercel. Run it inside try/except so a transient DB
+        # outage surfaces as ok=False instead of a 500.
+        try:
+            from .database import get_auth_session_count
+            payload["db_ok"] = True
+            payload["session_rows"] = get_auth_session_count()
+        except Exception as exc:
+            payload["db_ok"] = False
+            payload["db_error"] = "".join(
+                traceback.format_exception(type(exc), exc, exc.__traceback__)
+            )[-400:]
+    return JSONResponse(content=payload)
+
+
 # --- Authentication & Face Biometrics ---
 @app.post("/api/auth/login")
 def login(req: LoginRequest, request: Request, response: Response):
@@ -439,10 +482,10 @@ def _set_session_cookie(response: Response, request: Request, token: str) -> Non
     response.set_cookie(
         SESSION_COOKIE,
         token,
-        max_age=SESSION_IDLE_TIMEOUT_SECONDS,
+        max_age=SESSION_COOKIE_MAX_AGE,
         httponly=True,
         secure=request.url.scheme == "https",
-        samesite="strict",
+        samesite="lax",
         path="/",
     )
 
@@ -637,9 +680,9 @@ def get_session(request: Request, response: Response):
         response.set_cookie(
             SESSION_COOKIE,
             token,
-            max_age=SESSION_IDLE_TIMEOUT_SECONDS,
+            max_age=SESSION_COOKIE_MAX_AGE,
             httponly=True,
-            samesite="strict",
+            samesite="lax",
             secure=request.url.scheme == "https",
             path="/",
         )
@@ -658,9 +701,9 @@ def record_activity(request: Request, response: Response):
         response.set_cookie(
             SESSION_COOKIE,
             token,
-            max_age=SESSION_IDLE_TIMEOUT_SECONDS,
+            max_age=SESSION_COOKIE_MAX_AGE,
             httponly=True,
-            samesite="strict",
+            samesite="lax",
             secure=request.url.scheme == "https",
             path="/",
         )
@@ -675,7 +718,7 @@ async def logout(request: Request, response: Response):
         if os.environ.get("DATABASE_URL"):
             delete_auth_session(token)
         await manager.disconnect_session(token)
-    response.delete_cookie(SESSION_COOKIE, path="/", httponly=True, samesite="strict")
+    response.delete_cookie(SESSION_COOKIE, path="/", httponly=True, samesite="lax")
     return {"success": True}
 
 

@@ -4,28 +4,28 @@
    ========================================================================== */
 
 :root {
-  --ground: #101216;
-  --surface: #14171d;
-  --raised: #1c2028;
-  --border: #232832;
-  --rule: #1c2028;
-  --control: #222732;
-  --control-hover: #2b313f;
-  --control-border: #323948;
+  --ground: #ffffff;
+  --surface: #f5f6f8;
+  --raised: #ffffff;
+  --border: #e1e4e8;
+  --rule: #eceef1;
+  --control: #f0f2f5;
+  --control-hover: #e8eaee;
+  --control-border: #d5d8de;
 
-  --text: #f0f2f5;
-  --muted: #848c99;
-  --dim: #767d8b;
+  --text: #262626;
+  --muted: #5c6470;
+  --dim: #8a919d;
 
-  --accent: #2eb88a;
-  --accent-line: #2eb88a;
-  --accent-bg: #14231e;
-  --accent-hover: #36c796;
+  --accent: #0066FF;
+  --accent-line: #0066FF;
+  --accent-bg: #e8f1ff;
+  --accent-hover: #0055cc;
 
-  --positive: #3eb489;
-  --negative: #e0526b;
-  --warning: #d49b38;
-  --info: #4687d4;
+  --positive: #2e9e6a;
+  --negative: #d9405c;
+  --warning: #c98a2e;
+  --info: #0066FF;
 
   /* Derived palette tokens - keep within the established color system */
   --font-mono: ui-monospace, "Fira Code", "Courier New", monospace;
@@ -35,14 +35,14 @@
   --token-device-border: #232832;
   --btn-power-hover-bg: #2a1219;
 
-  --pill-positive-bg: #13221b;
-  --pill-positive-ink: #44b68e;
-  --pill-negative-bg: #261519;
-  --pill-negative-ink: #e0526b;
-  --pill-warning-bg: #241d11;
-  --pill-warning-ink: #d49b38;
-  --pill-neutral-bg: #191c23;
-  --pill-neutral-ink: #9da4b0;
+  --pill-positive-bg: #e6f6ee;
+  --pill-positive-ink: #1d7a4d;
+  --pill-negative-bg: #fbe9ed;
+  --pill-negative-ink: #b12a44;
+  --pill-warning-bg: #fdf4e3;
+  --pill-warning-ink: #9a6a1e;
+  --pill-neutral-bg: #eceef1;
+  --pill-neutral-ink: #5c6470;
 
   --radius-card: 4px;
   --radius-control: 3px;

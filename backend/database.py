@@ -680,6 +680,18 @@ def get_auth_session(token: str) -> dict | None:
         return dict(row) if row else None
 
 
+def get_auth_session_count() -> int:
+    """Row count used by the diagnostics health endpoint."""
+    with _managed_connection() as conn:
+        row = conn.execute("SELECT COUNT(*) FROM auth_sessions").fetchone()
+        if not row:
+            return 0
+        if isinstance(row, dict):
+            # psycopg's dict_row driver returns {"COUNT": n}
+            return int(next(iter(row.values()), 0))
+        return int(row[0])
+
+
 def get_auth_session_expiry(token: str) -> float | None:
     session = get_auth_session(token)
     return float(session["expires_at"]) if session else None
