@@ -509,38 +509,43 @@ const Commander = {
     if (showProgress) ProcessingModal.show("Memuat riwayat pesan…", 30);
     try {
       const data = await this.requestJSON("/api/messages");
-      list.replaceChildren();
-      if (!data.messages.length) {
-        const empty = document.createElement("div");
-        empty.className = "list-placeholder";
-        const txt = document.createElement("span");
-        txt.className = "list-placeholder-text";
-        txt.textContent = "Belum ada pesan terkirim.";
-        empty.appendChild(txt);
-        list.appendChild(empty);
-        return;
-      }
-      for (const message of data.messages) {
-        const row = document.createElement("div");
-        row.className = `intel-card ${message.status.toLowerCase()}`;
-        const header = document.createElement("div");
-        header.className = "intel-header";
-        const destination = document.createElement("span");
-        destination.textContent = `${message.id} · ${message.target_unit}`;
-        const status = document.createElement("span");
-        status.className = `logo-badge status-badge ${message.status.toLowerCase()}`;
-        status.textContent = {
-          LOCKED: "TERENKRIPSI",
-          UNLOCKED: "DIBUKA",
-          BURNED: "DIHANCURKAN",
-          LEGACY: "FORMAT LAMA",
-        }[message.status] || message.status;
-        header.append(destination, status);
-        const details = document.createElement("div");
-        details.className = "intel-body";
-        details.textContent = new Date(message.created_at).toLocaleString("id-ID");
-        row.append(header, details);
-        list.append(row);
+      const messageIds = data.messages.map(m => m.id).join(",");
+      if (list.dataset.loadedIds !== messageIds) {
+        list.replaceChildren();
+        if (!data.messages.length) {
+          const empty = document.createElement("div");
+          empty.className = "list-placeholder";
+          const txt = document.createElement("span");
+          txt.className = "list-placeholder-text";
+          txt.textContent = "Belum ada pesan terkirim.";
+          empty.appendChild(txt);
+          list.appendChild(empty);
+          list.dataset.loadedIds = messageIds;
+          return;
+        }
+        for (const message of data.messages) {
+          const row = document.createElement("div");
+          row.className = `intel-card ${message.status.toLowerCase()}`;
+          const header = document.createElement("div");
+          header.className = "intel-header";
+          const destination = document.createElement("span");
+          destination.textContent = `${message.id} · ${message.target_unit}`;
+          const status = document.createElement("span");
+          status.className = `logo-badge status-badge ${message.status.toLowerCase()}`;
+          status.textContent = {
+            LOCKED: "TERENKRIPSI",
+            UNLOCKED: "DIBUKA",
+            BURNED: "DIHANCURKAN",
+            LEGACY: "FORMAT LAMA",
+          }[message.status] || message.status;
+          header.append(destination, status);
+          const details = document.createElement("div");
+          details.className = "intel-body";
+          details.textContent = new Date(message.created_at).toLocaleString("id-ID");
+          row.append(header, details);
+          list.append(row);
+        }
+        list.dataset.loadedIds = messageIds;
       }
     } catch (error) {
       console.error("Load messages error:", error);

@@ -2217,3 +2217,215 @@ body.view-receiver .receiver-workspace {
     white-space: normal;
   }
 }
+
+/* ==========================================================================
+   Onboarding Tour
+   ========================================================================== */
+.tour-overlay {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 10001;
+  pointer-events: auto;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+.tour-overlay.is-open {
+  opacity: 1;
+}
+.tour-overlay[hidden] {
+  display: none;
+}
+
+/* Spotlight: 4 dim panels that leave the target zone clear.
+   JS positions them around the target's bounding box.
+   Top/bottom span full width; left/right span the target's vertical range. */
+.tour-panel {
+  position: absolute;
+  display: none;
+  background: rgba(15, 23, 42, 0.55);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Highlight: glowing outline box drawn above the spotlight,
+   hugging the target with a crisp border + soft outer glow. */
+.tour-highlight {
+  position: fixed;
+  display: none;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 3px rgba(0, 102, 255, 0.55),
+    0 0 0 8px rgba(0, 102, 255, 0.18),
+    0 8px 24px rgba(16, 24, 40, 0.35);
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Long arrow: full-viewport SVG. Two shafts (white halo + dark core)
+   with arrowhead markers. JS sets `d` to a straight line from card
+   edge to target edge. */
+.tour-arrow {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 6px rgba(16, 24, 40, 0.45));
+}
+
+.tour-card {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(300px, calc(100vw - 24px));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(16, 24, 40, 0.16), 0 4px 10px rgba(16, 24, 40, 0.08);
+  padding: 14px 16px 12px;
+  z-index: 10003;
+  outline: none;
+  transition: left 0.28s ease, top 0.28s ease, opacity 0.18s ease;
+}
+.tour-card--centered {
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%);
+}
+
+/* Lock body scroll while tour is active */
+body.is-tour-active {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden !important;
+  touch-action: none;
+}
+
+.tour-step-indicator {
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: 4px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.tour-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.tour-desc {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0 0 10px;
+}
+
+.tour-progress {
+  display: flex;
+  gap: 5px;
+  margin-top: 8px;
+}
+.tour-progress-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--control);
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+.tour-progress-dot.is-done {
+  background: color-mix(in srgb, var(--accent) 55%, var(--control));
+}
+.tour-progress-dot.is-active {
+  background: var(--accent);
+  transform: scale(1.35);
+}
+
+.tour-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tour-nav {
+  display: flex;
+  gap: 8px;
+}
+
+.tour-btn {
+  min-height: 32px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  border: 1px solid transparent;
+}
+.tour-btn-skip {
+  background: transparent;
+  color: var(--muted);
+}
+.tour-btn-skip:hover {
+  color: var(--text);
+  background: var(--control);
+}
+.tour-btn-prev {
+  background: var(--surface);
+  border-color: var(--control-border);
+  color: var(--muted);
+}
+.tour-btn-prev:hover {
+  background: var(--control);
+  color: var(--text);
+}
+.tour-btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+.tour-btn-primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+@media (max-width: 480px) {
+  .tour-card {
+    left: 12px !important;
+    right: 12px !important;
+    top: auto !important;
+    bottom: 16px !important;
+    transform: none;
+    width: auto;
+    transition: none;
+  }
+  .tour-arrow,
+  .tour-highlight,
+  .tour-panel {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-overlay,
+  .tour-card,
+  .tour-panel,
+  .tour-highlight {
+    transition: none;
+  }
+}

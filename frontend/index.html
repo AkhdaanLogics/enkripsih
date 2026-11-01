@@ -12,7 +12,7 @@
        are intentionally avoided to keep the strict style-src/style CSP clean. -->
 
   <!-- Stylesheet served by the FastAPI static mount -->
-  <link rel="stylesheet" href="/static/css/style.css?v=enkripsih-v2">
+  <link rel="stylesheet" href="/static/css/style.css?v=enkripsih-v3">
 </head>
 <body>
 
@@ -31,6 +31,7 @@
         <span class="led-indicator offline" id="wsLed" title="Menghubungkan"></span>
         <span id="connectionStatus">Tidak terhubung</span>
       </div>
+      <button class="btn-tactical btn-tactical-secondary" id="btnGuide" type="button" hidden>Cara penggunaan</button>
       <button class="mobile-nav-toggle btn-tactical btn-tactical-secondary" id="mobileNavToggle" type="button" aria-expanded="false" aria-controls="appNavigation" hidden>Menu</button>
       <button class="btn-tactical btn-tactical-secondary" id="btnLogout" type="button" hidden>Keluar</button>
     </div>
@@ -263,6 +264,40 @@
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
 
+  <!-- Onboarding Tour Overlay -->
+  <div class="tour-overlay" id="tourOverlay" hidden>
+    <div class="tour-panel" id="tourPanelT" aria-hidden="true"></div>
+    <div class="tour-panel" id="tourPanelB" aria-hidden="true"></div>
+    <div class="tour-panel" id="tourPanelL" aria-hidden="true"></div>
+    <div class="tour-panel" id="tourPanelR" aria-hidden="true"></div>
+    <div class="tour-highlight" id="tourHighlight" aria-hidden="true"></div>
+    <svg class="tour-arrow" id="tourArrow" width="120" height="120" viewBox="0 0 120 120" aria-hidden="true">
+      <defs>
+        <marker id="tourArrowHead" markerWidth="12" markerHeight="12" refX="6" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+          <path d="M0,0 L12,6 L0,12 Z" fill="#0f172a"/>
+        </marker>
+        <marker id="tourArrowHeadWhite" markerWidth="14" markerHeight="14" refX="6" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+          <path d="M0,0 L12,6 L0,12 Z" fill="#ffffff"/>
+        </marker>
+      </defs>
+      <path id="tourArrowShaftW" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" marker-end="url(#tourArrowHeadWhite)" opacity="0.85"/>
+      <path id="tourArrowShaft" fill="none" stroke="#0f172a" stroke-width="3.5" stroke-linecap="round" marker-end="url(#tourArrowHead)"/>
+    </svg>
+    <div class="tour-card" id="tourCard" role="dialog" aria-modal="true" aria-labelledby="tourTitle" tabindex="-1">
+      <p class="tour-step-indicator" id="tourStepIndicator" aria-live="polite">Langkah 1 dari 1</p>
+      <h3 class="tour-title" id="tourTitle">Selamat datang</h3>
+      <p class="tour-desc" id="tourDesc">Deskripsi</p>
+      <div class="tour-card-actions">
+        <button class="tour-btn tour-btn-skip" id="tourSkip" type="button">Lewati</button>
+        <div class="tour-nav">
+          <button class="tour-btn tour-btn-prev" id="tourPrev" type="button" hidden>Mundur</button>
+          <button class="tour-btn tour-btn-next tour-btn-primary" id="tourNext" type="button">Lanjut</button>
+        </div>
+      </div>
+      <div class="tour-progress" id="tourProgress" aria-hidden="true"></div>
+    </div>
+  </div>
+
   <!-- Processing Overlay Modal -->
   <div class="processing-overlay" id="processingOverlay" hidden>
     <div class="processing-modal">
@@ -277,6 +312,7 @@
   </div>
 
   <!-- Scripts served by the FastAPI static mount -->
+  <script src="/static/js/tour.js?v=guide-v4"></script>
   <script src="/static/js/app.js?v=antislop-v3"></script>
   <script src="/static/js/auth.js?v=antislop-v3"></script>
   <script src="/static/js/commander.js?v=ui-v2"></script>
