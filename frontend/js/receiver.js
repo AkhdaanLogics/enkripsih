@@ -370,12 +370,24 @@ const Receiver = {
     if (showSymbolPicker) {
       const challenge = document.createElement("p");
       challenge.className = "passkey-challenge";
-      challenge.textContent = `Challenge passkey: ${message.passkey_challenge
-        ? message.passkey_challenge
-            .split("")
-            .map(letter => MessageCrypto.symbols[MessageCrypto.letters.indexOf(letter)])
-            .join(" ")
-        : "(otomatis)"}`;
+      const prefix = document.createElement("span");
+      prefix.className = "passkey-challenge-label";
+      prefix.textContent = "Challenge passkey: ";
+      const symbolsWrap = document.createElement("span");
+      symbolsWrap.className = "passkey-challenge-symbols";
+      if (message.passkey_challenge) {
+        for (const letter of message.passkey_challenge) {
+          const idx = MessageCrypto.letters.indexOf(letter);
+          if (idx === -1) continue;
+          const svg = document.createElement("span");
+          svg.className = "passkey-challenge-sym";
+          svg.innerHTML = PASSKEY_SVG.icons[letter];
+          symbolsWrap.append(svg);
+        }
+      } else {
+        symbolsWrap.textContent = "(otomatis)";
+      }
+      challenge.append(prefix, symbolsWrap);
       const passkeyHelp = document.createElement("p");
       passkeyHelp.className = "passkey-help";
       passkeyHelp.textContent = "Masukkan challenge ke perangkat passkey, lalu ketuk 12 simbol respons yang tampil di bawah.";

@@ -393,9 +393,11 @@ body {
 }
 
 .passkey-challenge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
   color: var(--text);
-  font-size: 18px;
-  letter-spacing: 3px;
 }
 
 .registered-key-dismiss {
@@ -1591,15 +1593,40 @@ a:focus-visible {
 }
 
 .passkey-challenge {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: 6px;
-  text-align: center;
-  padding: 14px 0;
-  font-family: var(--font-sans);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 15px;
+  color: var(--text);
+  padding: 12px 0;
   border-bottom: 1px dashed var(--control-border);
   margin-bottom: 16px;
+}
+
+.passkey-challenge-label {
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.passkey-challenge-symbols {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.passkey-challenge-sym {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: var(--accent);
+}
+
+.passkey-challenge-sym .pk-symbol {
+  width: 20px;
+  height: 20px;
 }
 
 .passkey-help {
@@ -1955,8 +1982,8 @@ a:focus-visible {
 }
 
 .transmission-notice .passkey-challenge {
-  font-size: 16px;
-  letter-spacing: 4px;
+  font-size: 13px;
+  gap: 8px;
 }
 
 /* === Card full-width for receiver view === */
