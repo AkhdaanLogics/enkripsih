@@ -494,16 +494,10 @@ const Commander = {
     const notice = document.createElement("div");
     notice.className = "transmission-notice";
     const heading = document.createElement("strong");
-    heading.textContent = "Ciphertext tersimpan";
+    heading.textContent = "Pesan terkirim";
     const details = document.createElement("p");
-    details.textContent = `${data.message_id} · Untuk ${recipientName}. Isi pesan tidak dikirim dalam bentuk plaintext.`;
-    const challenge = document.createElement("p");
-    challenge.textContent = `Challenge 4 simbol (bagikan ke receiver): ${Array.from(challengeIndices, index =>
-      MessageCrypto.symbols[index]
-    ).join(" ")}`;
-    const guidance = document.createElement("p");
-    guidance.textContent = "Receiver menginput challenge ke perangkat passkey, lalu menyetel 12 simbol respons yang tampil di perangkat ke kotak input di kotak masuknya untuk membuka pesan.";
-    notice.append(heading, details, challenge, guidance);
+    details.textContent = `Untuk ${recipientName}`;
+    notice.append(heading, details);
     box.append(notice);
     box.hidden = false;
   },

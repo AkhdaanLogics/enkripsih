@@ -1,11 +1,11 @@
 const PASSKEY_SVG = {
   icons: {
-    T: '<svg class="pk-symbol" viewBox="0 0 24 24" fill="currentColor"><polygon points="4 20 12 5 20 20" stroke="currentColor" stroke-width="1" fill="none"/></svg>',
+    T: '<svg class="pk-symbol" viewBox="0 0 24 24" fill="none"><polygon points="4 20 12 5 20 20" stroke="currentColor" stroke-width="1.5"/></svg>',
     C: '<svg class="pk-symbol" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.5"/></svg>',
     X: '<svg class="pk-symbol" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.5"/></svg>',
     S: '<svg class="pk-symbol" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" stroke="currentColor" stroke-width="1.5"/></svg>',
   },
-  label: { T: "Segitiga", C: "Lingkaran", X: "Cross", S: "Kotak" },
+  label: { T: "Segitiga", C: "Lingkaran", X: "Silang", S: "Kotak" },
 };
 
 const MessageCrypto = {
