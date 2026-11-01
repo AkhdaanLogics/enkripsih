@@ -410,6 +410,13 @@ def api_health(request: Request):
     db_url = os.environ.get("DATABASE_URL")
     has_password = len(os.environ.get("ENKRIPSIH_PASSWORD", "")) >= 16
     has_keybca = len(os.environ.get("ENKRIPSIH_KEYBCA_SECRET", "")) >= 16
+    # Count agent keys visible to runtime (os.environ or .env file)
+    agent_key_count = 0
+    try:
+        from .env_agents import list_agent_env_keys
+        agent_key_count = len(list_agent_env_keys())
+    except Exception:
+        pass
     payload: dict = {
         "ok": bool(db_url) or has_password,
         "session_store": "database" if db_url else "in_memory",
@@ -417,6 +424,7 @@ def api_health(request: Request):
         "database_host": (urlsplit(db_url).hostname if db_url else None),
         "password_configured": has_password,
         "keybca_configured": has_keybca,
+        "agent_keys_found": agent_key_count,
         "idle_timeout_seconds": SESSION_IDLE_TIMEOUT_SECONDS,
     }
     if db_url:
@@ -964,7 +972,7 @@ def agent_keys_endpoint(request: Request):
     for env_name, key in env_keys.items():
         # Find the DB recipient matching this env agent name
         rec = next(
-            (r for r in recipients if r.get("name") and r["name"].lower() == env_name.lower()),
+            (r for r in recipients if r.get("name") and r["name"].lower().replace(' ', '_') == env_name.lower()),
             None,
         )
         result.append({

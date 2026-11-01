@@ -1,5 +1,6 @@
 """Backend helper: auto-append a new AGENT_<NAME>_SECRET_KEY line to .env,
-and read agent keys directly from .env on demand (no in-memory cache)."""
+and read agent keys directly from .env on demand (no in-memory cache).
+Falls back to os.environ when .env is absent (e.g. Vercel runtime)."""
 import os
 import re
 from pathlib import Path
@@ -27,12 +28,25 @@ def _normalize_agent_key(name: str) -> str:
     return safe
 
 
-def read_agent_secret_key(name: str) -> str | None:
-    """Read AGENT_<NAME>_SECRET_KEY directly from .env on each call.
+def _env_var_name(name: str) -> str:
+    suffix = _normalize_agent_key(name)
+    if suffix is None:
+        return None
+    return f"AGENT_{suffix}_SECRET_KEY"
 
-    No cache: always re-reads the file so edits to .env take effect
-    without a server restart. Returns None if not found.
+
+def read_agent_secret_key(name: str) -> str | None:
+    """Read AGENT_<NAME>_SECRET_KEY from .env or os.environ.
+
+    Prefers os.environ first (Vercel), then .env file (local dev).
+    No cache: always re-reads so edits take effect without restart.
     """
+    var_name = _env_var_name(name)
+    if var_name:
+        env_val = os.environ.get(var_name)
+        if env_val and len(env_val) >= 32:
+            return env_val
+
     suffix = _normalize_agent_key(name)
     if suffix is None:
         return None
@@ -55,21 +69,29 @@ def read_agent_secret_key(name: str) -> str | None:
 
 
 def list_agent_env_keys() -> dict[str, str]:
-    """Return all agent keys from .env as {normalized_name: key}."""
-    if not _ENV_PATH.exists():
-        return {}
-    content = _ENV_PATH.read_text(encoding='utf-8')
+    """Return all agent keys from os.environ + .env as {normalized_name: key}."""
     result: dict[str, str] = {}
-    for line in content.splitlines():
-        m = _AGENT_LINE_RE.match(line.strip())
-        if not m:
-            continue
-        raw_name = m.group('name')
-        value = line.split('=', 1)[1].strip()
-        if value.startswith(('"', "'")) and value.endswith(value[0]):
-            value = value[1:-1]
-        if len(value) >= 32:
-            result[raw_name] = value
+
+    # 1. From os.environ (Vercel runtime)
+    for key, value in os.environ.items():
+        if key.startswith("AGENT_") and key.endswith("_SECRET_KEY") and len(value) >= 32:
+            agent_name = key[len("AGENT_"):-len("_SECRET_KEY")]
+            result[agent_name] = value
+
+    # 2. From .env file (local dev, fallback)
+    if _ENV_PATH.exists():
+        content = _ENV_PATH.read_text(encoding='utf-8')
+        for line in content.splitlines():
+            m = _AGENT_LINE_RE.match(line.strip())
+            if not m:
+                continue
+            raw_name = m.group('name')
+            value = line.split('=', 1)[1].strip()
+            if value.startswith(('"', "'")) and value.endswith(value[0]):
+                value = value[1:-1]
+            if len(value) >= 32 and raw_name not in result:
+                result[raw_name] = value
+
     return result
 
 
