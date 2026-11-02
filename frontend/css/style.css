@@ -402,12 +402,17 @@ body {
 .registered-key-output {
   display: block;
   overflow-wrap: anywhere;
+  word-break: break-all;
+  min-width: 0;
   margin: 10px 0;
   padding: 12px;
   color: var(--text);
   background: var(--ground);
   border: 1px solid var(--border);
   user-select: all;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .registered-key-output:empty {
@@ -1442,6 +1447,12 @@ a:focus-visible {
   flex: 0 0 auto;
 }
 
+.receiver-back-btn {
+  min-height: 32px;
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
 .receiver-message-body {
   flex: 1;
   overflow-y: auto;
@@ -1864,6 +1875,22 @@ a:focus-visible {
 
 .list-placeholder-text {
   color: var(--muted);
+  font-size: var(--fs-body);
+}
+
+.list-error {
+  padding: 12px;
+  border: 1px solid var(--negative);
+  border-radius: var(--radius-control);
+  background: rgba(224, 52, 92, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.list-error p {
+  margin: 0;
+  color: var(--text);
   font-size: var(--fs-body);
 }
 

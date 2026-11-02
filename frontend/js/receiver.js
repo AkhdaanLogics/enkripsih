@@ -285,7 +285,15 @@ const Receiver = {
 
     const headerActions = document.createElement("div");
     headerActions.className = "receiver-header-actions";
-    headerActions.append(statusBadge);
+
+    const backButton = document.createElement("button");
+    backButton.type = "button";
+    backButton.className = "btn-tactical btn-tactical-secondary receiver-back-btn";
+    backButton.setAttribute("aria-label", "Kembali ke daftar pesan");
+    backButton.textContent = "Kembali";
+    backButton.addEventListener("click", () => this._resetDetailPane());
+
+    headerActions.append(backButton, statusBadge);
     header.append(contactInfo, headerActions);
 
     if (message.status === "LOCKED") {

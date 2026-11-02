@@ -166,10 +166,26 @@ const Commander = {
           list.append(members);
         }
       }
-     } catch (error) {
-      console.error("Load recipient keys error:", error);
-      showToast(error.message || "Gagal memuat daftar anggota.", "error");
-    } finally {
+      } catch (error) {
+       console.error("Load recipient keys error:", error);
+       const list = document.getElementById("recipientList");
+       if (list) {
+         list.replaceChildren();
+         const err = document.createElement("div");
+         err.className = "list-error";
+         err.setAttribute("role", "alert");
+         const msg = document.createElement("p");
+         msg.textContent = "Gagal memuat daftar anggota.";
+         const retry = document.createElement("button");
+         retry.type = "button";
+         retry.className = "btn-tactical btn-tactical-secondary";
+         retry.textContent = "Coba lagi";
+         retry.addEventListener("click", () => this.loadRecipients());
+         err.append(msg, retry);
+         list.append(err);
+       }
+       showToast(error.message || "Gagal memuat daftar anggota.", "error");
+     } finally {
       ProcessingModal.hide();
     }
     this._refreshAgentKeyHint();
@@ -439,24 +455,21 @@ const Commander = {
         endpoint = "/api/messages/encrypt-agent";
         body = JSON.stringify({ plaintext, recipient_id: recipientId, save: true });
       } else {
-        // Fallback: retry agent-key fetch in case it hasn't loaded yet.
+        // Agent key belum ada di server. Coba fetch ulang sekali; kalau masih
+        // tidak ada, minta komandan daftar dulu di tab members.
         await this._fetchAgentKeys();
         const retryKey = this._agentKeys && this._agentKeys[recipientId];
         if (retryKey) {
           endpoint = "/api/messages/encrypt-agent";
           body = JSON.stringify({ plaintext, recipient_id: recipientId, save: true });
         } else {
-          // No agent key available - require manual key entry
-          const keyInput = document.getElementById("senderSecretKey");
-          const secret = keyInput ? keyInput.value.trim() : "";
-          if (secret.length < 32) {
-            ProcessingModal.hide();
-            showToast("Kunci agen tidak tersedia. Masukkan secret key manual atau refresh halaman.", "warning");
-            button.disabled = false;
-            return;
-          }
-          endpoint = "/api/messages/encrypt";
-          body = JSON.stringify({ plaintext, recipient_id: recipientId, secret_key: secret, save: true });
+          ProcessingModal.hide();
+          showToast(
+            "Anggota ini belum punya agent key. Daftar dulu di tab Members, lalu kirim lagi.",
+            "warning",
+          );
+          button.disabled = false;
+          return;
         }
       }
 
@@ -549,6 +562,21 @@ const Commander = {
       }
     } catch (error) {
       console.error("Load messages error:", error);
+      if (trigger === "manual") {
+        list.replaceChildren();
+        const err = document.createElement("div");
+        err.className = "list-error";
+        err.setAttribute("role", "alert");
+        const msg = document.createElement("p");
+        msg.textContent = "Gagal memuat riwayat pesan.";
+        const retry = document.createElement("button");
+        retry.type = "button";
+        retry.className = "btn-tactical btn-tactical-secondary";
+        retry.textContent = "Coba lagi";
+        retry.addEventListener("click", () => this.loadMessages({ trigger: "manual" }));
+        err.append(msg, retry);
+        list.append(err);
+      }
       showToast(error.message || "Gagal memuat riwayat pesan.", "error");
     } finally {
       if (showProgress) ProcessingModal.hide();
