@@ -417,8 +417,13 @@ def init_db(
                     name TEXT NOT NULL UNIQUE,
                     salt TEXT NOT NULL,
                     verifier TEXT NOT NULL,
-                    created_at TEXT NOT NULL
+                    created_at TEXT NOT NULL,
+                    agent_secret TEXT
                 )
+            """)
+            conn.execute("""
+                ALTER TABLE recipient_keys
+                ADD COLUMN IF NOT EXISTS agent_secret TEXT
             """)
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS receiver_accounts (
@@ -577,6 +582,13 @@ def init_db(
         created_at TEXT NOT NULL
     )
     """)
+    recipient_columns = {
+        row["name"] for row in cursor.execute("PRAGMA table_info(recipient_keys)").fetchall()
+    }
+    if "agent_secret" not in recipient_columns:
+        cursor.execute("""
+        ALTER TABLE recipient_keys ADD COLUMN agent_secret TEXT
+        """)
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS audit_logs (
@@ -861,13 +873,17 @@ def register_recipient_key(
     username: str | None = None,
     password_salt: str | None = None,
     password_hash: str | None = None,
+    agent_secret: str | None = None,
 ) -> bool:
     with _managed_connection() as conn:
         cursor = conn.execute("""
-            INSERT INTO recipient_keys (id, name, salt, verifier, created_at)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO recipient_keys (id, name, salt, verifier, created_at, agent_secret)
+            VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT (name) DO NOTHING
-        """, (recipient_id, name, salt, verifier, datetime.now().isoformat()))
+        """, (
+            recipient_id, name, salt, verifier,
+            datetime.now().isoformat(), agent_secret,
+        ))
         if cursor.rowcount != 1:
             return False
         if username and password_salt and password_hash:
@@ -883,6 +899,19 @@ def register_recipient_key(
         return True
 
 
+def update_agent_secret(recipient_id: str, agent_secret: str | None) -> bool:
+    with _managed_connection() as conn:
+        cursor = conn.execute(
+            """
+            UPDATE recipient_keys
+            SET agent_secret = ?
+            WHERE id = ?
+            """,
+            (agent_secret, recipient_id),
+        )
+        return cursor.rowcount == 1
+
+
 def get_recipient_keys():
     with _managed_connection() as conn:
         return [dict(row) for row in conn.execute("""
@@ -893,7 +922,7 @@ def get_recipient_keys():
 def get_recipient_key(recipient_id: str):
     with _managed_connection() as conn:
         row = conn.execute("""
-            SELECT id, name, salt, verifier FROM recipient_keys WHERE id = ?
+            SELECT id, name, salt, verifier, agent_secret FROM recipient_keys WHERE id = ?
         """, (recipient_id,)).fetchone()
         return dict(row) if row else None
 

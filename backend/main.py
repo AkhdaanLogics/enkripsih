@@ -806,22 +806,25 @@ def register_recipient(req: RegisterRecipientRequest):
         )
     temporary_password = _new_receiver_password()
     password_salt = secrets.token_bytes(16)
+
+    encrypted_agent_secret = None
+    if getattr(req, "secret_key", None):
+        from .env_agents import write_agent_secret_to_db
+        encrypted_agent_secret = write_agent_secret_to_db(recipient_id, req.secret_key)
+
     if not register_recipient_key(
         recipient_id, name, req.salt.lower(), req.verifier.lower(),
         username, password_salt.hex(),
         _password_hash(temporary_password, password_salt),
+        agent_secret=encrypted_agent_secret,
     ):
         raise HTTPException(
             status_code=409,
             detail="Nama anggota sudah terdaftar. Gunakan nama berbeda atau hubungi admin untuk rotasi kunci.",
         )
 
-    # Auto-write the agent secret key into .env so the commander can use
-    # the /api/messages/encrypt-agent flow for this new member.
-    # We need the plaintext key, which the frontend already has in
-    # "secret_key" of the request body. However, RegisterRecipientRequest
-    # only carries salt+verifier. To support auto-env, extend the request
-    # with an optional `secret_key` field.
+    # Keep the legacy .env path working for local dev, but the DB copy is
+    # now authoritative for the agent encryption endpoint on Vercel.
     if getattr(req, "secret_key", None):
         try:
             from .env_agents import upsert_agent_secret_key
@@ -831,6 +834,8 @@ def register_recipient(req: RegisterRecipientRequest):
             log_event("KEY", "WARNING", f"Gagal menulis .env untuk [{name}]: {e}")
 
     log_event("KEY", "SUCCESS", f"Kunci verifier anggota [{recipient_id}] didaftarkan.")
+    if encrypted_agent_secret:
+        log_event("KEY", "INFO", f"Secret key agen [{name}] disimpan terenkripsi ke database.")
     return {
         "success": True,
         "recipient_id": recipient_id,
@@ -908,6 +913,11 @@ async def reissue_recipient_key_endpoint(recipient_id: str, request: Request):
 
     if not reissue_recipient_key(recipient_id, new_salt, new_verifier):
         raise HTTPException(status_code=409, detail="Gagal me-reissue kunci.")
+
+    from .env_agents import write_agent_secret_to_db
+    from .database import update_agent_secret
+    encrypted_new_secret = write_agent_secret_to_db(recipient_id, new_secret_key)
+    update_agent_secret(recipient_id, encrypted_new_secret)
 
     # If this recipient has an agent key in .env, refresh the key in .env too
     try:
@@ -1147,9 +1157,9 @@ async def encrypt_message_endpoint(req: EncryptMessageRequest, request: Request 
 
 @app.post("/api/messages/encrypt-agent")
 async def encrypt_agent_message_endpoint(req: EncryptAgentMessageRequest, request: Request = None):
-    """Encrypt a message to an agent whose secret key is stored in .env.
+    """Encrypt a message to an agent whose secret key is stored in the database.
     The commander does not need to know or type the secret key — the server
-    reads it directly from .env on every call (no cache)."""
+    reads it directly from the encrypted database record (fallback: .env)."""
     principal = getattr(getattr(request, "state", None), "principal", None) if request else None
     if not principal or principal["role"] != "COMMANDER":
         raise HTTPException(status_code=403, detail="Hanya komandan yang dapat mengenkripsi pesan.")
@@ -1159,18 +1169,22 @@ async def encrypt_agent_message_endpoint(req: EncryptAgentMessageRequest, reques
     if len(req.plaintext) > 50_000:
         raise HTTPException(status_code=413, detail="Pesan terlalu panjang.")
 
-    # Read the agent secret key directly from .env (no in-memory cache).
-    from .env_agents import read_agent_secret_key
-    secret_key = read_agent_secret_key(recipient["name"])
+    # Prefer the encrypted agent key persisted in the database. This makes
+    # newly registered agents work on Vercel without adding env vars.
+    from .env_agents import read_agent_secret_key, read_agent_secret_from_db
+    secret_key = read_agent_secret_from_db(recipient["id"], recipient.get("agent_secret"))
+    key_source = "database"
+    if not secret_key:
+        secret_key = read_agent_secret_key(recipient["name"])
+        key_source = "env"
     if not secret_key:
         raise HTTPException(
             status_code=400,
-            detail=f"Anggota '{recipient['name']}' tidak memiliki kunci agen di .env. "
-                   f"Tambahkan AGENT_{recipient['name'].upper().replace(' ', '_')}_SECRET_KEY ke file .env, "
-                   f"atau daftarkan anggota lewat form register.",
+            detail=f"Anggota '{recipient['name']}' tidak memiliki kunci agen. "
+                   f"Daftarkan anggota lewat form register atau tambah AGENT_{recipient['name'].upper().replace(' ', '_')}_SECRET_KEY ke .env/env vars.",
         )
 
-    # Skip DB verifier check for agent keys — the .env key is authoritative.
+    # Skip DB verifier check for agent keys — the persisted key is authoritative.
     work = await _compute_encrypt_work_agent(recipient, secret_key, req.plaintext)
     if work.get("error"):
         raise HTTPException(status_code=500, detail="Gagal mengenkripsi pesan.")

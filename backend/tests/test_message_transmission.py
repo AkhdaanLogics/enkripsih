@@ -1172,9 +1172,9 @@ class MessageTransmissionTests(unittest.TestCase):
                 burn_foreign = client.post(f"/api/messages/{msg_id}/burn")
                 self.assertEqual(burn_foreign.status_code, 404)
 
-    def _register_real_secret_recipient(self, client, name):
+    def _register_real_secret_recipient(self, client, name, secret_key=None):
         """Register a recipient whose verifier actually matches a known secret key."""
-        secret = os.urandom(16).hex()  # 32 chars
+        secret = secret_key or os.urandom(16).hex()  # 32 chars
         salt = os.urandom(16).hex()
         verifier = hashlib.pbkdf2_hmac(
             "sha256", secret.encode(),
@@ -1182,10 +1182,68 @@ class MessageTransmissionTests(unittest.TestCase):
         ).hex()
         response = client.post("/api/recipients/register", json={
             "name": name, "salt": salt, "verifier": verifier,
+            "secret_key": secret,
         })
         self.assertEqual(response.status_code, 200)
         body = response.json()
         return body["recipient_id"], secret, body["temporary_password"]
+
+    def test_agent_secret_key_is_stored_encrypted_in_db(self):
+        password = "enkripsih-test-password-2026"
+        with patch.dict(os.environ, {
+            "ENKRIPSIH_PASSWORD": password,
+            "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
+            "ENKRIPSIH_KEYBCA_SECRET": self.keybca_secret,
+        }):
+            with TestClient(main.app) as client:
+                client.post("/api/auth/login", json={"password": password})
+                secret = "agent-secret-key-0123456789abcdef"
+                recipient_id, _, _ = self._register_real_secret_recipient(
+                    client, f"Db Agent {self.test_suffix}", secret_key=secret,
+                )
+                row = database.get_recipient_key(recipient_id)
+                self.assertIn("agent_secret", row)
+                self.assertTrue(row["agent_secret"])
+                self.assertNotEqual(row["agent_secret"], secret)
+                from backend.env_agents import decrypt_agent_secret
+                self.assertEqual(decrypt_agent_secret(row["agent_secret"]), secret)
+
+    def test_encrypt_agent_uses_db_stored_secret_key_without_env(self):
+        password = "enkripsih-test-password-2026"
+        with patch.dict(os.environ, {
+            "ENKRIPSIH_PASSWORD": password,
+            "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
+            "ENKRIPSIH_KEYBCA_SECRET": self.keybca_secret,
+        }):
+            with TestClient(main.app) as client:
+                client.post("/api/auth/login", json={"password": password})
+                secret = "agent-round-trip-secret-0123456789"
+                recipient_id, _, _ = self._register_real_secret_recipient(
+                    client, f"Agent RT {self.test_suffix}", secret_key=secret,
+                )
+
+                encrypted = client.post("/api/messages/encrypt-agent", json={
+                    "plaintext": "pesan agen baru",
+                    "recipient_id": recipient_id,
+                    "save": True,
+                })
+                self.assertEqual(encrypted.status_code, 200)
+                body = encrypted.json()
+                self.assertEqual(body["saved"]["status"], "LOCKED")
+
+                envelope = json.loads(body["paket"])
+                self.assertEqual(envelope["v"], 5)
+                LETTERS = "TCXS"
+                challenge_indices = [LETTERS.index(ch) for ch in str(envelope["challenge"])]
+                challenge_bytes = bytes(challenge_indices)
+                mac = hmac.new(secret.encode("utf-8"), challenge_bytes, hashlib.sha256).digest()
+                resp_indices = [(mac[i // 4] >> ((i % 4) * 2)) & 3 for i in range(12)]
+                raw_salt = base64.urlsafe_b64decode(envelope["salt"] + "=" * (-len(envelope["salt"]) % 4))
+                raw_iv = base64.urlsafe_b64decode(envelope["iv"] + "=" * (-len(envelope["iv"]) % 4))
+                aes_key = hashlib.pbkdf2_hmac("sha256", bytes(resp_indices), raw_salt, 200_000, 32)
+                ct = base64.urlsafe_b64decode(envelope["ciphertext"] + "=" * (-len(envelope["ciphertext"]) % 4))
+                plaintext = AESGCM(aes_key).decrypt(raw_iv, ct, None).decode("utf-8")
+                self.assertEqual(plaintext, "pesan agen baru")
 
     def test_encrypt_endpoint_rejects_wrong_secret_key(self):
         password = "enkripsih-test-password-2026"
