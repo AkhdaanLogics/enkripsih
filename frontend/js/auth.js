@@ -226,8 +226,12 @@ const AppAuth = {
 
   showWorkspace(session) {
     State.isLoggedIn = true;
-    State.role = session.role || 'COMMANDER';
-    State.principalId = session.principal_id || 'CMD-01';
+    State.role = session.role;
+    State.principalId = session.principal_id;
+    if (!State.role || !State.principalId) {
+      console.error('Auth: session role/principal_id kosong', session);
+      return;
+    }
     document.getElementById('authGate').hidden = true;
     document.getElementById('passwordChangeGate').hidden = true;
     document.getElementById('appLayout').classList.add('is-visible');

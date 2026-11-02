@@ -1316,6 +1316,19 @@ async def decrypt_message_endpoint(request: Request):
 
     resp_indices = [LETTERS.find(ch) for ch in passkey_letters]
 
+    # Throttle brute-force attempts on the expensive PBKDF2 step so a
+    # compromised receiver account cannot starve the worker.
+    lock_key = "decrypt:" + principal["principal_id"]
+    now = time.time()
+    dec_attempts, dec_locked_until = get_login_lockout(lock_key, now)
+    if dec_locked_until > now:
+        retry_after = int(dec_locked_until - now) + 1
+        raise HTTPException(
+            status_code=429,
+            detail=f"Terlalu banyak percobaan. Coba lagi dalam {retry_after} detik.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
     salt = base64.urlsafe_b64decode(envelope["salt"] + "=" * (-len(envelope["salt"]) % 4))
     iv = base64.urlsafe_b64decode(envelope["iv"] + "=" * (-len(envelope["iv"]) % 4))
     ciphertext = base64.urlsafe_b64decode(envelope["ciphertext"] + "=" * (-len(envelope["ciphertext"]) % 4))
@@ -1329,7 +1342,21 @@ async def decrypt_message_endpoint(request: Request):
         plaintext_bytes = AESGCM(aes_key).decrypt(iv, ciphertext, None)
         plaintext = plaintext_bytes.decode("utf-8")
     except InvalidTag:
+        dec_attempts += 1
+        dec_locked = record_failed_login(
+            lock_key, dec_attempts, now,
+            max_attempts=5, lockout_seconds=300,
+        )
+        if dec_locked > now:
+            retry_after = int(dec_locked - now) + 1
+            raise HTTPException(
+                status_code=429,
+                detail=f"Percobaan gagal berulang. Coba lagi dalam {retry_after} detik.",
+                headers={"Retry-After": str(retry_after)},
+            )
         raise HTTPException(status_code=400, detail="Respons passkey salah — pesan tidak dapat dibuka.")
+
+    clear_login_lockout(lock_key)
 
     # Mark as decrypted
     mark_message_decrypted(message_id, principal["principal_id"])
