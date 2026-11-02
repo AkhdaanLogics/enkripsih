@@ -3,7 +3,10 @@ and read agent keys directly from .env on demand (no in-memory cache).
 Falls back to os.environ when .env is absent (e.g. Vercel runtime)."""
 import os
 import re
+import base64
 from pathlib import Path
+
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 # Resolve .env path relative to the project root (parent of backend/)
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -14,6 +17,54 @@ _AGENT_LINE_RE = re.compile(
     r'^AGENT_(?P<name>[A-Z0-9_]+)_SECRET_KEY=.*$',
     re.MULTILINE,
 )
+
+_KEYBCA_SECRET_ENV = "ENKRIPSIH_KEYBCA_SECRET"
+
+
+def _get_master_key() -> bytes:
+    """Derive a 32-byte AES-GCM key from ENKRIPSIH_KEYBCA_SECRET.
+
+    We use PBKDF2 (32-byte output) so any length of KEYBCA_SECRET works
+    without leaking the raw secret directly into the AES key material.
+    """
+    secret = os.environ.get(_KEYBCA_SECRET_ENV, "")
+    if len(secret) < 16:
+        raise RuntimeError(
+            f"{_KEYBCA_SECRET_ENV} belum diatur atau kurang dari 16 karakter."
+        )
+    import hashlib
+    return hashlib.pbkdf2_hmac("sha256", secret.encode("utf-8"), b"enkripsih:agent-secret:v1", 600_000, 32)
+
+
+def encrypt_agent_secret(plaintext: str) -> str:
+    """Encrypt an agent secret key with AES-GCM and return base64(nonce+ct)."""
+    key = _get_master_key()
+    nonce = os.urandom(12)
+    ct = AESGCM(key).encrypt(nonce, plaintext.encode("utf-8"), None)
+    return base64.b64encode(nonce + ct).decode("utf-8")
+
+
+def decrypt_agent_secret(blob: str | None) -> str | None:
+    """Decrypt a base64(nonce+ct) blob produced by encrypt_agent_secret()."""
+    if not blob:
+        return None
+    try:
+        key = _get_master_key()
+        raw = base64.b64decode(blob)
+        nonce, ct = raw[:12], raw[12:]
+        return AESGCM(key).decrypt(nonce, ct, None).decode("utf-8")
+    except Exception:
+        return None
+
+
+def read_agent_secret_from_db(recipient_id: str, encrypted_secret: str | None) -> str | None:
+    """Decrypt and return the agent secret key stored in DB for a recipient."""
+    return decrypt_agent_secret(encrypted_secret)
+
+
+def write_agent_secret_to_db(recipient_id: str, plaintext_secret: str) -> str:
+    """Encrypt the plaintext secret and return the base64 blob to persist in DB."""
+    return encrypt_agent_secret(plaintext_secret)
 
 
 def _normalize_agent_key(name: str) -> str:

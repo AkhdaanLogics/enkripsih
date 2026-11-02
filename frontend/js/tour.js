@@ -262,9 +262,21 @@
   }
 
   function scrollIntoViewFor(elm) {
-    // No-op. Body scroll is locked while the tour is active, and we only
-    // want to reposition the innermost scrollable container when the
-    // target is truly outside the visible area.
+    if (!elm) return;
+    var p = elm.parentElement;
+    while (p && p !== document.body && p !== document.documentElement) {
+      var st = window.getComputedStyle(p);
+      var overflowY = st.overflowY || st.overflow || "";
+      if (overflowY === "auto" || overflowY === "scroll") {
+        var rElm = elm.getBoundingClientRect();
+        var rP = p.getBoundingClientRect();
+        if (rElm.top < rP.top || rElm.bottom > rP.bottom) {
+          p.scrollTop += (rElm.top - rP.top) - 16;
+        }
+        break;
+      }
+      p = p.parentElement;
+    }
   }
 
   function clamp(v, a, b) {
@@ -601,6 +613,19 @@
     total = MENUS[activeMenu].length;
     index = 0;
     lastStepKey = "";
+
+    // Scroll to top so the first visible step's target is in the normal
+    // page flow before we lock the body. This avoids the "ugly" state
+    // where the tour card appears while the user is scrolled to the
+    // bottom and the locked body keeps the page in an odd position.
+    var firstStep = MENUS[activeMenu] && MENUS[activeMenu][0];
+    if (firstStep && firstStep.target) {
+      var firstTarget = document.querySelector(firstStep.target);
+      if (firstTarget && isElementVisible(firstTarget)) {
+        window.scrollTo({ top: 0, behavior: "instant" });
+      }
+    }
+
     overlay.hidden = false;
     overlay.classList.add("is-open");
     lockScroll(true);
