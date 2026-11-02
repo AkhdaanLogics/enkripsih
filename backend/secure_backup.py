@@ -97,10 +97,21 @@ def _verify_sqlite_bytes(data: bytes) -> None:
         raise ValueError("Data hasil dekripsi bukan database SQLite plaintext.")
     connection = sqlite3.connect(":memory:")
     try:
-        connection.deserialize(data)
-        integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
-        if integrity != "ok":
-            raise RuntimeError(f"Verifikasi database hasil dekripsi gagal: {integrity}")
+        if hasattr(connection, "deserialize"):
+            connection.deserialize(data)
+            integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
+            if integrity != "ok":
+                raise RuntimeError(f"Verifikasi database hasil dekripsi gagal: {integrity}")
+        else:
+            # Older SQLite builds lack Connection.deserialize(); verify the
+            # header fields that every SQLite database must satisfy.
+            if len(data) < 100:
+                raise ValueError("Ukuran database tidak valid.")
+            page_size = int.from_bytes(data[16:18], "big")
+            if page_size < 512 or page_size > 65536 or (page_size & (page_size - 1)) != 0:
+                raise ValueError("Ukuran halaman SQLite tidak valid.")
+            if data[28] not in (0x00, 0x02):
+                raise ValueError("Tekstur halaman SQLite tidak valid.")
     finally:
         connection.close()
 

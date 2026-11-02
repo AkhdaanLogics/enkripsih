@@ -912,11 +912,18 @@ def update_agent_secret(recipient_id: str, agent_secret: str | None) -> bool:
         return cursor.rowcount == 1
 
 
-def get_recipient_keys():
+def get_recipient_keys(include_secrets: bool = False):
+    """List all recipient keys. Never exposes the verifier hash in listings.
+    If include_secrets is True, the `agent_secret` (encrypted blob) is
+    returned so callers can decrypt it locally without a second round-trip
+    to the database.
+    """
+    secret_select = ", agent_secret" if include_secrets else ""
     with _managed_connection() as conn:
-        return [dict(row) for row in conn.execute("""
-            SELECT id, name, salt FROM recipient_keys ORDER BY name
-        """).fetchall()]
+        rows = conn.execute(
+            f"SELECT id, name, salt{secret_select} FROM recipient_keys ORDER BY name"
+        ).fetchall()
+        return [dict(row) for row in rows]
 
 
 def get_recipient_key(recipient_id: str):

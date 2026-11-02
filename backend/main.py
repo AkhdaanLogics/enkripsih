@@ -974,15 +974,22 @@ def agent_keys_endpoint(request: Request):
     principal = getattr(request.state, "principal", None) if request else None
     if not principal or principal["role"] != "COMMANDER":
         raise HTTPException(status_code=403, detail="Hanya komandan yang dapat melihat kunci agen.")
-    # Read .env directly, match to DB recipients by name (case-insensitive).
-    from .env_agents import list_agent_env_keys
+    # Read agents from the database (authoritative on Vercel), then merge
+    # with any legacy .env entries that are not already covered by a DB row.
+    from .env_agents import list_agent_env_keys, list_agent_keys_from_db
+    db_keys = dict(list_agent_keys_from_db())
     env_keys = list_agent_env_keys()
+    merged: dict[str, str] = {}
+    for name, key in env_keys.items():
+        merged[name.lower().replace(' ', '_')] = key
+    for name, key in db_keys.items():
+        merged[name.lower().replace(' ', '_')] = key
     recipients = get_recipient_keys()
     result = []
-    for env_name, key in env_keys.items():
-        # Find the DB recipient matching this env agent name
+    for env_name, key in merged.items():
+        # Find the DB recipient matching this agent name
         rec = next(
-            (r for r in recipients if r.get("name") and r["name"].lower().replace(' ', '_') == env_name.lower()),
+            (r for r in recipients if r.get("name") and r["name"].lower().replace(' ', '_') == env_name),
             None,
         )
         result.append({

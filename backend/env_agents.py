@@ -212,3 +212,25 @@ def upsert_agent_secret_key_inplace(name: str, secret_key: str) -> str:
 
     _ENV_PATH.write_text('\n'.join(new_lines) + '\n', encoding='utf-8')
     return var_name
+
+
+def list_agent_keys_from_db() -> list[tuple[str, str]]:
+    """Return a list of (agent_name, plaintext_secret_key) for every agent
+    that has an encrypted agent_secret stored in the database. This is the
+    runtime source of truth on Vercel where .env entries do not persist.
+    """
+    from .database import get_recipient_keys
+    out: list[tuple[str, str]] = []
+    for row in get_recipient_keys(include_secrets=True):
+        blob = row.get("agent_secret")
+        if not blob:
+            continue
+        try:
+            key = decrypt_agent_secret(blob)
+        except Exception:
+            # If the key can't be decrypted, skip it — the agent needs a
+            # fresh registration or reissue.
+            continue
+        if key and len(key) >= 32:
+            out.append((row["name"], key))
+    return out
