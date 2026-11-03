@@ -169,6 +169,7 @@ const Receiver = {
     timeEl.textContent = new Date(message.created_at).toLocaleTimeString("id-ID", {
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: "Asia/Jakarta",
     });
     const statusEl = document.createElement("span");
     statusEl.className = `status-badge--compact ${message.status.toLowerCase()}`;
@@ -270,7 +271,7 @@ const Receiver = {
     nameEl.textContent = contactName;
     const metaEl = document.createElement("div");
     metaEl.className = "contact-meta";
-    metaEl.textContent = `ID: ${message.id.slice(0, 12)}... · ${new Date(message.created_at).toLocaleString("id-ID")}`;
+    metaEl.textContent = `ID: ${message.id.slice(0, 12)}... · ${new Date(message.created_at).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })}`;
     nameWrap.append(nameEl, metaEl);
     contactInfo.append(avatar, nameWrap);
 

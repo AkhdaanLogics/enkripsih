@@ -554,7 +554,7 @@ const Commander = {
           header.append(destination, status);
           const details = document.createElement("div");
           details.className = "intel-body";
-          details.textContent = new Date(message.created_at).toLocaleString("id-ID");
+          details.textContent = new Date(message.created_at).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
           row.append(header, details);
           list.append(row);
         }

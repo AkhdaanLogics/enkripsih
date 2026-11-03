@@ -187,6 +187,7 @@ Tes transmisi memeriksa endpoint pengiriman, penyimpanan ciphertext tanpa metada
 | Materi | Link |
 |---|---|
 | Flowchart & diagram alur | [Google Drive](https://drive.google.com/drive/folders/1GI7Vqc96OBDakjI7JJHdpANcP_7V6cju?usp=sharing) |
+| Simulasi Wemos D1 Mini (Wokwi) | [wokwi.com/projects/479672497803902977](https://wokwi.com/projects/479672497803902977) |
 | Tabel tools & teknologi | [`slides/tools-tech.md`](slides/tools-tech.md) |
 | Diagram Mermaid (source) | [`slides/diagrams/00-ringkasan.mmd`](slides/diagrams/00-ringkasan.mmd) |
 | Live demo | <https://enkripsih.vercel.app> |
