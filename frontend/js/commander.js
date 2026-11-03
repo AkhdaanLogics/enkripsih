@@ -456,7 +456,7 @@ const Commander = {
         body = JSON.stringify({ plaintext, recipient_id: recipientId, save: true });
       } else {
         // Agent key belum ada di server. Coba fetch ulang sekali; kalau masih
-        // tidak ada, minta komandan daftar dulu di tab members.
+        // tidak ada, minta Sender daftar dulu di tab members.
         await this._fetchAgentKeys();
         const retryKey = this._agentKeys && this._agentKeys[recipientId];
         if (retryKey) {
