@@ -13,7 +13,7 @@ const State = {
   principalId: null,
   commander: null,
   messages: [],
-  audioEnabled: true
+  audioEnabled: false
 };
 
 // Web Audio API Synthesizer (Zero external dependencies)
