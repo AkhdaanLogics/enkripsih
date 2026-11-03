@@ -34,8 +34,18 @@
       <button class="btn-tactical btn-tactical-secondary" id="btnGuide" type="button" hidden>Cara penggunaan</button>
       <button class="mobile-nav-toggle btn-tactical btn-tactical-secondary" id="mobileNavToggle" type="button" aria-expanded="false" aria-controls="appNavigation" hidden>Menu</button>
       <button class="btn-tactical btn-tactical-secondary" id="btnLogout" type="button" hidden>Keluar</button>
+      <button class="btn-tactical btn-tactical-secondary mobile-menu-btn" id="mobileMenu" type="button" aria-expanded="false" aria-controls="mobileMenuSheet" hidden>
+        <span class="mobile-menu-ic" aria-hidden="true"></span>
+        Menu
+      </button>
     </div>
   </header>
+
+  <div class="mobile-menu-sheet" id="mobileMenuSheet" hidden>
+    <button class="mm-item" type="button" id="mmGuide">Cara penggunaan</button>
+    <button class="mm-item" type="button" id="mmMenu">Menu</button>
+    <button class="mm-item" type="button" id="mmLogout">Keluar</button>
+  </div>
 
   <main class="main-content" id="authGate">
     <section class="tactical-card auth-gate">
@@ -287,7 +297,7 @@
       <div class="tour-card-actions">
         <button class="tour-btn tour-btn-skip" id="tourSkip" type="button">Lewati</button>
         <div class="tour-nav">
-          <button class="tour-btn tour-btn-prev" id="tourPrev" type="button" hidden>Mundur</button>
+          <button class="tour-btn tour-btn-prev" id="tourPrev" type="button" hidden>Kembali</button>
           <button class="tour-btn tour-btn-next tour-btn-primary" id="tourNext" type="button">Lanjut</button>
         </div>
       </div>

@@ -176,6 +176,8 @@ const AppAuth = {
     if (workspace) workspace.hidden = true;
     const mobileNavToggle = document.getElementById('mobileNavToggle');
     if (mobileNavToggle) mobileNavToggle.hidden = true;
+    const mobileMenu = document.getElementById('mobileMenu');
+    if (mobileMenu) mobileMenu.hidden = true;
     const btnLogout = document.getElementById('btnLogout');
     if (btnLogout) btnLogout.hidden = false;
   },
@@ -242,6 +244,10 @@ const AppAuth = {
     if (btnLogout) btnLogout.hidden = false;
     const mobileNavToggle = document.getElementById('mobileNavToggle');
     if (mobileNavToggle) mobileNavToggle.setAttribute('aria-expanded', 'false');
+    // Mobile hamburger: always available (even for receivers), so the top bar
+    // never stacks three buttons on a narrow screen.
+    const mobileMenu = document.getElementById('mobileMenu');
+    if (mobileMenu) mobileMenu.hidden = false;
 
     const isReceiver = State.role === 'RECEIVER';
     const sidebar = document.querySelector('.app-sidebar');
@@ -298,6 +304,11 @@ const AppAuth = {
     if (workspace) workspace.hidden = true;
     const mobileNavToggle = document.getElementById('mobileNavToggle');
     if (mobileNavToggle) mobileNavToggle.setAttribute('aria-expanded', 'false');
+    const mobileMenu = document.getElementById('mobileMenu');
+    if (mobileMenu) {
+      mobileMenu.hidden = true;
+      mobileMenu.setAttribute('aria-expanded', 'false');
+    }
     const btnLogout = document.getElementById('btnLogout');
     if (btnLogout) btnLogout.hidden = true;
     if (message) showToast(message, 'warning');

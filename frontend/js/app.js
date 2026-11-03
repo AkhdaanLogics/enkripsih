@@ -304,10 +304,51 @@ document.addEventListener('DOMContentLoaded', () => {
     navigation?.closest('.app-sidebar')?.classList.toggle('is-open', !expanded);
     event.currentTarget.setAttribute('aria-expanded', String(!expanded));
   });
+
+  const mobileMenu = document.getElementById('mobileMenu');
+  const mobileMenuSheet = document.getElementById('mobileMenuSheet');
+  const closeMobileMenu = () => {
+    if (!mobileMenu || !mobileMenuSheet) return;
+    mobileMenuSheet.hidden = true;
+    mobileMenu.setAttribute('aria-expanded', 'false');
+  };
+
+  if (mobileMenu && mobileMenuSheet) {
+    mobileMenu.addEventListener('click', () => {
+      const expanded = mobileMenu.getAttribute('aria-expanded') === 'true';
+      mobileMenuSheet.hidden = !expanded;
+      mobileMenu.setAttribute('aria-expanded', String(!expanded));
+    });
+
+    document.getElementById('mmGuide')?.addEventListener('click', () => {
+      closeMobileMenu();
+      document.getElementById('btnGuide')?.click();
+    });
+    document.getElementById('mmMenu')?.addEventListener('click', () => {
+      closeMobileMenu();
+      document.getElementById('mobileNavToggle')?.click();
+    });
+    document.getElementById('mmLogout')?.addEventListener('click', () => {
+      closeMobileMenu();
+      document.getElementById('btnLogout')?.click();
+    });
+
+    document.addEventListener('click', (event) => {
+      if (mobileMenuSheet.hidden) return;
+      if (mobileMenuSheet.contains(event.target) || mobileMenu.contains(event.target)) return;
+      closeMobileMenu();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      closeMobileMenu();
+    });
+  }
+
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
     document.getElementById('appNavigation')?.classList.remove('is-open');
     document.querySelector('.app-sidebar')?.classList.remove('is-open');
     document.getElementById('mobileNavToggle')?.setAttribute('aria-expanded', 'false');
+    closeMobileMenu();
   });
 });
