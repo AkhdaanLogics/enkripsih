@@ -75,6 +75,9 @@
   var total = 0;
   var activeMenu = null;
   var bodyLock = false;
+  var mobileLock = false;
+  var savedHtmlOverflow = "";
+  var savedBodyOverflow = "";
   var overlayMounted = false;
   var rafScheduled = false;
   var lastStepKey = "";
@@ -115,8 +118,31 @@
     }
   }
 
+  function isMobileViewport() {
+    return window.matchMedia && window.matchMedia("(max-width: 480px)").matches;
+  }
+
   function lockPage(on) {
     var body = document.body;
+    if (isMobileViewport()) {
+      // On a narrow screen, blocking the body with position:fixed would kill
+      // programmatic scrolling to the tour target. Instead we only hide the
+      // overflow so the user cannot scroll manually; the scroll position is
+      // still settable, which is what scrollTargetIntoView relies on.
+      if (on) {
+        mobileLock = true;
+        savedHtmlOverflow = document.documentElement.style.overflow || "";
+        savedBodyOverflow = body.style.overflow || "";
+        document.documentElement.style.overflow = "hidden";
+        body.style.overflow = "hidden";
+      } else if (mobileLock) {
+        mobileLock = false;
+        document.documentElement.style.overflow = savedHtmlOverflow;
+        body.style.overflow = savedBodyOverflow;
+      }
+      return;
+    }
+
     if (on) {
       savedScrollX = window.scrollX;
       savedScrollY = window.scrollY;
@@ -261,8 +287,13 @@
     return fromIndex;
   }
 
-  function scrollIntoViewFor(elm) {
+  function scrollTargetIntoView(elm) {
     if (!elm) return;
+    var v = viewport();
+    var r = elm.getBoundingClientRect();
+    var inView = r.top >= v.offY && r.bottom <= v.offY + v.h;
+    if (inView) return;
+
     var p = elm.parentElement;
     while (p && p !== document.body && p !== document.documentElement) {
       var st = window.getComputedStyle(p);
@@ -273,10 +304,20 @@
         if (rElm.top < rP.top || rElm.bottom > rP.bottom) {
           p.scrollTop += (rElm.top - rP.top) - 16;
         }
-        break;
+        return;
       }
       p = p.parentElement;
     }
+    if (isMobileViewport()) {
+      var scrollRoot = document.scrollingElement || document.documentElement;
+      var targetTop = scrollRoot.scrollTop + (r.top - v.offY) - 16;
+      scrollRoot.scrollTop = targetTop;
+      return;
+    }
+    window.scrollTo({
+      top: window.scrollY + (r.top - v.offY) - 16,
+      behavior: "instant"
+    });
   }
 
   function clamp(v, a, b) {
@@ -454,7 +495,7 @@
       var v0 = viewport();
       var inView = r0.top >= v0.offY && r0.bottom <= v0.offY + v0.h;
       if (!inView) {
-        scrollIntoViewFor(t);
+        scrollTargetIntoView(t);
         clearTimeout(window.__enkTourScrollT);
         window.__enkTourScrollT = setTimeout(scheduleRender, 40);
       }
@@ -614,15 +655,18 @@
     index = 0;
     lastStepKey = "";
 
-    // Scroll to top so the first visible step's target is in the normal
-    // page flow before we lock the body. This avoids the "ugly" state
-    // where the tour card appears while the user is scrolled to the
-    // bottom and the locked body keeps the page in an odd position.
+    // On a narrow screen the spotlight/arrow overlay is hidden; the card is
+    // pinned to the bottom. To keep each step readable we simply scroll the
+    // current target into view before locking the page.
     var firstStep = MENUS[activeMenu] && MENUS[activeMenu][0];
     if (firstStep && firstStep.target) {
       var firstTarget = document.querySelector(firstStep.target);
       if (firstTarget && isElementVisible(firstTarget)) {
-        window.scrollTo({ top: 0, behavior: "instant" });
+        if (isMobileViewport()) {
+          scrollTargetIntoView(firstTarget);
+        } else {
+          window.scrollTo({ top: 0, behavior: "instant" });
+        }
       }
     }
 
