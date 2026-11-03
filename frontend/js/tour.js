@@ -618,6 +618,15 @@
     if (on) {
       var targets = [];
 
+      // On a narrow screen, only lock the body-level overflow so the card
+      // cannot be scrolled out of view. We deliberately do NOT lock the
+      // inner overflow containers: scrollTargetIntoView needs to move those
+      // to reveal each tour target, and the bottom-pinned card already hides
+      // the spotlight/arrow overlay.
+      if (isMobileViewport()) {
+        return;
+      }
+
       if (activeMenu === "receiver") {
         var list = document.querySelector("#receiverMessageList");
         if (list) targets.push(list);
