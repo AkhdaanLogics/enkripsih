@@ -428,6 +428,41 @@
     var pRight = tr.right + v.offX;
     var pBottom = tr.bottom + v.offY;
 
+    // On a narrow screen the spotlight/arrow are hidden and the card is
+    // pinned to the bottom as a sheet. We only need to make sure the target
+    // is scrolled into the visible area; the card position is fully driven
+    // by CSS in this mode, so we skip the desktop placement math.
+    if (isMobileViewport()) {
+      card.classList.add("tour-card--mobile");
+      card.style.left = "";
+      card.style.right = "";
+      card.style.top = "";
+      card.style.bottom = "";
+      card.style.transform = "";
+      card.style.margin = "";
+      [panelT, panelB, panelL, panelR].forEach(function (p) {
+        if (p) p.style.display = "none";
+      });
+      highlight.style.display = "none";
+      arrow.style.display = "none";
+
+      var stepKeyM = activeMenu + ":" + index;
+      if (stepKeyM !== lastStepKey) {
+        lastStepKey = stepKeyM;
+        var rM = t.getBoundingClientRect();
+        var vM = viewport();
+        var inViewM = rM.top >= vM.offY && rM.bottom <= vM.offY + vM.h;
+        if (!inViewM) {
+          scrollTargetIntoView(t);
+          clearTimeout(window.__enkTourScrollT);
+          window.__enkTourScrollT = setTimeout(scheduleRender, 40);
+        }
+      }
+      return;
+    }
+
+    card.classList.remove("tour-card--mobile");
+
     var gap = 12;
     var pad = 14;
     var margin = 10;

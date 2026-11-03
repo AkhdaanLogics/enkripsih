@@ -2609,7 +2609,8 @@ body.is-tour-active {
 }
 
 @media (max-width: 480px) {
-  .tour-card {
+  .tour-card,
+  .tour-card--mobile {
     left: 12px !important;
     right: 12px !important;
     top: auto !important;
@@ -2617,6 +2618,24 @@ body.is-tour-active {
     transform: none;
     width: auto;
     transition: none;
+  }
+  .tour-card--mobile {
+    max-height: 45vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .tour-card--mobile .tour-desc {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    margin-bottom: 4px;
+  }
+  .tour-card--mobile .tour-card-actions {
+    flex: 0 0 auto;
+  }
+  .tour-card--mobile .tour-progress {
+    flex: 0 0 auto;
   }
   .tour-arrow,
   .tour-highlight,
