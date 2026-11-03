@@ -43,8 +43,12 @@
 
   <div class="mobile-menu-sheet" id="mobileMenuSheet" hidden>
     <button class="mm-item" type="button" id="mmGuide">Cara penggunaan</button>
-    <button class="mm-item" type="button" id="mmMenu">Menu</button>
-    <button class="mm-item" type="button" id="mmLogout">Keluar</button>
+    <div class="mm-tabs" id="mmTabs">
+      <button class="mm-item mm-tab" type="button" data-tab="commander">Kirim pesan</button>
+      <button class="mm-item mm-tab" type="button" data-tab="receiver">Kotak masuk</button>
+      <button class="mm-item mm-tab" type="button" data-tab="members">Kelola anggota</button>
+    </div>
+    <button class="mm-item mm-danger" type="button" id="mmLogout">Keluar</button>
   </div>
 
   <main class="main-content" id="authGate">

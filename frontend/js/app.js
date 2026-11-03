@@ -314,19 +314,49 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   if (mobileMenu && mobileMenuSheet) {
+    const mmTabs = document.getElementById('mmTabs');
+
+    // Reflect which tabs the current role actually has, and hide the sheet
+    // for items that are not available to this role.
+    const syncMobileMenuItems = () => {
+      if (!mmTabs) return;
+      const role = State.role;
+      mmTabs.querySelectorAll('.mm-tab').forEach((tab) => {
+        const isReceiverTab = tab.dataset.tab === 'receiver';
+        let show;
+        if (role === 'RECEIVER') {
+          show = isReceiverTab;
+        } else {
+          show = !isReceiverTab;
+        }
+        tab.hidden = !show;
+      });
+    };
+
+    const openMobileMenu = () => {
+      syncMobileMenuItems();
+      mobileMenuSheet.hidden = false;
+      mobileMenu.setAttribute('aria-expanded', 'true');
+    };
+
     mobileMenu.addEventListener('click', () => {
       const expanded = mobileMenu.getAttribute('aria-expanded') === 'true';
-      mobileMenuSheet.hidden = !expanded;
-      mobileMenu.setAttribute('aria-expanded', String(!expanded));
+      if (expanded) {
+        closeMobileMenu();
+      } else {
+        openMobileMenu();
+      }
     });
 
     document.getElementById('mmGuide')?.addEventListener('click', () => {
       closeMobileMenu();
       document.getElementById('btnGuide')?.click();
     });
-    document.getElementById('mmMenu')?.addEventListener('click', () => {
-      closeMobileMenu();
-      document.getElementById('mobileNavToggle')?.click();
+    mmTabs?.querySelectorAll('.mm-tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        switchTab(tab.dataset.tab);
+        closeMobileMenu();
+      });
     });
     document.getElementById('mmLogout')?.addEventListener('click', () => {
       closeMobileMenu();
