@@ -402,11 +402,22 @@
     var tr = t ? targetRectFor(t) : null;
 
     if (!t || !isElementVisible(t) || !tr) {
-      card.style.left = "50%";
-      card.style.top = "50%";
-      card.style.transform = "translate(-50%, -50%)";
-      card.style.margin = "";
-      card.classList.add("tour-card--centered");
+      if (isMobileViewport()) {
+        card.classList.add("tour-card--mobile");
+        card.classList.remove("tour-card--centered");
+        card.style.left = "";
+        card.style.right = "";
+        card.style.top = "";
+        card.style.bottom = "";
+        card.style.transform = "";
+        card.style.margin = "";
+      } else {
+        card.style.left = "50%";
+        card.style.top = "50%";
+        card.style.transform = "translate(-50%, -50%)";
+        card.style.margin = "";
+        card.classList.add("tour-card--centered");
+      }
       [panelT, panelB, panelL, panelR].forEach(function (p) {
         if (p) p.style.display = "none";
       });
