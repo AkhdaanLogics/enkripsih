@@ -1846,6 +1846,21 @@ a:focus-visible {
   height: 20px;
 }
 
+/* Vertically align symbols by their visual center, not container center.
+   Different shapes have different bounding-box centroids inside 24×24 viewBox. */
+.passkey-challenge-sym[data-sym="T"] .pk-symbol {
+  transform: translateY(1.5px);
+}
+.passkey-challenge-sym[data-sym="C"] .pk-symbol {
+  transform: translateY(-0.5px);
+}
+.passkey-challenge-sym[data-sym="X"] .pk-symbol {
+  transform: translateY(0);
+}
+.passkey-challenge-sym[data-sym="S"] .pk-symbol {
+  transform: translateY(0);
+}
+
 .passkey-help {
   margin: 0 0 16px;
   padding: 0 4px;

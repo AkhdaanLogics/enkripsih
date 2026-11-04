@@ -390,6 +390,7 @@ const Receiver = {
           if (idx === -1) continue;
           const svg = document.createElement("span");
           svg.className = "passkey-challenge-sym";
+          svg.setAttribute("data-sym", letter);
           svg.innerHTML = PASSKEY_SVG.icons[letter];
           symbolsWrap.append(svg);
         }
