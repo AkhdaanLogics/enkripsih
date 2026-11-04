@@ -1376,6 +1376,7 @@ a:focus-visible {
   border-radius: var(--radius-card);
   margin-bottom: 14px;
   overflow: hidden;
+  overflow-x: auto;
   transition: background-color 0.12s ease;
 }
 
@@ -2168,6 +2169,7 @@ a:focus-visible {
   justify-content: space-between;
   border-bottom: 1px solid var(--border);
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .intel-header .destination {
@@ -2177,12 +2179,15 @@ a:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .intel-header .logo-badge {
   flex: 0 0 auto;
   font-size: 11px;
   padding: 2px 7px;
+  white-space: nowrap;
 }
 
 .intel-body {
