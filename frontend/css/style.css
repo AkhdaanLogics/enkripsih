@@ -1846,19 +1846,11 @@ a:focus-visible {
   height: 20px;
 }
 
-/* Vertically align symbols by their visual center, not container center.
-   Different shapes have different bounding-box centroids inside 24×24 viewBox. */
+/* Vertically align symbols by their visual centroid.
+   All shapes live in 24×24 viewBox. Triangle centroid is y≈15 (lower),
+   others are y≈12 (center). Adjust each shape so they read on the same line. */
 .passkey-challenge-sym[data-sym="T"] .pk-symbol {
-  transform: translateY(1.5px);
-}
-.passkey-challenge-sym[data-sym="C"] .pk-symbol {
-  transform: translateY(-0.5px);
-}
-.passkey-challenge-sym[data-sym="X"] .pk-symbol {
-  transform: translateY(0);
-}
-.passkey-challenge-sym[data-sym="S"] .pk-symbol {
-  transform: translateY(0);
+  transform: translateY(-1px);
 }
 
 .passkey-help {
@@ -2631,18 +2623,15 @@ body.is-tour-active {
 }
 
 @media (max-width: 480px) {
+  /* On narrow screens the card uses JS-driven positioning (like desktop).
+     No !important bottom/left/top here so render() can place it freely. */
   .tour-card,
   .tour-card--mobile {
-    left: 12px !important;
-    right: 12px !important;
-    top: auto !important;
-    bottom: calc(12px + env(safe-area-inset-bottom)) !important;
-    transform: none;
-    width: auto;
+    width: min(280px, calc(100vw - 24px));
     transition: none;
   }
   .tour-card--mobile {
-    max-height: 45vh;
+    max-height: 48vh;
     overflow: hidden;
     display: flex;
     flex-direction: column;

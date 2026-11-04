@@ -289,9 +289,9 @@
 
   function scrollTargetIntoView(elm, offsetPx) {
     if (!elm) return;
-    var offset = offsetPx != null ? offsetPx : 16;
     var v = viewport();
     var r = elm.getBoundingClientRect();
+    var offset = offsetPx != null ? offsetPx : 16;
     var inView = r.top >= v.offY + offset && r.bottom <= v.offY + v.h - offset;
     if (inView) return;
 
@@ -309,16 +309,13 @@
       }
       p = p.parentElement;
     }
-    if (isMobileViewport()) {
-      var scrollRoot = document.scrollingElement || document.documentElement;
-      var targetTop = scrollRoot.scrollTop + (r.top - v.offY) - 16;
-      scrollRoot.scrollTop = targetTop;
-      return;
-    }
-    window.scrollTo({
-      top: window.scrollY + (r.top - v.offY) - 16,
-      behavior: "instant"
-    });
+    var sr = scrollRoot();
+    var targetY = (r.top - v.offY) - offset;
+    sr.scrollTop = Math.max(0, sr.scrollTop + targetY);
+  }
+
+  function scrollRoot() {
+    return document.scrollingElement || document.documentElement;
   }
 
   function clamp(v, a, b) {
@@ -440,46 +437,42 @@
     var pRight = tr.right + v.offX;
     var pBottom = tr.bottom + v.offY;
 
-    // On a narrow screen the spotlight/arrow are hidden and the card is
-    // pinned to the bottom as a sheet. We only need to make sure the target
-    // is scrolled into the visible area; the card position is fully driven
-    // by CSS in this mode, so we skip the desktop placement math.
+    // On a narrow screen the spotlight panels/arrow are hidden.
+    // The card is positioned freely by the same placement algorithm so it
+    // can float above or beside the target rather than being stuck at the bottom.
     if (isMobileViewport()) {
       card.classList.add("tour-card--mobile");
-      card.style.left = "";
-      card.style.right = "";
-      card.style.top = "";
-      card.style.bottom = "";
-      card.style.transform = "";
-      card.style.margin = "";
+      card.classList.remove("tour-card--centered");
+      arrow.style.display = "none";
       [panelT, panelB, panelL, panelR].forEach(function (p) {
         if (p) p.style.display = "none";
       });
-      arrow.style.display = "none";
       highlight.style.display = "block";
       highlight.style.left = pLeft - 2 + "px";
       highlight.style.top = pTop - 2 + "px";
       highlight.style.width = tr.width + 4 + "px";
       highlight.style.height = tr.height + 4 + "px";
 
-      var cardRectH = card.offsetHeight || 200;
-      var cardGap = 12;
-      var targetTopOffset = Math.round(vh * 0.42) - cardRectH - cardGap;
-      var desiredScroll = t.getBoundingClientRect().top - vh * 0.42;
-      var currentScroll = document.scrollingElement ? document.scrollingElement.scrollTop : 0;
+      var cwM = card.offsetWidth || 280;
+      var chM = card.offsetHeight || 180;
+      var posM = placeCard(tr, cwM, chM);
 
-      if (Math.abs(desiredScroll - currentScroll) > 4) {
-        scrollTargetIntoView(t, Math.max(0, targetTopOffset));
-      }
+      card.style.transform = "none";
+      card.style.left = posM.left + "px";
+      card.style.top = posM.top + "px";
+      card.style.margin = "";
+      card.style.right = "";
+      card.style.bottom = "";
 
       var stepKeyM = activeMenu + ":" + index;
       if (stepKeyM !== lastStepKey) {
         lastStepKey = stepKeyM;
         var rM = t.getBoundingClientRect();
         var vM = viewport();
-        var inViewM = rM.top >= vM.offY + vh * 0.3 && rM.bottom <= vM.offY + vh * 0.55;
+        var cardBottomEdge = posM.top + chM + 12;
+        var inViewM = rM.bottom <= vM.offY + vM.h * 0.7 && rM.top >= vM.offY;
         if (!inViewM) {
-          scrollTargetIntoView(t, Math.max(0, targetTopOffset));
+          scrollTargetIntoView(t, 16);
           clearTimeout(window.__enkTourScrollT);
           window.__enkTourScrollT = setTimeout(scheduleRender, 40);
         }
@@ -726,16 +719,13 @@
     lastStepKey = "";
 
     // On a narrow screen the spotlight/arrow overlay is hidden; the card is
-    // pinned to the bottom. To keep each step readable we simply scroll the
-    // current target into view before locking the page.
+    // positioned freely by render() so it can float near the target.
     var firstStep = MENUS[activeMenu] && MENUS[activeMenu][0];
     if (firstStep && firstStep.target) {
       var firstTarget = document.querySelector(firstStep.target);
       if (firstTarget && isElementVisible(firstTarget)) {
         if (isMobileViewport()) {
-          var fh = card ? card.offsetHeight || 200 : 200;
-          var fTargetTop = Math.round(window.innerHeight * 0.42) - fh - 12;
-          scrollTargetIntoView(firstTarget, Math.max(0, fTargetTop));
+          scrollTargetIntoView(firstTarget, 24);
         } else {
           window.scrollTo({ top: 0, behavior: "instant" });
         }
