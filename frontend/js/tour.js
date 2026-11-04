@@ -287,11 +287,12 @@
     return fromIndex;
   }
 
-  function scrollTargetIntoView(elm) {
+  function scrollTargetIntoView(elm, offsetPx) {
     if (!elm) return;
+    var offset = offsetPx != null ? offsetPx : 16;
     var v = viewport();
     var r = elm.getBoundingClientRect();
-    var inView = r.top >= v.offY && r.bottom <= v.offY + v.h;
+    var inView = r.top >= v.offY + offset && r.bottom <= v.offY + v.h - offset;
     if (inView) return;
 
     var p = elm.parentElement;
@@ -454,17 +455,31 @@
       [panelT, panelB, panelL, panelR].forEach(function (p) {
         if (p) p.style.display = "none";
       });
-      highlight.style.display = "none";
       arrow.style.display = "none";
+      highlight.style.display = "block";
+      highlight.style.left = pLeft - 2 + "px";
+      highlight.style.top = pTop - 2 + "px";
+      highlight.style.width = tr.width + 4 + "px";
+      highlight.style.height = tr.height + 4 + "px";
+
+      var cardRectH = card.offsetHeight || 200;
+      var cardGap = 12;
+      var targetTopOffset = Math.round(vh * 0.42) - cardRectH - cardGap;
+      var desiredScroll = t.getBoundingClientRect().top - vh * 0.42;
+      var currentScroll = document.scrollingElement ? document.scrollingElement.scrollTop : 0;
+
+      if (Math.abs(desiredScroll - currentScroll) > 4) {
+        scrollTargetIntoView(t, Math.max(0, targetTopOffset));
+      }
 
       var stepKeyM = activeMenu + ":" + index;
       if (stepKeyM !== lastStepKey) {
         lastStepKey = stepKeyM;
         var rM = t.getBoundingClientRect();
         var vM = viewport();
-        var inViewM = rM.top >= vM.offY && rM.bottom <= vM.offY + vM.h;
+        var inViewM = rM.top >= vM.offY + vh * 0.3 && rM.bottom <= vM.offY + vh * 0.55;
         if (!inViewM) {
-          scrollTargetIntoView(t);
+          scrollTargetIntoView(t, Math.max(0, targetTopOffset));
           clearTimeout(window.__enkTourScrollT);
           window.__enkTourScrollT = setTimeout(scheduleRender, 40);
         }
@@ -718,7 +733,9 @@
       var firstTarget = document.querySelector(firstStep.target);
       if (firstTarget && isElementVisible(firstTarget)) {
         if (isMobileViewport()) {
-          scrollTargetIntoView(firstTarget);
+          var fh = card ? card.offsetHeight || 200 : 200;
+          var fTargetTop = Math.round(window.innerHeight * 0.42) - fh - 12;
+          scrollTargetIntoView(firstTarget, Math.max(0, fTargetTop));
         } else {
           window.scrollTo({ top: 0, behavior: "instant" });
         }

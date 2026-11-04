@@ -2636,7 +2636,7 @@ body.is-tour-active {
     left: 12px !important;
     right: 12px !important;
     top: auto !important;
-    bottom: 16px !important;
+    bottom: calc(12px + env(safe-area-inset-bottom)) !important;
     transform: none;
     width: auto;
     transition: none;
@@ -2659,10 +2659,15 @@ body.is-tour-active {
   .tour-card--mobile .tour-progress {
     flex: 0 0 auto;
   }
-  .tour-arrow,
-  .tour-highlight,
+  .tour-arrow {
+    display: none !important;
+  }
   .tour-panel {
     display: none !important;
+  }
+  .tour-highlight {
+    display: block;
+    z-index: 10002;
   }
 }
 
