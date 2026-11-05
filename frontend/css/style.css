@@ -92,6 +92,8 @@ body {
   font-size: var(--fs-body);
   line-height: 1.6;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
 }
@@ -2149,8 +2151,9 @@ a:focus-visible {
 }
 
 .app-footer {
+  width: 100%;
   max-width: var(--app-max-width);
-  margin: 0 auto;
+  margin: auto auto 0;
   padding: 18px clamp(18px, 3vw, 40px) 28px;
   text-align: center;
   color: var(--muted);
