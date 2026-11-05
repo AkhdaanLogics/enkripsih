@@ -351,6 +351,26 @@ const Receiver = {
     return note;
   },
 
+  renderWokwiDemoLink() {
+    const wrap = document.createElement("div");
+    wrap.className = "wokwi-demo-note";
+    const label = document.createElement("span");
+    label.textContent = "Perangkat demo (simulasi)";
+    wrap.append(label);
+    const a = document.createElement("a");
+    a.className = "wokwi-demo-link";
+    a.href = "https://wokwi.com/projects/478446530349223937";
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.title = "Buka simulasi perangkat di Wokwi (hanya demo)";
+    const tag = document.createElement("span");
+    tag.className = "wokwi-demo-tag";
+    tag.textContent = "demo";
+    a.append(tag, document.createTextNode(" Buka di Wokwi"));
+    wrap.append(a);
+    return wrap;
+  },
+
   renderUnlockForm(message) {
     const wrapper = document.createElement("div");
     wrapper.className = "recipient-key-form";
@@ -407,6 +427,7 @@ const Receiver = {
       passkeyInput.name = "passkey_response";
       wrapper.append(challenge, passkeyHelp);
       wrapper.append(this.renderSymbolPicker(message, passkeyOnly, passkeyInput, "", wrapper));
+      wrapper.append(this.renderWokwiDemoLink());
     }
 
     const button = document.createElement("button");
