@@ -1599,29 +1599,18 @@ a:focus-visible {
   flex: 0 0 auto;
 }
 
-.wokwi-demo-note {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px dashed var(--control-border);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--dim);
-}
 .wokwi-demo-link {
-  align-self: flex-start;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 30px;
+  min-height: 28px;
   padding: 3px 10px;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--muted);
   text-decoration: none;
   border: 1px solid var(--control-border);
-  border-radius: var(--radius-control);
+  border-radius: var(--radius-pill);
   background: var(--control);
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
@@ -1860,13 +1849,23 @@ a:focus-visible {
 .passkey-challenge {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
   font-size: 15px;
   color: var(--text);
   padding: 12px 0;
   border-bottom: 1px dashed var(--control-border);
   margin-bottom: 16px;
+}
+
+.passkey-challenge > .passkey-challenge-label,
+.passkey-challenge > .passkey-challenge-symbols {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.passkey-challenge > .wokwi-demo-link {
+  flex: 0 0 auto;
 }
 
 .passkey-challenge-label {

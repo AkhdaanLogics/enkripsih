@@ -352,23 +352,17 @@ const Receiver = {
   },
 
   renderWokwiDemoLink() {
-    const wrap = document.createElement("div");
-    wrap.className = "wokwi-demo-note";
-    const label = document.createElement("span");
-    label.textContent = "Buka enkripsi dengan perangkat demo (simulasi Wokwi)";
-    wrap.append(label);
     const a = document.createElement("a");
     a.className = "wokwi-demo-link";
     a.href = "https://wokwi.com/projects/478446530349223937";
     a.target = "_blank";
     a.rel = "noopener noreferrer";
-    a.title = "Buka simulasi perangkat di Wokwi (hanya demo)";
+    a.title = "Buka enkripsi dengan perangkat demo (simulasi Wokwi)";
     const tag = document.createElement("span");
     tag.className = "wokwi-demo-tag";
     tag.textContent = "demo";
     a.append(tag, document.createTextNode(" Buka di Wokwi"));
-    wrap.append(a);
-    return wrap;
+    return a;
   },
 
   renderUnlockForm(message) {
@@ -418,6 +412,8 @@ const Receiver = {
         symbolsWrap.textContent = "(otomatis)";
       }
       challenge.append(prefix, symbolsWrap);
+      const wokwiLink = this.renderWokwiDemoLink();
+      challenge.append(wokwiLink);
       const passkeyHelp = document.createElement("p");
       passkeyHelp.className = "passkey-help";
       passkeyHelp.textContent = "Masukkan challenge ke perangkat passkey, lalu ketuk 12 simbol respons yang tampil di bawah.";
@@ -427,7 +423,6 @@ const Receiver = {
       passkeyInput.name = "passkey_response";
       wrapper.append(challenge, passkeyHelp);
       wrapper.append(this.renderSymbolPicker(message, passkeyOnly, passkeyInput, "", wrapper));
-      wrapper.append(this.renderWokwiDemoLink());
     }
 
     const button = document.createElement("button");
