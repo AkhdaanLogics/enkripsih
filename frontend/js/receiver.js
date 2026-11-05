@@ -355,7 +355,7 @@ const Receiver = {
     const wrap = document.createElement("div");
     wrap.className = "wokwi-demo-note";
     const label = document.createElement("span");
-    label.textContent = "Perangkat demo (simulasi)";
+    label.textContent = "Buka enkripsi dengan perangkat demo (simulasi Wokwi)";
     wrap.append(label);
     const a = document.createElement("a");
     a.className = "wokwi-demo-link";
