@@ -100,7 +100,7 @@ body {
 .header-bar {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 16px;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -975,7 +975,7 @@ a:focus-visible {
     align-items: center;
     justify-content: space-between;
     min-height: 64px;
-    padding: 10px 16px;
+    padding: 10px 18px;
     gap: 10px;
   }
 
@@ -2194,7 +2194,7 @@ a:focus-visible {
     gap: 10px;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 14px;
+    padding: 10px 20px;
   }
   .header-status {
     max-width: 100%;
@@ -2565,7 +2565,7 @@ body.view-receiver .receiver-workspace {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 12px 30px rgba(16, 24, 40, 0.16), 0 4px 10px rgba(16, 24, 40, 0.08);
+  box-shadow: var(--shadow-md);
   padding: 14px 16px 12px;
   z-index: 10003;
   outline: none;
