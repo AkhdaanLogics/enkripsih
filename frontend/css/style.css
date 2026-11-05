@@ -238,11 +238,11 @@ body {
 
 .auth-gate {
   max-width: 440px;
-  margin: 56px auto;
+  margin: 20px auto;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 18px;
-  padding: 32px;
+  padding: 24px;
   box-shadow: var(--shadow-md);
 }
 
@@ -292,7 +292,7 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  padding: 24px;
+  padding: 20px;
   position: relative;
   box-shadow: var(--shadow-md);
 }
@@ -302,8 +302,8 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -734,15 +734,13 @@ body {
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   align-items: start;
   max-width: var(--app-max-width);
-  min-height: calc(100vh - 78px);
   margin: 0 auto;
 }
 
 .app-sidebar {
   position: sticky;
   top: 0;
-  min-height: calc(100vh - 72px);
-  padding: 24px 16px 24px 24px;
+  padding: 20px 16px 20px 24px;
 }
 
 .tab-badge {
@@ -758,7 +756,7 @@ body {
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 28px clamp(20px, 3.2vw, 48px) 56px;
+  padding: 20px clamp(20px, 3.2vw, 48px) 32px;
 }
 
 .screen-heading {
@@ -766,7 +764,7 @@ body {
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
-  margin: 0 0 28px;
+  margin: 0 0 16px;
 }
 
 .screen-heading h1 {
@@ -942,16 +940,16 @@ a:focus-visible {
 }
 
 .tactical-card .form-group {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .tactical-card .form-group:last-child {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .tactical-card .card-footer {
   margin-top: auto;
-  padding-top: 16px;
+  padding-top: 12px;
 }
 
 @media (max-width: 900px) {
@@ -1040,7 +1038,6 @@ a:focus-visible {
 
   .app-layout {
     display: block;
-    min-height: calc(100vh - 64px);
   }
 
   .app-layout.is-visible {
@@ -1075,11 +1072,11 @@ a:focus-visible {
   }
 
   .main-content.app-workspace {
-    padding: 24px 16px 40px;
+    padding: 16px 14px 28px;
   }
 
   .screen-heading {
-    margin-bottom: 21px;
+    margin-bottom: 14px;
   }
 
   @media (max-width: 400px) {
