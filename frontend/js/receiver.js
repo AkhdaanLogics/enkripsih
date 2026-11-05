@@ -354,6 +354,7 @@ const Receiver = {
   renderWokwiDemoLink() {
     const a = document.createElement("a");
     a.className = "wokwi-demo-link";
+    a.id = "wokwiDemoLink";
     a.href = "https://wokwi.com/projects/478446530349223937";
     a.target = "_blank";
     a.rel = "noopener noreferrer";

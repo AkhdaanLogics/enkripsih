@@ -7,14 +7,19 @@
   <meta name="description" content="Kirim pesan terenkripsi kepada anggota terdaftar.">
   <link rel="icon" type="image/svg+xml" href="/static/image.svg">
   <title>ENKRIPSIH: Pesan terenkripsi</title>
-  
-  <!-- Typography: system sans stack (--font-sans in CSS). External font hosts
-       are intentionally avoided to keep the strict style-src/style CSP clean. -->
+
+  <!-- Inter: variable font, subset latin, display=swap to avoid FOIT -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 
   <!-- Stylesheet served by the FastAPI static mount -->
-  <link rel="stylesheet" href="/static/css/style.css?v=enkripsih-v5">
+  <link rel="stylesheet" href="/static/css/style.css?v=enkripsih-v6">
 </head>
 <body>
+
+  <!-- Accessible document title (visually hidden, read by screen readers / SEO) -->
+  <h1 class="visually-hidden">Enkripsih: kirim pesan terenkripsi</h1>
 
   <!-- Header -->
   <header class="header-bar">
@@ -326,7 +331,7 @@
 
   <!-- Footer -->
   <footer class="app-footer">
-    <p>© 2026 <span class="footer-brand">AYAH INI ARAHNYA KEMANA</span> Team. Seluruh hak cipta dilindungi.</p>
+    <p>© 2026 <span class="footer-brand">Ayah Ini Arahnya Kemana</span> Team. Seluruh hak cipta dilindungi.</p>
   </footer>
 
   <!-- Scripts served by the FastAPI static mount -->
