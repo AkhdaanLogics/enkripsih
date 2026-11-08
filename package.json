@@ -1,0 +1,26 @@
+{
+  "name": "enkripsih",
+  "version": "1.0.0",
+  "description": "Aplikasi web untuk mengirim pesan terenkripsi dari **Sender** ke banyak **Receiver** terdaftar. Pesan dienkripsi di sisi server dengan Web Crypto (PBKDF2-HMAC-SHA-256 dan AES-GCM), lalu server menyimpan paket ciphertext. Receiver hanya dapat membuka pesan dengan respons dari perangkat passkey Wemos D1 Mini.",
+  "main": "index.js",
+  "dependencies": {
+    "playwright-core": "^1.64.1"
+  },
+  "devDependencies": {
+    "playwright": "^1.65.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AkhdaanLogics/enkripsih.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AkhdaanLogics/enkripsih/issues"
+  },
+  "homepage": "https://github.com/AkhdaanLogics/enkripsih#readme"
+}
