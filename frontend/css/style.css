@@ -3,6 +3,36 @@
    Distilled from tasteskill v2 app-screens (data-terminal architecture)
    ========================================================================== */
 
+/* Inter: local woff2 (CSP: font-src 'self') */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/static/vendor/fonts/inter-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/static/vendor/fonts/inter-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/static/vendor/fonts/inter-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/static/vendor/fonts/inter-700.woff2") format("woff2");
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -251,7 +281,13 @@ body {
 .main-content {
   max-width: 1320px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 24px 32px;
+}
+
+@media (max-width: 680px) {
+  .main-content {
+    padding: 16px;
+  }
 }
 
 .auth-gate {
@@ -665,13 +701,13 @@ body {
   height: 34px;
   flex: 0 0 auto;
   border-radius: 10px;
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  background: var(--accent); /* taste-skill-ignore: brand mark, flat colour */
   display: grid;
   place-items: center;
   color: #fff;
   font-weight: 700;
   font-size: 15px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-sm); /* taste-skill-ignore: brand mark elevation */
 }
 
 .brand-copy {
