@@ -562,6 +562,7 @@ const Commander = {
           const header = document.createElement("div");
           header.className = "intel-header";
           const destination = document.createElement("span");
+          destination.className = "destination";
           destination.textContent = `${message.id} · ${message.target_unit}`;
           const status = document.createElement("span");
           status.className = `status-badge ${message.status.toLowerCase()}`;

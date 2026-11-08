@@ -1530,31 +1530,6 @@ a:focus-visible {
 /* ==========================================================================
    RECEIVER & INTEL INBOX
    ========================================================================== */
-.intel-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  margin-bottom: 14px;
-  overflow: hidden;
-  overflow-x: auto;
-  transition: background-color 0.12s ease;
-}
-
-.intel-card:hover {
-  background: var(--raised);
-}
-
-.intel-card.locked {
-  border-left: 3px solid var(--accent);
-}
-
-.intel-card.unlocked {
-  border-left: 3px solid var(--positive);
-}
-
-.intel-card.burned {
-  border-left: 3px solid var(--negative);
-}
 
 /* == Receiver full-screen layout == */
 #view-receiver .receiver-card {
@@ -2422,6 +2397,11 @@ a:focus-visible {
   border-radius: 12px;
   margin: 0;
   overflow: hidden;
+  flex-shrink: 0;
+  min-height: 68px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   transition: background-color 0.14s var(--ease-out), border-color 0.14s var(--ease-out), box-shadow 0.14s var(--ease-out), transform 0.14s var(--ease-out);
   box-shadow: var(--elevation-0);
 }
@@ -2463,16 +2443,17 @@ a:focus-visible {
 }
 
 .intel-header {
-  padding: 16px 18px 14px 22px;
+  padding: 12px 16px 4px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 10px;
+  flex-wrap: nowrap;
 }
 
 .intel-header .destination {
-  font-size: 14px;
+  font-family: var(--font-mono);
+  font-size: 13px;
   font-weight: 600;
   color: var(--text);
   letter-spacing: -0.01em;
@@ -2482,26 +2463,21 @@ a:focus-visible {
   white-space: nowrap;
   min-width: 0;
   flex: 1 1 auto;
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 600;
 }
 
-.intel-header .logo-badge {
+.intel-header .status-badge {
   flex: 0 0 auto;
-  font-size: 10px;
-  padding: 3px 8px;
-  white-space: nowrap;
 }
 
 .intel-body {
-  padding: 0 18px 14px 22px;
-  font-size: 12px;
+  padding: 0 16px 12px 18px;
+  font-size: 11px;
   color: var(--dim);
   letter-spacing: 0.01em;
   display: flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
 }
 
 .intel-body::before {
@@ -2649,7 +2625,7 @@ body.view-receiver .receiver-workspace {
 #view-commander .grid-2col .tactical-card .sent-list-scroll {
   flex: 1 1 0;
   min-height: 0;
-  max-height: 480px;
+  overflow-y: auto;
 }
 
 /* Members view */

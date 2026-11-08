@@ -262,6 +262,8 @@ const AppAuth = {
     workspace.hidden = false;
     const btnLogout = document.getElementById('btnLogout');
     if (btnLogout) btnLogout.hidden = false;
+    const btnGuide = document.getElementById('btnGuide');
+    if (btnGuide) btnGuide.hidden = false;
     const mobileNavToggle = document.getElementById('mobileNavToggle');
     if (mobileNavToggle) mobileNavToggle.setAttribute('aria-expanded', 'false');
     // Mobile hamburger: always available (even for receivers), so the top bar
@@ -331,6 +333,8 @@ const AppAuth = {
     }
     const btnLogout = document.getElementById('btnLogout');
     if (btnLogout) btnLogout.hidden = true;
+    const btnGuide = document.getElementById('btnGuide');
+    if (btnGuide) btnGuide.hidden = true;
     if (message) showToast(message, 'warning');
   }
 };

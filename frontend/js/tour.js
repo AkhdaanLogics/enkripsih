@@ -860,6 +860,8 @@
           start("login");
         }, 500);
       }
+    } else if (authGate && authGate.hidden && btn) {
+      btn.hidden = false;
     }
   });
 })();
