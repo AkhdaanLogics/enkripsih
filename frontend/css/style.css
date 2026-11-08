@@ -971,12 +971,12 @@ body {
 .receiver-message-header {
   height: var(--row-height);
   padding: 0 var(--pad);
-  background-color: #ffffff;
+  background-color: #ffffff !important;
   border-bottom: 1px solid var(--rule);
 }
 
 .receiver-message-body {
-  background-color: var(--ground);
+  background-color: #ffffff !important;
   padding: var(--pad);
 }
 
