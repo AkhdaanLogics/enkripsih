@@ -294,8 +294,9 @@
     var f = document.querySelector(".app-footer, .footer");
     if (!f) return 0;
     var r = f.getBoundingClientRect();
-    // The footer is in normal flow; reserve its height so the target has room.
-    return Math.min(140, Math.max(48, r.height || 48));
+    if (r.top >= window.innerHeight) return 0; // footer below the fold: no clearance needed
+    // Footer is partially/fully in view: reserve just enough to not cover it.
+    return Math.min(72, Math.max(40, (window.innerHeight - r.top) || 40));
   }
 
   function scrollTargetIntoView(elm, offsetPx) {
@@ -322,10 +323,12 @@
       p = p.parentElement;
     }
     var sr = scrollRoot();
-    // Center the target within the viewport (minus reserved footer clearance)
-    // so the fixed card below it never collides with the footer.
-    var targetCenter = (r.top + r.bottom) / 2 - v.offY - footClear / 2;
-    var desiredScroll = Math.max(0, sr.scrollTop + targetCenter - (v.h - footClear) / 2);
+    // Minimal scroll: park target near the top of the viewport (with a small
+    // offset) so the fixed card can sit BELOW it without covering it. This
+    // is far more predictable than centering, which forces the card up over
+    // the target. Footer clearance is reserved so the card never hides it.
+    var desiredTop = v.offY + offset + footClear;
+    var desiredScroll = Math.max(0, sr.scrollTop + (r.top - v.offY) - offset - footClear);
     sr.scrollTop = desiredScroll;
   }
 

@@ -2238,9 +2238,19 @@ a:focus-visible {
 
 /* List placeholder states */
 .sent-list-scroll {
-  max-height: 560px;
   overflow-y: auto;
-  padding-right: 4px;
+  padding: 2px 4px 2px 0;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--control-border) transparent;
+}
+
+/* Limit height only when there's too much content - never blocks below 100% */
+@media (min-height: 820px) {
+  .sent-list-scroll {
+    max-height: calc(100vh - 320px);
+  }
 }
 
 .list-placeholder {
