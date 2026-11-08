@@ -117,7 +117,20 @@ const Commander = {
       if (list) {
         list.replaceChildren();
         if (!data.recipients.length) {
-          list.textContent = "Belum ada anggota terdaftar.";
+          const empty = document.createElement("div");
+          empty.className = "list-placeholder";
+          const icon = document.createElement("div");
+          icon.className = "list-placeholder-icon";
+          icon.setAttribute("aria-hidden", "true");
+          icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>';
+          const title = document.createElement("div");
+          title.className = "list-placeholder-text";
+          title.textContent = "Belum ada anggota";
+          const sub = document.createElement("div");
+          sub.className = "list-placeholder-sub";
+          sub.textContent = "Daftarkan anggota di panel sebelah kiri untuk mulai mengirim pesan terenkripsi.";
+          empty.append(icon, title, sub);
+          list.append(empty);
         } else {
           const members = document.createElement("div");
           members.className = "recipient-list";
@@ -528,11 +541,18 @@ const Commander = {
         if (!data.messages.length) {
           const empty = document.createElement("div");
           empty.className = "list-placeholder";
-          const txt = document.createElement("span");
-          txt.className = "list-placeholder-text";
-          txt.textContent = "Belum ada pesan terkirim.";
-          empty.appendChild(txt);
-          list.appendChild(empty);
+          const icon = document.createElement("div");
+          icon.className = "list-placeholder-icon";
+          icon.setAttribute("aria-hidden", "true");
+          icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 10h8M8 14h5"/></svg>';
+          const title = document.createElement("div");
+          title.className = "list-placeholder-text";
+          title.textContent = "Belum ada transmisi";
+          const sub = document.createElement("div");
+          sub.className = "list-placeholder-sub";
+          sub.textContent = "Kirim pesan pertama di panel sebelah kiri. Ciphertext akan muncul di sini secara real-time.";
+          empty.append(icon, title, sub);
+          list.append(empty);
           list.dataset.loadedIds = messageIds;
           return;
         }

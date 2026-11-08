@@ -108,10 +108,17 @@ const Receiver = {
         if (!messages.messages.length) {
           const empty = document.createElement("div");
           empty.className = "list-placeholder";
-          const txt = document.createElement("span");
-          txt.className = "list-placeholder-text";
-          txt.textContent = "Belum ada pesan untuk anggota.";
-          empty.appendChild(txt);
+          const icon = document.createElement("div");
+          icon.className = "list-placeholder-icon";
+          icon.setAttribute("aria-hidden", "true");
+          icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 9l9 5 9-5"/></svg>';
+          const title = document.createElement("div");
+          title.className = "list-placeholder-text";
+          title.textContent = "Kotak masuk kosong";
+          const sub = document.createElement("div");
+          sub.className = "list-placeholder-sub";
+          sub.textContent = "Pesan dari Commander akan muncul di sini setelah dikirim.";
+          empty.append(icon, title, sub);
           list.appendChild(empty);
         } else {
           for (const message of messages.messages) {
