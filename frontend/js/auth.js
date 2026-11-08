@@ -9,8 +9,8 @@ const AppAuth = {
     const hashA = window.location.hash === '#a';
     if (!params.has('a') && !hashA) {
       // Landing-bound: unauthenticated visitors go to the marketing page.
-      // Returning users (valid session) stay on the app — that's the
-      // expected flow when ?a=1 is absent but a cookie exists.
+      // Returning users (valid session) stay on the app.
+      // That is the expected flow when ?a=1 is absent but a cookie exists.
       fetch('/api/auth/session')
         .then(r => r.json())
         .then((d) => {

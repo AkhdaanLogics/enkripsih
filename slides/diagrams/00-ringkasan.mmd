@@ -1,0 +1,72 @@
+%% Diagram: ENKRIPSIH - Alur Lengkap (Sender & Receiver + Perangkat Wemos D1 Mini)
+%% Sumber: E:\enkripsih - backend/main.py, frontend/js/*.js, iot_microcontroller/wemos_d1_mini/wemos_keybca.ino
+%% Cara pakai: buka https://mermaid.live -> paste isi -> Export SVG -> import ke draw.io (app.diagrams.net)
+flowchart TD
+    subgraph SND[SENDER]
+        S0[Login Sender]
+        S1[Buka tab Kelola Anggota]
+        S2[Daftar Anggota: nama + secret key 32 char]
+        S3[Isi plaintext + pilih anggota]
+        S4[Kirim Pesan]
+        S0 --> S1 --> S2
+        S1 --> S3 --> S4
+    end
+
+    subgraph SRV[SERVER - FastAPI di Vercel]
+        P1[Generate salt 16B + verifier PBKDF2-600k]
+        P2[Encrypt agent_secret AES-GCM simpan ke DB]
+        P3[Provision akun receiver: username + password sementara]
+        P4[Baca agent_secret dari DB decrypt AES-GCM]
+        P5[Generate challenge 4 simbol △ ○ ✕ □]
+        P6[HMAC-SHA256 secret_key challenge]
+        P7[PBKDF2-SHA256 response salt 200.000 iterasi]
+        P8[AES-GCM encrypt plaintext]
+        P9[Simpan ciphertext status LOCKED]
+        P10[Decrypt: PBKDF2 + AES-GCM]
+        P11{Auth tag valid?}
+        P12[Status UNLOCKED broadcast WebSocket]
+        P13[Throttle 5x = lock 5 menit]
+        P14[Opsional BURN: paket dihapus jadi NULL]
+        P1 --> P2 --> P3
+        P4 --> P5 --> P6 --> P7 --> P8 --> P9 --> P10 --> P11
+        P11 -->|ya| P12
+        P11 -->|tidak| P13
+        P12 --> P14
+    end
+
+    subgraph RCV[RECEIVER]
+        R0[Login receiver ganti password sementara]
+        R1[Lihat inbox: pesan + 4 simbol challenge]
+        R2[Ketik 12 simbol response ke browser]
+        R3[Plaintext muncul status UNLOCKED]
+        R0 --> R1
+        R1 -->|kirim ke Wemos| W0
+        R2 --> P10
+        R3 --> P14
+    end
+
+    subgraph IOT[PERANGKAT WEMOS D1 MINI - ESP8266]
+        W0[Input 4 simbol challenge via Serial USB]
+        W1[HMAC-SHA256 MASTER_SECRET BearSSL]
+        W2[Dynamic Truncation TOTP-style]
+        W3[12 simbol response tampil di OLED]
+        W0 --> W1 --> W2 --> W3
+        W3 -->|receiver salin| R2
+    end
+
+    S2 --> P1
+    S4 --> P4
+    P9 -->|WebSocket broadcast| R1
+    P14 -.->|audit log| AUDIT[(audit_logs DB)]
+
+    classDef snd fill:#e6f0ff,stroke:#0066FF,color:#1a202c
+    classDef srv fill:#f2f4f8,stroke:#d6dbe3,color:#1a202c
+    classDef rec fill:#e6f7ef,stroke:#1a9e6a,color:#1a202c
+    classDef iot fill:#fcf1e0,stroke:#d98a2b,color:#1a202c
+    classDef db  fill:#fce8ee,stroke:#c02347,color:#1a202c
+
+    class S0,S1,S2,S3,S4 snd
+    class P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,P11,P12,P13,P14 srv
+    class R0,R1,R2,R3 rec
+    class W0,W1,W2,W3 iot
+    class AUDIT db

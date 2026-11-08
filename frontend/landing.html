@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0b0d10">
   <meta name="description" content="ENKRIPSIH: kirim pesan terenkripsi antar anggota terdaftar dengan passkey Cypher, HMAC-SHA256, dan enkripsi AES-GCM di browser.">
-  <title>ENKRIPSIH — Pesan yang benar-benar terkunci</title>
+  <title>ENKRIPSIH · Pintar mengunci, tegas menjaga.</title>
 
   <link rel="stylesheet" href="/static/css/landing.css?v=enkripsih-v5">
 </head>
@@ -37,8 +37,8 @@
       <div class="container hero-inner">
         <span class="hero-eyebrow" data-reveal>End-to-end · Browser-side crypto</span>
         <h1 data-reveal>
-          <span class="line"><span>Pesan yang</span></span><br>
-          <span class="line"><span>benar-benar <em class="accent">terkunci</em>.</span></span>
+          <span class="line"><span>Pintar mengunci,</span></span><br>
+          <span class="line"><span>tegas <em class="accent">menjaga</em>.</span></span>
         </h1>
         <p class="hero-lede" data-reveal>
           ENKRIPSIH mengirim pesan antar anggota terdaftar dengan enkripsi AES-GCM
@@ -55,29 +55,7 @@
           Kartika Cyber Hackathon 2026
         </p>
 
-        <!-- Signature hero visual: an encrypted package -->
-        <div class="hero-visual" data-reveal aria-hidden="true">
-          <div class="hero-visual-bar">
-            <span>Paket v5 · LOCKED</span>
-            <span class="tag">AES-GCM</span>
-          </div>
-          <div class="challenge-line">
-            <div class="sym" data-kind="tri"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 L21 20 L3 20 Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span class="l">Segitiga</span></div>
-            <div class="sym" data-kind="box"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span class="l">Kotak</span></div>
-            <div class="sym" data-kind="cir"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span class="l">Bulat</span></div>
-            <div class="sym" data-kind="cross"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 L18 18 M18 6 L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span class="l">Silang</span></div>
-          </div>
-          <div class="sym-stack">
-            <div class="sym" data-kind="tri" style="width:100%"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 L21 20 L3 20 Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
-            <div class="sym" data-kind="box" style="width:100%"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></div>
-            <div class="sym" data-kind="cir" style="width:100%"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></div>
-            <div class="sym" data-kind="cross" style="width:100%"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 L18 18 M18 6 L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-          </div>
-          <div class="hero-visual-foot">
-            <span>challenge: △ ▢ ○ ✕</span>
-            <span class="ok">respons diterima → kunci dibuat</span>
-          </div>
-        </div>
+
       </div>
     </section>
 
@@ -97,7 +75,7 @@
         <div class="section-head" data-reveal>
           <div class="kicker">Fitur</div>
           <h2>Keamanan yang tidak bisa kamu lihat, tapi bisa kamu percaya.</h2>
-          <p>Setiap lapisan dirancang supaya isi pesan hanya bisa dibuka oleh pemilik kunci yang sah — bukan oleh siapa pun di tengah jalan.</p>
+          <p>Setiap lapisan dirancang supaya isi pesan hanya bisa dibuka oleh pemilik kunci yang sah, bukan oleh siapa pun di tengah jalan.</p>
         </div>
         <div class="features-grid">
           <article class="feature big" data-reveal>
@@ -106,7 +84,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
               </div>
               <h3>Enkripsi di browser, bukan di server</h3>
-              <p>Pesan dienkripsi dengan AES-GCM 256-bit langsung di perangkatmu sebelum meninggalkan mesin. Server hanya meneruskan ciphertext — ia tidak memegang kunci untuk membacanya.</p>
+              <p>Pesan dienkripsi dengan AES-GCM 256-bit langsung di perangkatmu sebelum meninggalkan mesin. Server hanya meneruskan ciphertext, ia tidak memegang kunci untuk membacanya.</p>
             </div>
             <pre class="code"><span class="hl">PBKDF2</span>(passkey, 200k) → kunci AES
 AES-GCM.encrypt(plaintext) → <span class="ok">paket terkirim</span></pre>

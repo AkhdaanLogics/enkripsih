@@ -8,11 +8,6 @@
   <link rel="icon" type="image/svg+xml" href="/static/image.svg">
   <title>ENKRIPSIH: Pesan terenkripsi</title>
 
-  <!-- Inter: variable font, subset latin, display=swap to avoid FOIT -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-
   <!-- Stylesheet served by the FastAPI static mount -->
   <link rel="stylesheet" href="/static/css/style.css?v=enkripsih-v8">
 </head>
@@ -57,9 +52,10 @@
   </div>
 
   <main class="main-content" id="authGate">
-    <section class="tactical-card auth-gate">
-      <h2 class="card-title">Masuk ke Enkripsih</h2>
-      <p class="card-subtitle">Pilih peranmu: Sender mengirim pesan, anggota menerimanya dan membukanya.</p>
+    <section class="auth-gate">
+      <div class="auth-gate-eyebrow" aria-hidden="true">ENKRIPSIH</div>
+      <h2 class="auth-gate-title">Pilih peran, masuk, kirim.</h2>
+      <p class="auth-gate-subtitle">Commander mengirim pesan terenkripsi. Receiver membuka pesan yang ditujukan kepadanya. Semua kunci ada di browser, tidak pernah di server.</p>
       <form id="loginForm">
         <div class="form-group">
           <label class="form-label" for="loginRole">Jenis akun</label>
@@ -84,9 +80,10 @@
   </main>
 
   <main class="main-content" id="passwordChangeGate" hidden>
-    <section class="tactical-card auth-gate">
-      <h2 class="card-title">Ganti password sementara</h2>
-      <p class="card-subtitle">Buat password baru minimal 16 karakter sebelum membuka kotak masuk.</p>
+    <section class="auth-gate">
+      <div class="auth-gate-eyebrow" aria-hidden="true">ENKRIPSIH</div>
+      <h2 class="auth-gate-title">Ganti password sementara</h2>
+      <p class="auth-gate-subtitle">Buat password baru minimal 16 karakter sebelum membuka kotak masuk.</p>
       <form id="passwordChangeForm">
         <div class="form-group">
           <label class="form-label" for="newReceiverPassword">Password baru</label>

@@ -29,7 +29,6 @@
     gsapL.to('.hero-lede', { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out', delay: 0.3 });
     gsapL.to('.hero-cta', { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out', delay: 0.38 });
     gsapL.to('.hero-meta', { opacity: 1, duration: 0.5, delay: 0.46 });
-    gsapL.to('.hero-visual', { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out', delay: 0.5 });
   }
 
   window.addEventListener('beforeunload', function () {

@@ -223,87 +223,6 @@ a { color: inherit; text-decoration: none; }
 }
 .hero-meta .dot { color: var(--accent); margin: 0 6px; }
 
-/* Signature hero visual: "encrypted package" card */
-.hero-visual {
-  margin-top: 24px;
-  width: 100%;
-  max-width: 560px;
-  background: linear-gradient(180deg, var(--bg-2), var(--bg-3));
-  border: 1px solid var(--line-2);
-  border-radius: 18px;
-  padding: 20px;
-  box-shadow: 0 40px 80px -40px rgba(0,102,255,0.35);
-}
-.hero-visual-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--fg-3);
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--line);
-  margin-bottom: 14px;
-}
-.hero-visual-bar .tag {
-  color: var(--accent);
-  border: 1px solid var(--accent-line);
-  border-radius: 6px;
-  padding: 2px 8px;
-}
-.challenge-line {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin-bottom: 14px;
-}
-.sym {
-  aspect-ratio: 1;
-  border-radius: 10px;
-  display: grid;
-  place-items: center;
-  gap: 4px;
-  background: var(--bg);
-  border: 1px solid var(--line-2);
-  color: var(--fg-2);
-  padding: 6px;
-}
-.sym > svg {
-  width: 26px;
-  height: 26px;
-}
-.sym .l {
-  font-size: 10px;
-  font-family: var(--font-mono);
-  color: var(--fg-3);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.sym-stack { display: grid; gap: 6px; }
-.sym-stack .sym { aspect-ratio: auto; height: 40px; }
-
-/* Geometric challenge shape colors (distinct but muted) */
-.sym[data-kind="tri"]  { color: var(--accent); }
-.sym[data-kind="box"]  { color: #6aa9ff; }
-.sym[data-kind="cir"]  { color: #9dff8e; }
-.sym[data-kind="cross"]{ color: #ffd47a; }
-.sym[data-kind="tri"]  { border-color: rgba(0,102,255,0.35); }
-.sym[data-kind="cir"]  { border-color: rgba(157,255,142,0.3); }
-.sym[data-kind="cross"]{ border-color: rgba(255,212,122,0.3); }
-
-.hero-visual-foot {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--line);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--fg-3);
-}
-.hero-visual-foot .ok { color: #9dff8e; }
-.hero-visual-foot .glyphs { letter-spacing: 0.12em; }
-
 /* =====================================================================
    3. MARQUEE / STATS
    ===================================================================== */
@@ -600,7 +519,7 @@ section { scroll-margin-top: 80px; }
 .footer-brand { color: var(--fg); font-weight: 600; }
 
 /* =====================================================================
-   Reveal: [data-reveal] is a semantic no-op — content is ALWAYS visible.
+   Reveal: [data-reveal] is a semantic no-op. Content is ALWAYS visible.
    Hero intro is a pure GSAP `.to()` sequence (no hidden CSS state), so
    the first paint is already the final, fully-readable layout.
    ===================================================================== */
