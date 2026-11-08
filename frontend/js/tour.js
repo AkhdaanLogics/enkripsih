@@ -125,10 +125,6 @@
   function lockPage(on) {
     var body = document.body;
     if (isMobileViewport()) {
-      // On a narrow screen, blocking the body with position:fixed would kill
-      // programmatic scrolling to the tour target. Instead we only hide the
-      // overflow so the user cannot scroll manually; the scroll position is
-      // still settable, which is what scrollTargetIntoView relies on.
       if (on) {
         mobileLock = true;
         savedHtmlOverflow = document.documentElement.style.overflow || "";
@@ -146,19 +142,13 @@
     if (on) {
       savedScrollX = window.scrollX;
       savedScrollY = window.scrollY;
-      var bStyle = window.getComputedStyle(body);
-      savedBodyTop = body.style.top || "";
-      savedBodyLeft = body.style.left || "";
-      savedBodyWidth = body.style.width || "";
       body.classList.add("is-tour-active");
-      body.style.top = -savedScrollY + "px";
-      body.style.left = -savedScrollX + "px";
-      body.style.width = "100%";
+      // Do NOT set position:fixed on body, as it collapses layout (sidebar, footer)
     } else {
       body.classList.remove("is-tour-active");
-      body.style.top = savedBodyTop;
-      body.style.left = savedBodyLeft;
-      body.style.width = savedBodyWidth;
+      body.style.top = "";
+      body.style.left = "";
+      body.style.width = "";
       window.scrollTo(savedScrollX, savedScrollY);
     }
   }

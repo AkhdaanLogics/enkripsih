@@ -2635,12 +2635,21 @@ body.view-receiver .receiver-workspace {
 /* Commander view: two-column layout */
 #view-commander .grid-2col {
   grid-template-columns: minmax(320px, 5fr) minmax(280px, 4fr);
-  align-items: start;
+  align-items: stretch;
   gap: 20px;
 }
 
 #view-commander .grid-2col .tactical-card {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+#view-commander .grid-2col .tactical-card .sent-list-scroll {
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: 480px;
 }
 
 /* Members view */
@@ -2871,11 +2880,6 @@ body.view-receiver .receiver-workspace {
 
 /* Lock body scroll while tour is active */
 body.is-tour-active {
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100vh;
   overflow: hidden !important;
   touch-action: none;
 }
