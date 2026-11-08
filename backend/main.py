@@ -1694,3 +1694,7 @@ if os.path.exists(FRONTEND_DIR):
     @app.get("/")
     def serve_index():
         return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+
+    @app.get("/landing")
+    def serve_landing():
+        return FileResponse(os.path.join(FRONTEND_DIR, "landing.html"))
