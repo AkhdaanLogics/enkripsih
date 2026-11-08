@@ -2400,16 +2400,19 @@ a:focus-visible {
 /* === Sender: transmission status list === */
 #commanderSentList {
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .intel-card {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  margin-bottom: 14px;
+  border-radius: 12px;
+  margin: 0;
   overflow: hidden;
-  overflow-x: auto;
-  transition: background-color 0.12s var(--ease-out), border-color 0.12s var(--ease-out), box-shadow 0.12s var(--ease-out);
+  transition: background-color 0.14s var(--ease-out), border-color 0.14s var(--ease-out), box-shadow 0.14s var(--ease-out), transform 0.14s var(--ease-out);
   box-shadow: var(--elevation-0);
 }
 
@@ -2417,28 +2420,43 @@ a:focus-visible {
   background: var(--raised);
   border-color: var(--control-border);
   box-shadow: var(--elevation-1);
+  transform: translateY(-1px);
 }
 
-.intel-card.locked {
-  border-left: 3px solid var(--accent);
+/* Left color rail, keyed to status */
+.intel-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--border);
+  transition: background 0.14s var(--ease-out);
 }
 
-.intel-card.unlocked {
-  border-left: 3px solid var(--positive);
+.intel-card.locked::before {
+  background: var(--accent);
+}
+
+.intel-card.unlocked::before {
+  background: var(--positive);
+}
+
+.intel-card.burned::before {
+  background: var(--negative);
+  opacity: 0.8;
 }
 
 .intel-card.burned {
-  border-left: 3px solid var(--negative);
-  opacity: 0.75;
+  opacity: 0.9;
 }
 
 .intel-header {
-  padding: 14px 18px;
-  background: var(--surface);
+  padding: 16px 18px 14px 22px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--rule);
   gap: 12px;
   flex-wrap: wrap;
 }
@@ -2447,26 +2465,42 @@ a:focus-visible {
   font-size: 14px;
   font-weight: 600;
   color: var(--text);
+  letter-spacing: -0.01em;
+  line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
   flex: 1 1 auto;
-  letter-spacing: -0.01em;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .intel-header .logo-badge {
   flex: 0 0 auto;
-  font-size: 11px;
+  font-size: 10px;
   padding: 3px 8px;
   white-space: nowrap;
 }
 
 .intel-body {
-  padding: 12px 18px;
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.5;
+  padding: 0 18px 14px 22px;
+  font-size: 12px;
+  color: var(--dim);
+  letter-spacing: 0.01em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.intel-body::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--control-border);
+  flex: 0 0 auto;
 }
 
 /* === Status badge (canonical) === */
@@ -2474,27 +2508,43 @@ a:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 5px 12px;
-  min-height: 26px;
-  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  min-height: 24px;
+  border-radius: 6px;
+  letter-spacing: 0.04em;
   white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.status-badge::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: 0 0 auto;
 }
 
 .status-badge.locked {
-  background: var(--pill-negative-bg);
-  color: var(--pill-negative-ink);
+  background: var(--accent-bg);
+  color: var(--accent-hover);
 }
 
 .status-badge.unlocked {
   background: var(--pill-positive-bg);
-  color: var(--pill-positive-ink);
+  color: var(--positive);
 }
 
 .status-badge.burned {
   background: var(--pill-warning-bg);
-  color: var(--pill-warning-ink);
+  color: var(--warning);
+}
+
+/* Status badge when used inside intel-header (no extra padding from logo-badge) */
+.intel-header .status-badge {
+  padding: 4px 10px;
 }
 
 /* Typography refinement */

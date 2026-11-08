@@ -564,7 +564,7 @@ const Commander = {
           const destination = document.createElement("span");
           destination.textContent = `${message.id} · ${message.target_unit}`;
           const status = document.createElement("span");
-          status.className = `logo-badge status-badge ${message.status.toLowerCase()}`;
+          status.className = `status-badge ${message.status.toLowerCase()}`;
           status.textContent = {
             LOCKED: "TERENKRIPSI",
             UNLOCKED: "DIBUKA",
@@ -574,7 +574,9 @@ const Commander = {
           header.append(destination, status);
           const details = document.createElement("div");
           details.className = "intel-body";
-          details.textContent = new Date(message.created_at).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
+          const ts = document.createElement("span");
+          ts.textContent = new Date(message.created_at).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" });
+          details.append(ts);
           row.append(header, details);
           list.append(row);
         }

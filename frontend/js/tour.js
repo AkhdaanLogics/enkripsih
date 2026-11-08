@@ -500,6 +500,7 @@
     var gap = 12;
     var pad = 14;
     var margin = 10;
+    var footReserve = footerClearancePx();
 
     var bottomFree = vh - pBottom;
     var topFree = pTop;
@@ -512,7 +513,7 @@
              t < pBottom + margin && t + ch > pTop - margin;
     };
 
-    if (bottomFree < ch + gap + pad) {
+    if (bottomFree < ch + gap + pad + footReserve) {
       if (topFree >= ch + gap + pad) {
         side = "top";
         cardTop = pTop - ch - gap;
@@ -523,11 +524,11 @@
         if (leftFree >= rightFree) {
           side = "left";
           cardLeft = Math.max(margin, leftFree);
-          cardTop = clamp(pTop + tr.height / 2 - ch / 2, pad, vh - ch - pad);
+          cardTop = clamp(pTop + tr.height / 2 - ch / 2, pad, vh - ch - pad - footReserve);
         } else {
           side = "right";
           cardLeft = Math.min(vw - cw - margin, pRight + gap);
-          cardTop = clamp(pTop + tr.height / 2 - ch / 2, pad, vh - ch - pad);
+          cardTop = clamp(pTop + tr.height / 2 - ch / 2, pad, vh - ch - pad - footReserve);
         }
       }
     }
@@ -538,11 +539,11 @@
       if (lf >= rf) {
         side = "left";
         cardLeft = Math.max(margin, lf);
-        cardTop = clamp(pTop + tr.height / 2 - ch / 2, pad, vh - ch - pad);
+        cardTop = clamp(pTop + tr.height / 2 - ch / 2, pad, vh - ch - pad - footReserve);
       } else {
         side = "right";
         cardLeft = Math.min(vw - cw - margin, rf);
-        cardTop = clamp(pTop + tr.height / 2 - ch / 2, pad, vh - ch - pad);
+        cardTop = clamp(pTop + tr.height / 2 - ch / 2, pad, vh - ch - pad - footReserve);
       }
     }
 
