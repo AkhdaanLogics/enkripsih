@@ -240,15 +240,15 @@ function switchTab(tabName) {
   const screen = {
     commander: {
       title: 'Kirim pesan',
-      description: 'Tulis pesan, pilih anggota, lalu kirim dengan enkripsi di browser.'
+      description: 'Tulis pesan, pilih anggota, enkripsi di browser, kirim.'
     },
     receiver: {
       title: 'Kotak masuk',
-      description: 'Pesan yang ditujukan ke akun receiver ini.'
+      description: 'Pesan untuk akun receiver ini. Buka, baca, lalu bakar.'
     },
     members: {
       title: 'Kelola anggota',
-      description: 'Daftarkan penerima dan kelola akses akunnya.'
+      description: 'Daftarkan penerima, kelola kunci dan akses akunnya.'
     }
   }[tabName];
   const heading = document.getElementById('workspaceHeading');
