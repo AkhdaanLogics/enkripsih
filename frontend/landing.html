@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0b0d10">
-  <meta name="description" content="ENKRIPSIH: kirim pesan terenkripsi antar anggota terdaftar dengan passkey KeyBCA, HMAC-SHA256, dan enkripsi AES-GCM di browser.">
+  <meta name="description" content="ENKRIPSIH: kirim pesan terenkripsi antar anggota terdaftar dengan passkey Cypher, HMAC-SHA256, dan enkripsi AES-GCM di browser.">
   <title>ENKRIPSIH — Pesan yang benar-benar terkunci</title>
 
-  <link rel="stylesheet" href="/static/css/landing.css?v=enkripsih-v2">
+  <link rel="stylesheet" href="/static/css/landing.css?v=enkripsih-v3">
 </head>
 <body>
 
@@ -42,7 +42,7 @@
         </h1>
         <p class="hero-lede" data-reveal>
           ENKRIPSIH mengirim pesan antar anggota terdaftar dengan enkripsi AES-GCM
-          langsung di browser, autentikasi perangkat KeyBCA, dan tanda tangan
+          langsung di browser, autentikasi perangkat Cypher, dan tanda tangan
           HMAC-SHA256. Server tidak pernah melihat isi pesanmu.
         </p>
         <div class="hero-cta" data-reveal>
@@ -62,19 +62,19 @@
             <span class="tag">AES-GCM</span>
           </div>
           <div class="challenge-line">
-            <div class="sym" data-kind="t"><span>T</span><span class="l">Tiga</span></div>
-            <div class="sym" data-kind="c"><span>C</span><span class="l">Cepat</span></div>
-            <div class="sym" data-kind="x"><span>X</span><span class="l">Xtra</span></div>
-            <div class="sym" data-kind="s"><span>S</span><span class="l">Satu</span></div>
+            <div class="sym" data-kind="tri"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 L21 20 L3 20 Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span class="l">Segitiga</span></div>
+            <div class="sym" data-kind="box"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span class="l">Kotak</span></div>
+            <div class="sym" data-kind="cir"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span class="l">Bulat</span></div>
+            <div class="sym" data-kind="cross"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 L18 18 M18 6 L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span class="l">Silang</span></div>
           </div>
           <div class="sym-stack">
-            <div class="sym" data-kind="c" style="width:100%"><span>T</span></div>
-            <div class="sym" data-kind="s" style="width:100%"><span>C</span></div>
-            <div class="sym" data-kind="x" style="width:100%"><span>X</span></div>
-            <div class="sym" data-kind="t" style="width:100%"><span>S</span></div>
+            <div class="sym" data-kind="tri" style="width:100%"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 L21 20 L3 20 Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+            <div class="sym" data-kind="box" style="width:100%"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></div>
+            <div class="sym" data-kind="cir" style="width:100%"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></div>
+            <div class="sym" data-kind="cross" style="width:100%"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 L18 18 M18 6 L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
           </div>
           <div class="hero-visual-foot">
-            <span>challenge: TCXS</span>
+            <span>challenge: △ ▢ ○ ✕</span>
             <span class="ok">respons diterima → kunci dibuat</span>
           </div>
         </div>
@@ -116,7 +116,7 @@ AES-GCM.encrypt(plaintext) → <span class="ok">paket terkirim</span></pre>
             <div class="ico" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"/></svg>
             </div>
-            <h3>Passkey KeyBCA</h3>
+            <h3>Passkey Cypher</h3>
             <p>Perangkat Wemos menjawab challenge 4 simbol dengan respons 12 simbol. Respons itulah yang menjadi bahan kunci sesi.</p>
           </article>
 
@@ -140,7 +140,7 @@ AES-GCM.encrypt(plaintext) → <span class="ok">paket terkirim</span></pre>
         </div>
         <div class="steps">
           <div class="step" data-reveal><span class="tag">Commander</span><h4>Tulis &amp; pilih</h4><p>Ketik pesan dan pilih anggota penerima di panel kirim.</p></div>
-          <div class="step" data-reveal><span class="tag">Browser</span><h4>Tantang perangkat</h4><p>Browser meminta passkey dan menerima 12 simbol respons dari KeyBCA.</p></div>
+          <div class="step" data-reveal><span class="tag">Browser</span><h4>Tantang perangkat</h4><p>Browser meminta passkey dan menerima 12 simbol respons dari Cypher.</p></div>
           <div class="step" data-reveal><span class="tag">Crypto</span><h4>Enkripsi</h4><p>PBKDF2 + AES-GCM mengubah pesan menjadi paket yang tidak terbaca.</p></div>
           <div class="step" data-reveal><span class="tag">Receiver</span><h4>Buka &amp; bakar</h4><p>Penerima membuka dengan kunci yang sama, lalu bisa menghancurkan pesan.</p></div>
         </div>
@@ -159,11 +159,11 @@ AES-GCM.encrypt(plaintext) → <span class="ok">paket terkirim</span></pre>
         <div class="demo-card" data-reveal aria-hidden="true">
           <div class="lbl">CHALLENGE</div>
           <div class="demo-chips">
-            <span class="chip hot">T</span><span class="chip hot">C</span><span class="chip hot">X</span><span class="chip hot">S</span>
+            <span class="chip hot">△</span><span class="chip hot">▢</span><span class="chip hot">○</span><span class="chip hot">✕</span>
           </div>
-          <div class="lbl" style="margin-top:20px">RESPONSE (KeyBCA)</div>
+          <div class="lbl" style="margin-top:20px">RESPONSE (Cypher)</div>
           <div class="demo-chips">
-            <span class="chip">S</span><span class="chip">T</span><span class="chip">C</span><span class="chip">X</span><span class="chip">S</span><span class="chip">T</span><span class="chip">C</span><span class="chip">X</span><span class="chip">S</span><span class="chip">T</span><span class="chip">C</span><span class="chip">X</span>
+            <span class="chip">○</span><span class="chip">△</span><span class="chip">▢</span><span class="chip">✕</span><span class="chip">○</span><span class="chip">△</span><span class="chip">▢</span><span class="chip">✕</span><span class="chip">○</span><span class="chip">△</span><span class="chip">▢</span><span class="chip">✕</span>
           </div>
           <div class="foot"><span class="dot-pulse" aria-hidden="true"></span> Kunci sesi diturunkan dari respons</div>
         </div>
@@ -208,6 +208,6 @@ AES-GCM.encrypt(plaintext) → <span class="ok">paket terkirim</span></pre>
   <script src="/static/vendor/gsap.min.js"></script>
   <script src="/static/vendor/ScrollTrigger.min.js"></script>
   <script src="/static/vendor/lenis.min.js"></script>
-  <script src="/static/js/landing.js?v=enkripsih-v1"></script>
+  <script src="/static/js/landing.js?v=enkripsih-v3"></script>
 </body>
 </html>

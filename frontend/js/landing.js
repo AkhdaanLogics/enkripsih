@@ -3,51 +3,51 @@
 
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var hasGsap = !!(window.gsap && window.ScrollTrigger);
-  var hasLenis = !!window.Lenis;
 
-  // Add class so CSS intro states apply only when we intend to animate.
+  // Progressive enhancement: only mark [data-reveal] as hidden when we will
+  // actually animate it. Otherwise the content stays fully visible (no-JS /
+  // reduced-motion safe).
   if (hasGsap && !reduce) {
-    document.body.classList.add('hero-anim');
+    gsap.registerPlugin(ScrollTrigger);
+    document.querySelectorAll('[data-reveal]').forEach(function (el) {
+      el.classList.add('js-init');
+    });
   }
 
   // --- Lenis smooth scroll (single engine), skipped on reduced motion ---
   var lenis = null;
+  var hasLenis = !!window.Lenis;
   if (hasLenis && !reduce) {
     lenis = new Lenis({ lerp: 0.09, wheelMultiplier: 1 });
-    if (hasGsap && gsap.ticker) {
-      gsap.ticker.add(function (time) {
+    if (hasGsap && window.gsap && window.gsap.ticker) {
+      window.gsap.ticker.add(function (time) {
         lenis.raf(time * 1000);
       });
-      gsap.ticker.lagSmoothing(0);
+      window.gsap.ticker.lagSmoothing(0);
     }
-    if (window.ScrollTrigger) {
+    if (hasGsap && window.ScrollTrigger) {
       lenis.on('scroll', ScrollTrigger.update);
-      gsap.ticker.add(function () {
-        lenis.raf(performance.now());
-      });
     }
   }
 
-  // --- Hero intro: line-mask + reveal ---
   if (hasGsap && !reduce) {
-    gsap.registerPlugin(ScrollTrigger);
+    var gsapL = window.gsap;
 
-    var heroTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+    // Hero intro: line-mask reveal + fade-up. gsap.from auto-reverts to the
+    // element's natural (visible) state, so nothing is left hidden.
+    var heroTl = gsapL.timeline({ defaults: { ease: 'power3.out' } });
     heroTl
       .from('.hero .hero-eyebrow', { y: 14, autoAlpha: 0, duration: 0.5 }, 0)
       .from('.hero h1 .line > span', { yPercent: 110, duration: 0.9, stagger: 0.08 }, 0.1)
-      .to('.hero h1 .line > span', { yPercent: 0, duration: 0.9, stagger: 0.08 }, 0.1)
       .from('.hero-lede', { y: 16, autoAlpha: 0, duration: 0.6 }, '>-0.3')
       .from('.hero-cta', { y: 16, autoAlpha: 0, duration: 0.6 }, '>-0.3')
       .from('.hero-meta', { autoAlpha: 0, duration: 0.6 }, '>-0.2')
       .from('.hero-visual', { y: 24, autoAlpha: 0, duration: 0.8 }, '>-0.4');
 
-    // Stagger reveal for marked elements
-    gsap.utils.toArray('[data-reveal].js-init').forEach(function (el) {
-      // already handled above for hero; skip those in hero
+    // Reveals outside the hero: scroll-triggered fade-up.
+    gsapL.utils.toArray('[data-reveal]').forEach(function (el) {
       if (el.closest('.hero') || el.closest('.ld-nav')) return;
-      el.classList.remove('js-init');
-      gsap.from(el, {
+      gsapL.from(el, {
         y: 24,
         autoAlpha: 0,
         duration: 0.7,
@@ -55,48 +55,13 @@
         scrollTrigger: { trigger: el, start: 'top 85%', once: true }
       });
     });
-  } else {
-    // No motion: ensure everything is visible (progressive enhancement).
-    document.querySelectorAll('[data-reveal]').forEach(function (el) {
-      el.classList.remove('js-init');
-    });
   }
-
-  // Seed reveal states on DOM ready, before CSS transition kicks in.
-  document.querySelectorAll('[data-reveal]').forEach(function (el) {
-    el.classList.add('js-init');
-  });
-  if (hasGsap && !reduce) {
-    document.querySelectorAll('[data-reveal]').forEach(function (el) {
-      if (el.closest('.hero') || el.closest('.ld-nav')) return;
-      el.classList.remove('js-init');
-    });
-    requestAnimationFrame(function () {
-      document.querySelectorAll('.hero [data-reveal], .ld-nav[data-reveal]').forEach(function (el) {
-        el.classList.add('js-in');
-      });
-    });
-  } else {
-    requestAnimationFrame(function () {
-      document.querySelectorAll('[data-reveal]').forEach(function (el) {
-        el.classList.add('js-in');
-      });
-    });
-  }
-
-  // --- Nav scroll shadow ---
-  var nav = document.querySelector('.ld-nav');
-  var onScroll = function () {
-    if (!nav) return;
-    if (lenis) {
-      nav.style.transform = 'translateY(0)';
-    }
-  };
-  window.addEventListener('scroll', onScroll, { passive: true });
 
   // Cleanup on unload
   window.addEventListener('beforeunload', function () {
     if (lenis && lenis.destroy) lenis.destroy();
-    if (hasGsap && ScrollTrigger) ScrollTrigger.getAll().forEach(function (st) { st.kill(); });
+    if (hasGsap && window.ScrollTrigger) {
+      window.ScrollTrigger.getAll().forEach(function (st) { st.kill(); });
+    }
   });
 })();

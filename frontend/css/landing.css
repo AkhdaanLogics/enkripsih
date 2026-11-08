@@ -223,7 +223,7 @@ a { color: inherit; text-decoration: none; }
 }
 .hero-meta .dot { color: var(--accent); margin: 0 6px; }
 
-/* Hero visual: "encrypted package" card */
+/* Signature hero visual: "encrypted package" card */
 .hero-visual {
   margin-top: 24px;
   width: 100%;
@@ -262,20 +262,34 @@ a { color: inherit; text-decoration: none; }
   border-radius: 10px;
   display: grid;
   place-items: center;
-  font-family: var(--font-mono);
-  font-size: 22px;
-  font-weight: 600;
+  gap: 4px;
   background: var(--bg);
   border: 1px solid var(--line-2);
   color: var(--fg-2);
+  padding: 6px;
 }
-.sym[data-kind="t"] { color: #ff7a7a; border-color: rgba(255,122,122,0.3); }
-.sym[data-kind="c"] { color: #6aa9ff; }
-.sym[data-kind="x"] { color: #ffd47a; border-color: rgba(255,212,122,0.3); }
-.sym[data-kind="s"] { color: #9dff8e; border-color: rgba(157,255,142,0.3); }
-.sym .l { font-size: 11px; color: var(--fg-3); margin-top: 2px; }
+.sym > svg {
+  width: 26px;
+  height: 26px;
+}
+.sym .l {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--fg-3);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
 .sym-stack { display: grid; gap: 6px; }
-.sym-stack .sym { aspect-ratio: auto; height: 34px; }
+.sym-stack .sym { aspect-ratio: auto; height: 40px; }
+
+/* Geometric challenge shape colors (distinct but muted) */
+.sym[data-kind="tri"]  { color: var(--accent); }
+.sym[data-kind="box"]  { color: #6aa9ff; }
+.sym[data-kind="cir"]  { color: #9dff8e; }
+.sym[data-kind="cross"]{ color: #ffd47a; }
+.sym[data-kind="tri"]  { border-color: rgba(0,102,255,0.35); }
+.sym[data-kind="cir"]  { border-color: rgba(157,255,142,0.3); }
+.sym[data-kind="cross"]{ border-color: rgba(255,212,122,0.3); }
 
 .hero-visual-foot {
   display: flex;
@@ -288,6 +302,7 @@ a { color: inherit; text-decoration: none; }
   color: var(--fg-3);
 }
 .hero-visual-foot .ok { color: #9dff8e; }
+.hero-visual-foot .glyphs { letter-spacing: 0.12em; }
 
 /* =====================================================================
    3. MARQUEE / STATS
@@ -595,13 +610,8 @@ section { scroll-margin-top: 80px; }
   opacity: 0;
   transform: translateY(24px);
 }
-[data-reveal].js-in {
-  opacity: 1;
-  transform: none;
-  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-}
 
-/* Hero intro line-mask (only animates when JS adds .hero-anim) */
+/* Hero intro line-mask (only animates when JS drives it via GSAP) */
 .hero h1 .line {
   display: inline-block;
   overflow: hidden;
