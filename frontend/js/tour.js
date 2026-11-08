@@ -287,12 +287,24 @@
     return fromIndex;
   }
 
+  // Reserves clearance for the footer (and the fixed tour card) so the target
+  // is never parked at the very bottom of the viewport where the card would
+  // cover the footer. Used by scrollTargetIntoView to center the target.
+  function footerClearancePx() {
+    var f = document.querySelector(".app-footer, .footer");
+    if (!f) return 0;
+    var r = f.getBoundingClientRect();
+    // The footer is in normal flow; reserve its height so the target has room.
+    return Math.min(140, Math.max(48, r.height || 48));
+  }
+
   function scrollTargetIntoView(elm, offsetPx) {
     if (!elm) return;
     var v = viewport();
     var r = elm.getBoundingClientRect();
     var offset = offsetPx != null ? offsetPx : 16;
-    var inView = r.top >= v.offY + offset && r.bottom <= v.offY + v.h - offset;
+    var footClear = isMobileViewport() ? 0 : footerClearancePx();
+    var inView = r.top >= v.offY + offset && r.bottom <= v.offY + v.h - offset - footClear;
     if (inView) return;
 
     var p = elm.parentElement;
@@ -310,8 +322,11 @@
       p = p.parentElement;
     }
     var sr = scrollRoot();
-    var targetY = (r.top - v.offY) - offset;
-    sr.scrollTop = Math.max(0, sr.scrollTop + targetY);
+    // Center the target within the viewport (minus reserved footer clearance)
+    // so the fixed card below it never collides with the footer.
+    var targetCenter = (r.top + r.bottom) / 2 - v.offY - footClear / 2;
+    var desiredScroll = Math.max(0, sr.scrollTop + targetCenter - (v.h - footClear) / 2);
+    sr.scrollTop = desiredScroll;
   }
 
   function scrollRoot() {

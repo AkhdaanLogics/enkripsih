@@ -1,6 +1,6 @@
 {
  "url": "frontend/index.html",
- "at": "2026-10-22T03:14:51.540Z",
+ "at": "2026-11-08T09:38:06.861Z",
  "allow": [],
  "viewports": [
   {
@@ -9,15 +9,15 @@
    "load": "load",
    "screens": 1,
    "filled": [
-    0.38
+    0.06
    ],
    "motion": {
     "elements": 0,
     "css": 0,
     "transitions": 0,
     "scripted": 0,
-    "videos": 1,
-    "playingVideos": 1
+    "videos": 0,
+    "playingVideos": 0
    },
    "metrics": {
     "viewport": {
@@ -27,18 +27,18 @@
     "page": {
      "height": 900,
      "screens": 1,
-     "words": 83,
+     "words": 54,
      "img": 0,
-     "video": 1,
-     "canvas": 1,
-     "svg": 0,
-     "sections": 4,
+     "video": 0,
+     "canvas": 0,
+     "svg": 4,
+     "sections": 5,
      "horizontalOverflow": 0,
      "overflowCulprits": [],
-     "uiFragments": 1,
+     "uiFragments": 0,
      "uiAbuse": false,
-     "realPictures": 1,
-     "videoCount": 1,
+     "realPictures": 0,
+     "videoCount": 0,
      "uiPictures": 0,
      "pictureSamples": [],
      "blendText": 0,
@@ -48,33 +48,55 @@
      "videosNoPoster": 0
     },
     "hero": {
-     "text": "ENKRIP SIH",
-     "words": 2,
-     "chars": 10,
+     "text": "Enkripsih: kirim pesan terenkripsi",
+     "words": 4,
+     "chars": 34,
      "lines": 1,
-     "size": 16,
-     "vw": 1.1,
-     "font": "Public Sans",
+     "size": 32,
+     "vw": 2.2,
+     "font": "Times New Roman",
      "weight": 700,
-     "tracking": 0.09,
-     "leading": 1.5,
-     "top": 14,
+     "tracking": 0,
+     "leading": 1.2,
+     "top": 21,
      "tag": "h1",
      "kind": "heading",
      "align": "left",
      "position": "left"
     },
     "h1": {
-     "text": "ENKRIPSIH",
-     "words": 1,
+     "text": "Enkripsih: kirim pesan terenkripsi",
+     "words": 4,
      "lines": 1,
-     "size": 16,
-     "font": "Public Sans"
+     "size": 32,
+     "font": "Times New Roman"
     },
-    "headings": [],
+    "headings": [
+     {
+      "text": "Enkripsih: kirim pesan terenkripsi",
+      "words": 4,
+      "chars": 34,
+      "lines": 1,
+      "size": 32,
+      "vw": 2.2,
+      "font": "Times New Roman",
+      "weight": 700,
+      "tracking": 0,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.99,
+      "top": 21,
+      "tag": "h1",
+      "kind": "heading"
+     }
+    ],
     "headingSummary": {
-     "count": 0,
-     "maxLines": 0,
+     "count": 1,
+     "maxLines": 1,
      "over2Lines": 0,
      "statements": 0,
      "centered": 0,
@@ -84,35 +106,39 @@
     "type": {
      "families": [
       {
-       "family": "Public Sans",
-       "share": 1,
+       "family": "Times New Roman",
+       "share": 0.99,
+       "mono": false
+      },
+      {
+       "family": "Arial",
+       "share": 0.01,
        "mono": false
       }
      ],
-     "familyCount": 1,
+     "familyCount": 2,
      "sizes": [
-      10,
-      11,
       13,
-      15,
-      16
+      16,
+      24,
+      32
      ],
-     "sizeCount": 5,
+     "sizeCount": 4,
      "notLoaded": [],
      "body": {
-      "font": "Public Sans",
-      "size": 13,
-      "leading": 1.5,
+      "font": "Times New Roman",
+      "size": 16,
+      "leading": 1.2,
       "weight": 400,
       "tracking": 0,
-      "contrast": 5.3
+      "contrast": 21
      },
-     "measureChars": 92,
+     "measureChars": 178,
      "max": {
-      "size": 16,
-      "vw": 1.1,
-      "font": "Public Sans",
-      "text": "ENKRIP"
+      "size": 32,
+      "vw": 2.2,
+      "font": "Times New Roman",
+      "text": "Enkripsih: kirim pesan terenkripsi"
      },
      "monoShare": 0,
      "monoProseShare": 0,
@@ -121,65 +147,38 @@
      "microLabels": 0,
      "microLabelShare": 0,
      "microSamples": [],
-     "upperShare": 0.54,
-     "centerShare": 0.34,
-     "smallText": 7
+     "upperShare": 0.05,
+     "centerShare": 0.01,
+     "smallText": 0
     },
     "eyebrows": [],
     "numbered": [],
     "color": {
-     "bodyBg": "#101216",
+     "bodyBg": "#ffffff",
      "bodyBgHsl": {
-      "h": 220,
-      "s": 0.16,
-      "l": 0.07
+      "h": 0,
+      "s": 0,
+      "l": 1
      },
-     "dark": true,
+     "dark": false,
      "sectionBgs": [],
      "textColors": [
       {
-       "color": "#848c99",
-       "share": 0.68
-      },
-      {
-       "color": "#f0f2f5",
-       "share": 0.17
-      },
-      {
-       "color": "#2eb88a",
-       "share": 0.09
-      },
-      {
-       "color": "#0b110e",
-       "share": 0.05
+       "color": "#000000",
+       "share": 1
       }
      ],
-     "button": {
-      "bg": "#2eb88a",
-      "hsl": {
-       "h": 160,
-       "s": 0.6,
-       "l": 0.45
-      },
-      "fg": "#0b110e"
-     },
+     "button": null,
      "lowContrast": []
     },
     "buttons": {
-     "count": 4,
-     "inHero": 4,
-     "radius": 3,
-     "height": 33,
+     "count": 0,
+     "inHero": 0,
      "withShadow": 0,
      "withGradient": 0,
      "mono": 0,
      "upper": 0,
-     "heroLabels": [
-      "AKTIFKAN WEBCAM",
-      "VERIFIKASI WAJAH",
-      "DAFTARKAN WAJAH BARU",
-      "MODE SIMULASI (BYPASS)"
-     ]
+     "heroLabels": []
     },
     "surfaces": {
      "shadowStatic": 0,
@@ -189,39 +188,28 @@
      "scrims": 0,
      "gradientSamples": [],
      "gradientText": 0,
-     "hairlines": 3,
-     "hairlineSamples": [
-      "header.header-bar 1440px",
-      "nav.tabs-container 1440px",
-      "div.card-header 598px"
-     ],
-     "outlinedBoxes": 3,
-     "dashed": 1,
+     "hairlines": 0,
+     "hairlineSamples": [],
+     "outlinedBoxes": 0,
+     "dashed": 0,
      "blurred": 0,
      "roundedBoxes": 0,
      "boxRadius": 0,
      "squareMedia": 0,
-     "roundedMedia": 1,
-     "mediaRadius": 4,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
      "textShadow": 0,
      "cardRows": []
     },
-    "heroMedia": [
-     {
-      "type": "video",
-      "ratio": 0.11
-     }
-    ],
+    "heroMedia": [],
     "nav": {
      "links": 0,
-     "fixed": true,
-     "height": 70,
+     "fixed": false,
+     "height": 54,
      "floatingPill": false,
      "blur": false
     },
-    "fontsLoaded": [
-     "public sans"
-    ]
+    "fontsLoaded": []
    },
    "layout": {
     "viewport": {
@@ -230,45 +218,78 @@
     },
     "pageH": 900,
     "margins": {
-     "left": 40,
-     "right": 127
+     "left": 8,
+     "right": 491
     },
     "sections": [],
     "gaps": [],
     "h1s": [
      {
-      "text": "ENKRIPSIH",
-      "size": 16,
-      "top": 14,
+      "text": "Enkripsih: kirim pesan terenkripsi",
+      "size": 32,
+      "top": 21,
       "firstScreen": true
      }
     ],
-    "edgeText": [],
+    "edgeText": [
+     {
+      "text": "Enkripsih: kirim pesan terenkripsi",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "ENKRIPSIH",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "Tidak terhubung",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "ENKRIPSIH",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "Pilih peran, masuk, kirim.",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "Commander mengirim pesan terenkripsi. Receiver mem",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "Jenis akun",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "Password aplikasi",
+      "side": "left",
+      "px": 8
+     }
+    ],
     "edges": [
      {
-      "x": 145,
-      "n": 1
-     },
-     {
-      "x": 214,
-      "n": 1
-     },
-     {
-      "x": 421,
-      "n": 1
+      "x": 8,
+      "n": 3
      }
     ],
     "leftBlocks": 3,
-    "bodySize": 13,
+    "bodySize": 16,
     "stage": false,
     "explains": false,
     "slivers": [],
-    "voidShare": 0.27,
+    "voidShare": 0.6,
     "voidBox": {
      "x": 0,
-     "y": 660,
+     "y": 360,
      "w": 1440,
-     "h": 240
+     "h": 540
     }
    },
    "app": {
@@ -276,28 +297,26 @@
      "w": 1440,
      "h": 900
     },
-    "dark": true,
-    "ground": "#101216",
+    "dark": false,
+    "ground": "#ffffff",
     "sidebar": null,
-    "topbar": {
-     "h": 70
-    },
+    "topbar": null,
     "canvas": {
-     "left": 32,
-     "right": 43
+     "left": 8,
+     "right": 491
     },
     "hero": {
-     "text": "ENKRIP SIH",
-     "words": 2,
-     "chars": 10,
+     "text": "Enkripsih: kirim pesan terenkripsi",
+     "words": 4,
+     "chars": 34,
      "lines": 1,
-     "size": 16,
-     "vw": 1.1,
-     "font": "Public Sans",
+     "size": 32,
+     "vw": 2.2,
+     "font": "Times New Roman",
      "weight": 700,
-     "tracking": 0.09,
-     "leading": 1.5,
-     "top": 14,
+     "tracking": 0,
+     "leading": 1.2,
+     "top": 21,
      "tag": "h1",
      "kind": "heading",
      "align": "left",
@@ -305,24 +324,15 @@
     },
     "charts": 0,
     "layout": {
-     "panels": 1,
-     "firstScreen": 1,
+     "panels": 0,
+     "firstScreen": 0,
      "ragged": [],
      "voids": []
     },
     "tiles": 0,
     "panels": {
-     "count": 3,
-     "radii": [
-      [
-       4,
-       2
-      ],
-      [
-       0,
-       1
-      ]
-     ],
+     "count": 0,
+     "radii": [],
      "heavyBorders": 0,
      "borderSamples": [],
      "heavyShadows": 0,
@@ -346,26 +356,23 @@
     "chartHues": 0,
     "placeholders": [],
     "type": {
-     "under13": 0.66,
-     "tiny": 1,
-     "tinySamples": [
-      "ESP-CRYPTO-V1 10px"
-     ],
+     "under13": 0,
+     "tiny": 0,
+     "tinySamples": [],
      "sizes": [
-      10,
-      11,
-      12,
       13,
-      15,
-      16
+      16,
+      19,
+      24,
+      32
      ]
     },
     "title": {
-     "text": "ENKRIPSIH",
-     "size": 16,
-     "top": 14
+     "text": "Enkripsih: kirim pesan terenkripsi",
+     "size": 32,
+     "top": 21
     },
-    "colourShare": 0.01
+    "colourShare": 0
    },
    "consoleErrors": []
   },
@@ -375,15 +382,15 @@
    "load": "load",
    "screens": 1,
    "filled": [
-    0.58
+    0.17
    ],
    "motion": {
     "elements": 0,
     "css": 0,
     "transitions": 0,
     "scripted": 0,
-    "videos": 1,
-    "playingVideos": 1
+    "videos": 0,
+    "playingVideos": 0
    },
    "metrics": {
     "viewport": {
@@ -393,18 +400,18 @@
     "page": {
      "height": 1024,
      "screens": 1,
-     "words": 83,
+     "words": 54,
      "img": 0,
-     "video": 1,
-     "canvas": 1,
-     "svg": 0,
-     "sections": 4,
+     "video": 0,
+     "canvas": 0,
+     "svg": 4,
+     "sections": 5,
      "horizontalOverflow": 0,
      "overflowCulprits": [],
-     "uiFragments": 1,
+     "uiFragments": 0,
      "uiAbuse": false,
-     "realPictures": 1,
-     "videoCount": 1,
+     "realPictures": 0,
+     "videoCount": 0,
      "uiPictures": 0,
      "pictureSamples": [],
      "blendText": 0,
@@ -414,33 +421,55 @@
      "videosNoPoster": 0
     },
     "hero": {
-     "text": "ENKRIP SIH",
-     "words": 2,
-     "chars": 10,
+     "text": "Enkripsih: kirim pesan terenkripsi",
+     "words": 4,
+     "chars": 34,
      "lines": 1,
-     "size": 16,
-     "vw": 2.1,
-     "font": "Public Sans",
+     "size": 32,
+     "vw": 4.2,
+     "font": "Times New Roman",
      "weight": 700,
-     "tracking": 0.09,
-     "leading": 1.5,
-     "top": 14,
+     "tracking": 0,
+     "leading": 1.2,
+     "top": 21,
      "tag": "h1",
      "kind": "heading",
      "align": "left",
      "position": "left"
     },
     "h1": {
-     "text": "ENKRIPSIH",
-     "words": 1,
+     "text": "Enkripsih: kirim pesan terenkripsi",
+     "words": 4,
      "lines": 1,
-     "size": 16,
-     "font": "Public Sans"
+     "size": 32,
+     "font": "Times New Roman"
     },
-    "headings": [],
+    "headings": [
+     {
+      "text": "Enkripsih: kirim pesan terenkripsi",
+      "words": 4,
+      "chars": 34,
+      "lines": 1,
+      "size": 32,
+      "vw": 4.2,
+      "font": "Times New Roman",
+      "weight": 700,
+      "tracking": 0,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.98,
+      "top": 21,
+      "tag": "h1",
+      "kind": "heading"
+     }
+    ],
     "headingSummary": {
-     "count": 0,
-     "maxLines": 0,
+     "count": 1,
+     "maxLines": 1,
      "over2Lines": 0,
      "statements": 0,
      "centered": 0,
@@ -450,35 +479,39 @@
     "type": {
      "families": [
       {
-       "family": "Public Sans",
-       "share": 1,
+       "family": "Times New Roman",
+       "share": 0.99,
+       "mono": false
+      },
+      {
+       "family": "Arial",
+       "share": 0.01,
        "mono": false
       }
      ],
-     "familyCount": 1,
+     "familyCount": 2,
      "sizes": [
-      10,
-      11,
       13,
-      15,
-      16
+      16,
+      24,
+      32
      ],
-     "sizeCount": 5,
+     "sizeCount": 4,
      "notLoaded": [],
      "body": {
-      "font": "Public Sans",
-      "size": 13,
-      "leading": 1.5,
+      "font": "Times New Roman",
+      "size": 16,
+      "leading": 1.2,
       "weight": 400,
       "tracking": 0,
-      "contrast": 5.3
+      "contrast": 21
      },
-     "measureChars": 92,
+     "measureChars": 94,
      "max": {
-      "size": 16,
-      "vw": 2.1,
-      "font": "Public Sans",
-      "text": "ENKRIP"
+      "size": 32,
+      "vw": 4.2,
+      "font": "Times New Roman",
+      "text": "Enkripsih: kirim pesan terenkripsi"
      },
      "monoShare": 0,
      "monoProseShare": 0,
@@ -487,75 +520,38 @@
      "microLabels": 0,
      "microLabelShare": 0,
      "microSamples": [],
-     "upperShare": 0.54,
-     "centerShare": 0.34,
-     "smallText": 7
+     "upperShare": 0.05,
+     "centerShare": 0.01,
+     "smallText": 0
     },
     "eyebrows": [],
     "numbered": [],
     "color": {
-     "bodyBg": "#101216",
+     "bodyBg": "#ffffff",
      "bodyBgHsl": {
-      "h": 220,
-      "s": 0.16,
-      "l": 0.07
+      "h": 0,
+      "s": 0,
+      "l": 1
      },
-     "dark": true,
-     "sectionBgs": [
-      {
-       "color": "#14171d",
-       "top": 170,
-       "hsl": {
-        "h": 220,
-        "s": 0.18,
-        "l": 0.1
-       }
-      }
-     ],
+     "dark": false,
+     "sectionBgs": [],
      "textColors": [
       {
-       "color": "#848c99",
-       "share": 0.68
-      },
-      {
-       "color": "#f0f2f5",
-       "share": 0.17
-      },
-      {
-       "color": "#2eb88a",
-       "share": 0.09
-      },
-      {
-       "color": "#0b110e",
-       "share": 0.05
+       "color": "#000000",
+       "share": 1
       }
      ],
-     "button": {
-      "bg": "#2eb88a",
-      "hsl": {
-       "h": 160,
-       "s": 0.6,
-       "l": 0.45
-      },
-      "fg": "#0b110e"
-     },
+     "button": null,
      "lowContrast": []
     },
     "buttons": {
-     "count": 4,
-     "inHero": 4,
-     "radius": 3,
-     "height": 33,
+     "count": 0,
+     "inHero": 0,
      "withShadow": 0,
      "withGradient": 0,
      "mono": 0,
      "upper": 0,
-     "heroLabels": [
-      "AKTIFKAN WEBCAM",
-      "VERIFIKASI WAJAH",
-      "DAFTARKAN WAJAH BARU",
-      "MODE SIMULASI (BYPASS)"
-     ]
+     "heroLabels": []
     },
     "surfaces": {
      "shadowStatic": 0,
@@ -565,39 +561,28 @@
      "scrims": 0,
      "gradientSamples": [],
      "gradientText": 0,
-     "hairlines": 3,
-     "hairlineSamples": [
-      "header.header-bar 768px",
-      "nav.tabs-container 768px",
-      "div.card-header 598px"
-     ],
-     "outlinedBoxes": 3,
-     "dashed": 1,
+     "hairlines": 0,
+     "hairlineSamples": [],
+     "outlinedBoxes": 0,
+     "dashed": 0,
      "blurred": 0,
      "roundedBoxes": 0,
      "boxRadius": 0,
      "squareMedia": 0,
-     "roundedMedia": 1,
-     "mediaRadius": 4,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
      "textShadow": 0,
      "cardRows": []
     },
-    "heroMedia": [
-     {
-      "type": "video",
-      "ratio": 0.18
-     }
-    ],
+    "heroMedia": [],
     "nav": {
      "links": 0,
-     "fixed": true,
-     "height": 106,
+     "fixed": false,
+     "height": 54,
      "floatingPill": false,
      "blur": false
     },
-    "fontsLoaded": [
-     "public sans"
-    ]
+    "fontsLoaded": []
    },
    "layout": {
     "viewport": {
@@ -606,36 +591,69 @@
     },
     "pageH": 1024,
     "margins": {
-     "left": 40,
-     "right": 96
+     "left": 8,
+     "right": 24
     },
     "sections": [],
     "gaps": [],
     "h1s": [
      {
-      "text": "ENKRIPSIH",
-      "size": 16,
-      "top": 14,
+      "text": "Enkripsih: kirim pesan terenkripsi",
+      "size": 32,
+      "top": 21,
       "firstScreen": true
      }
     ],
-    "edgeText": [],
+    "edgeText": [
+     {
+      "text": "Enkripsih: kirim pesan terenkripsi",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "ENKRIPSIH",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "Tidak terhubung",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "ENKRIPSIH",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "Pilih peran, masuk, kirim.",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "Commander mengirim pesan terenkripsi. Receiver mem",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "Jenis akun",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "Password aplikasi",
+      "side": "left",
+      "px": 8
+     }
+    ],
     "edges": [
      {
-      "x": 85,
-      "n": 1
-     },
-     {
-      "x": 145,
-      "n": 1
-     },
-     {
-      "x": 214,
-      "n": 1
+      "x": 8,
+      "n": 3
      }
     ],
     "leftBlocks": 3,
-    "bodySize": 13,
+    "bodySize": 16,
     "stage": false,
     "explains": false,
     "slivers": [],
@@ -647,26 +665,26 @@
      "w": 768,
      "h": 1024
     },
-    "dark": true,
-    "ground": "#101216",
+    "dark": false,
+    "ground": "#ffffff",
     "sidebar": null,
     "topbar": null,
     "canvas": {
-     "left": 32,
-     "right": -376
+     "left": 8,
+     "right": 24
     },
     "hero": {
-     "text": "ENKRIP SIH",
-     "words": 2,
-     "chars": 10,
+     "text": "Enkripsih: kirim pesan terenkripsi",
+     "words": 4,
+     "chars": 34,
      "lines": 1,
-     "size": 16,
-     "vw": 2.1,
-     "font": "Public Sans",
+     "size": 32,
+     "vw": 4.2,
+     "font": "Times New Roman",
      "weight": 700,
-     "tracking": 0.09,
-     "leading": 1.5,
-     "top": 14,
+     "tracking": 0,
+     "leading": 1.2,
+     "top": 21,
      "tag": "h1",
      "kind": "heading",
      "align": "left",
@@ -674,24 +692,15 @@
     },
     "charts": 0,
     "layout": {
-     "panels": 1,
-     "firstScreen": 1,
+     "panels": 0,
+     "firstScreen": 0,
      "ragged": [],
      "voids": []
     },
     "tiles": 0,
     "panels": {
-     "count": 3,
-     "radii": [
-      [
-       4,
-       2
-      ],
-      [
-       0,
-       1
-      ]
-     ],
+     "count": 0,
+     "radii": [],
      "heavyBorders": 0,
      "borderSamples": [],
      "heavyShadows": 0,
@@ -715,26 +724,23 @@
     "chartHues": 0,
     "placeholders": [],
     "type": {
-     "under13": 0.66,
-     "tiny": 1,
-     "tinySamples": [
-      "ESP-CRYPTO-V1 10px"
-     ],
+     "under13": 0,
+     "tiny": 0,
+     "tinySamples": [],
      "sizes": [
-      10,
-      11,
-      12,
       13,
-      15,
-      16
+      16,
+      19,
+      24,
+      32
      ]
     },
     "title": {
-     "text": "ENKRIPSIH",
-     "size": 16,
-     "top": 14
+     "text": "Enkripsih: kirim pesan terenkripsi",
+     "size": 32,
+     "top": 21
     },
-    "colourShare": 0.018
+    "colourShare": 0.002
    },
    "consoleErrors": []
   },
@@ -744,15 +750,15 @@
    "load": "load",
    "screens": 1,
    "filled": [
-    0.87
+    0.32
    ],
    "motion": {
     "elements": 0,
     "css": 0,
     "transitions": 0,
     "scripted": 0,
-    "videos": 1,
-    "playingVideos": 1
+    "videos": 0,
+    "playingVideos": 0
    },
    "metrics": {
     "viewport": {
@@ -762,18 +768,18 @@
     "page": {
      "height": 844,
      "screens": 1,
-     "words": 83,
+     "words": 54,
      "img": 0,
-     "video": 1,
-     "canvas": 1,
-     "svg": 0,
-     "sections": 4,
+     "video": 0,
+     "canvas": 0,
+     "svg": 4,
+     "sections": 5,
      "horizontalOverflow": 0,
      "overflowCulprits": [],
-     "uiFragments": 1,
+     "uiFragments": 0,
      "uiAbuse": false,
-     "realPictures": 1,
-     "videoCount": 1,
+     "realPictures": 0,
+     "videoCount": 0,
      "uiPictures": 0,
      "pictureSamples": [],
      "blendText": 0,
@@ -783,71 +789,118 @@
      "videosNoPoster": 0
     },
     "hero": {
-     "text": "ENKRIP SIH",
-     "words": 2,
-     "chars": 10,
-     "lines": 1,
-     "size": 16,
-     "vw": 4.1,
-     "font": "Public Sans",
+     "text": "Enkripsih: kirim pesan terenkripsi",
+     "words": 4,
+     "chars": 34,
+     "lines": 2,
+     "size": 32,
+     "vw": 8.2,
+     "font": "Times New Roman",
      "weight": 700,
-     "tracking": 0.09,
-     "leading": 1.5,
-     "top": 14,
+     "tracking": 0,
+     "leading": 1.2,
+     "top": 21,
      "tag": "h1",
      "kind": "heading",
      "align": "left",
      "position": "left"
     },
     "h1": {
-     "text": "ENKRIPSIH",
-     "words": 1,
-     "lines": 1,
-     "size": 16,
-     "font": "Public Sans"
+     "text": "Enkripsih: kirim pesan terenkripsi",
+     "words": 4,
+     "lines": 2,
+     "size": 32,
+     "font": "Times New Roman"
     },
-    "headings": [],
+    "headings": [
+     {
+      "text": "Enkripsih: kirim pesan terenkripsi",
+      "words": 4,
+      "chars": 34,
+      "lines": 2,
+      "size": 32,
+      "vw": 8.2,
+      "font": "Times New Roman",
+      "weight": 700,
+      "tracking": 0,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.96,
+      "top": 21,
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "Pilih peran, masuk, kirim.",
+      "words": 4,
+      "chars": 26,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.2,
+      "font": "Times New Roman",
+      "weight": 700,
+      "tracking": 0,
+      "leading": 1.2,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.96,
+      "top": 209,
+      "tag": "h2",
+      "kind": "heading"
+     }
+    ],
     "headingSummary": {
-     "count": 0,
-     "maxLines": 0,
+     "count": 2,
+     "maxLines": 2,
      "over2Lines": 0,
      "statements": 0,
      "centered": 0,
-     "medianWords": null,
+     "medianWords": 4,
      "mixedFontHeadings": 0
     },
     "type": {
      "families": [
       {
-       "family": "Public Sans",
-       "share": 1,
+       "family": "Times New Roman",
+       "share": 0.99,
+       "mono": false
+      },
+      {
+       "family": "Arial",
+       "share": 0.01,
        "mono": false
       }
      ],
-     "familyCount": 1,
+     "familyCount": 2,
      "sizes": [
-      10,
-      11,
       13,
-      15,
-      16
+      16,
+      24,
+      32
      ],
-     "sizeCount": 5,
+     "sizeCount": 4,
      "notLoaded": [],
      "body": {
-      "font": "Public Sans",
-      "size": 13,
-      "leading": 1.5,
+      "font": "Times New Roman",
+      "size": 16,
+      "leading": 1.2,
       "weight": 400,
       "tracking": 0,
-      "contrast": 5.3
+      "contrast": 21
      },
-     "measureChars": 46,
+     "measureChars": 47,
      "max": {
-      "size": 16,
-      "vw": 4.1,
-      "font": "Public Sans",
-      "text": "ENKRIP"
+      "size": 32,
+      "vw": 8.2,
+      "font": "Times New Roman",
+      "text": "Enkripsih: kirim pesan terenkripsi"
      },
      "monoShare": 0,
      "monoProseShare": 0,
@@ -856,75 +909,38 @@
      "microLabels": 0,
      "microLabelShare": 0,
      "microSamples": [],
-     "upperShare": 0.54,
-     "centerShare": 0.34,
-     "smallText": 7
+     "upperShare": 0.05,
+     "centerShare": 0.01,
+     "smallText": 0
     },
     "eyebrows": [],
     "numbered": [],
     "color": {
-     "bodyBg": "#101216",
+     "bodyBg": "#ffffff",
      "bodyBgHsl": {
-      "h": 220,
-      "s": 0.16,
-      "l": 0.07
+      "h": 0,
+      "s": 0,
+      "l": 1
      },
-     "dark": true,
-     "sectionBgs": [
-      {
-       "color": "#14171d",
-       "top": 187,
-       "hsl": {
-        "h": 220,
-        "s": 0.18,
-        "l": 0.1
-       }
-      }
-     ],
+     "dark": false,
+     "sectionBgs": [],
      "textColors": [
       {
-       "color": "#848c99",
-       "share": 0.68
-      },
-      {
-       "color": "#f0f2f5",
-       "share": 0.17
-      },
-      {
-       "color": "#2eb88a",
-       "share": 0.09
-      },
-      {
-       "color": "#0b110e",
-       "share": 0.05
+       "color": "#000000",
+       "share": 1
       }
      ],
-     "button": {
-      "bg": "#2eb88a",
-      "hsl": {
-       "h": 160,
-       "s": 0.6,
-       "l": 0.45
-      },
-      "fg": "#0b110e"
-     },
+     "button": null,
      "lowContrast": []
     },
     "buttons": {
-     "count": 4,
-     "inHero": 4,
-     "radius": 3,
-     "height": 33,
+     "count": 0,
+     "inHero": 0,
      "withShadow": 0,
      "withGradient": 0,
      "mono": 0,
      "upper": 0,
-     "heroLabels": [
-      "AKTIFKAN WEBCAM",
-      "VERIFIKASI WAJAH",
-      "DAFTARKAN WAJAH BARU",
-      "MODE SIMULASI (BYPASS)"
-     ]
+     "heroLabels": []
     },
     "surfaces": {
      "shadowStatic": 0,
@@ -934,39 +950,28 @@
      "scrims": 0,
      "gradientSamples": [],
      "gradientText": 0,
-     "hairlines": 3,
-     "hairlineSamples": [
-      "header.header-bar 390px",
-      "nav.tabs-container 390px",
-      "div.card-header 300px"
-     ],
-     "outlinedBoxes": 3,
-     "dashed": 1,
+     "hairlines": 0,
+     "hairlineSamples": [],
+     "outlinedBoxes": 0,
+     "dashed": 0,
      "blurred": 0,
      "roundedBoxes": 0,
      "boxRadius": 0,
      "squareMedia": 0,
-     "roundedMedia": 1,
-     "mediaRadius": 4,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
      "textShadow": 0,
      "cardRows": []
     },
-    "heroMedia": [
-     {
-      "type": "video",
-      "ratio": 0.2
-     }
-    ],
+    "heroMedia": [],
     "nav": {
      "links": 0,
-     "fixed": true,
-     "height": 123,
+     "fixed": false,
+     "height": 54,
      "floatingPill": false,
      "blur": false
     },
-    "fontsLoaded": [
-     "public sans"
-    ]
+    "fontsLoaded": []
    },
    "layout": {
     "viewport": {
@@ -975,83 +980,69 @@
     },
     "pageH": 844,
     "margins": {
-     "left": 40,
-     "right": 37
+     "left": 8,
+     "right": 15
     },
-    "sections": [
-     {
-      "sel": "header.header-bar",
-      "tag": "header",
-      "top": 0,
-      "height": 123,
-      "words": 16,
-      "media": 0,
-      "middle": 8,
-      "heading": {
-       "text": "ENKRIP",
-       "size": 16,
-       "tag": "h1"
-      },
-      "left": 40,
-      "right": 37,
-      "textLeft": 40,
-      "textRight": 37,
-      "fullBleed": false,
-      "footer": false,
-      "hero": true,
-      "continues": false,
-      "pinned": true
-     },
-     {
-      "sel": "main.main-content",
-      "tag": "main",
-      "top": 163,
-      "height": 664,
-      "words": 52,
-      "media": 1,
-      "middle": 0,
-      "heading": {
-       "text": "VERIFIKASI BIOMETRIK WAJAH KOMANDAN",
-       "size": 15,
-       "tag": "h2"
-      },
-      "left": 45,
-      "right": 46,
-      "textLeft": 45,
-      "textRight": 54,
-      "fullBleed": false,
-      "footer": true,
-      "hero": true,
-      "continues": false,
-      "pinned": false
-     }
-    ],
+    "sections": [],
     "gaps": [],
     "h1s": [
      {
-      "text": "ENKRIPSIH",
-      "size": 16,
-      "top": 14,
+      "text": "Enkripsih: kirim pesan terenkripsi",
+      "size": 32,
+      "top": 21,
       "firstScreen": true
      }
     ],
-    "edgeText": [],
+    "edgeText": [
+     {
+      "text": "Enkripsih: kirim pesan terenkripsi",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "ENKRIPSIH",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "Tidak terhubung",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "ENKRIPSIH",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "Pilih peran, masuk, kirim.",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "Commander mengirim pesan terenkripsi. Receiver mem",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "Jenis akun",
+      "side": "left",
+      "px": 8
+     },
+     {
+      "text": "Password aplikasi",
+      "side": "left",
+      "px": 8
+     }
+    ],
     "edges": [
      {
-      "x": 45,
-      "n": 1
-     },
-     {
-      "x": 122,
-      "n": 1
-     },
-     {
-      "x": 192,
-      "n": 1
+      "x": 8,
+      "n": 3
      }
     ],
     "leftBlocks": 3,
-    "bodySize": 13,
+    "bodySize": 16,
     "stage": false,
     "explains": false,
     "slivers": [],
@@ -1063,26 +1054,26 @@
      "w": 390,
      "h": 844
     },
-    "dark": true,
-    "ground": "#101216",
+    "dark": false,
+    "ground": "#ffffff",
     "sidebar": null,
     "topbar": null,
     "canvas": {
-     "left": 32,
-     "right": -754
+     "left": 8,
+     "right": 15
     },
     "hero": {
-     "text": "ENKRIP SIH",
-     "words": 2,
-     "chars": 10,
-     "lines": 1,
-     "size": 16,
-     "vw": 4.1,
-     "font": "Public Sans",
+     "text": "Enkripsih: kirim pesan terenkripsi",
+     "words": 4,
+     "chars": 34,
+     "lines": 2,
+     "size": 32,
+     "vw": 8.2,
+     "font": "Times New Roman",
      "weight": 700,
-     "tracking": 0.09,
-     "leading": 1.5,
-     "top": 14,
+     "tracking": 0,
+     "leading": 1.2,
+     "top": 21,
      "tag": "h1",
      "kind": "heading",
      "align": "left",
@@ -1090,24 +1081,15 @@
     },
     "charts": 0,
     "layout": {
-     "panels": 1,
-     "firstScreen": 1,
+     "panels": 0,
+     "firstScreen": 0,
      "ragged": [],
      "voids": []
     },
     "tiles": 0,
     "panels": {
-     "count": 3,
-     "radii": [
-      [
-       4,
-       2
-      ],
-      [
-       0,
-       1
-      ]
-     ],
+     "count": 0,
+     "radii": [],
      "heavyBorders": 0,
      "borderSamples": [],
      "heavyShadows": 0,
@@ -1131,41 +1113,66 @@
     "chartHues": 0,
     "placeholders": [],
     "type": {
-     "under13": 0.66,
-     "tiny": 1,
-     "tinySamples": [
-      "ESP-CRYPTO-V1 10px"
-     ],
+     "under13": 0,
+     "tiny": 0,
+     "tinySamples": [],
      "sizes": [
-      10,
-      11,
-      12,
       13,
-      15,
-      16
+      16,
+      19,
+      24,
+      32
      ]
     },
     "title": {
-     "text": "ENKRIPSIH",
-     "size": 16,
-     "top": 14
+     "text": "Enkripsih: kirim pesan terenkripsi",
+     "size": 32,
+     "top": 21
     },
-    "colourShare": 0.032
+    "colourShare": 0.001
    },
    "consoleErrors": []
   }
  ],
  "findings": [
   {
-   "level": "WARN",
-   "id": "tiny-text",
+   "level": "FAIL",
+   "id": "font-not-dealt",
    "width": 1440,
-   "message": "66% of the text is under 13px.",
-   "fix": "Data and labels read at 13–14px; keep 11–12px for sublines and axis ticks.",
+   "message": "The sheet dealt Geist, but the page renders Times New Roman, Arial.",
+   "fix": "Load the dealt face (the link on the sheet) and put it first in font-family. A build that falls back to a default face lands on the default look."
+  },
+  {
+   "level": "WARN",
+   "id": "hero-void",
+   "width": 1440,
+   "message": "60% of the first screen is one empty block (1440×540px at 0,360).",
+   "fix": "Place the void on purpose or fill it: move the picture, the film or one fact into it, grow the headline to meet it, or shrink the screen to its content. A void reads as placed only when something closes it on the far side and it is the screen's one rest."
+  },
+  {
+   "level": "FAIL",
+   "id": "edge-text",
+   "width": 1440,
+   "message": "8 text block(s) sit within 16px of the screen edge: \"Enkripsih: kirim pesan terenkr\" (8px from the left); \"ENKRIPSIH\" (8px from the left); \"Tidak terhubung\" (8px from the left); \"ENKRIPSIH\" (8px from the left)",
+   "fix": "Keep text inside the page margin (16–32px or more). Only display type deliberately bled past the edge may touch it.",
    "alsoAt": [
     768,
     390
    ]
+  },
+  {
+   "level": "WARN",
+   "id": "unused-canvas",
+   "width": 1440,
+   "message": "The content stops 491px short of the right edge while it starts 8px from the sidebar.",
+   "fix": "Let the grid fill the canvas (columns in fr units), or centre a capped canvas with equal margins. A dead strip on one side reads as unfinished."
+  },
+  {
+   "level": "WARN",
+   "id": "app-title-size",
+   "width": 390,
+   "message": "The h1 is 32px (\"Enkripsih: kirim pesan terenkripsi\").",
+   "fix": "An app screen is not a landing page: the title is 18-32px (20-24px on a phone)."
   }
  ],
  "images": [

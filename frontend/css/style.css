@@ -153,7 +153,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Header: sticky, elevated, with subtle brand mark */
+/* Header: sticky, clean, no shadow (border-bottom only) */
 .header-bar {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -888,9 +888,7 @@ body {
   position: sticky;
   top: 60px;
   padding: 24px 16px 24px 24px;
-  height: calc(100vh - 60px);
-  border-right: 1px solid var(--rule);
-  background: var(--surface);
+  align-self: start;
 }
 
 .tab-badge {
