@@ -337,6 +337,7 @@
     var pad = 14;
     var gap = 12;
     var margin = 10;
+    var footReserve = footerClearancePx();
 
     var tLeft = tr.left + v.offX;
     var tTop = tr.top + v.offY;
@@ -354,30 +355,23 @@
              t < tBottom + margin && t + ch > tTop - margin;
     };
 
-    // When placing a card, prefer 'bottom' or 'top', but if the target is near
-    // the bottom of the viewport (like the submit button), placing 'top' will
-    // overlap the button. In that case, force side 'bottom' or shift left/right.
     if (bottomFree < ch + gap + pad) {
-      // If the button is near the bottom, placing card on top overlaps it.
-      // Check if putting card on top would cover the target's top half.
-      if (topFree >= ch + gap + pad && pTop > vh * 0.35) {
+      if (topFree >= ch + gap + pad && tTop > vh * 0.35) {
         side = "top";
-        cardTop = pTop - ch - gap;
-        cardLeft = clamp(pLeft + tr.width / 2 - cw / 2, margin, vw - cw - margin);
+        cardTop = tTop - ch - gap;
+        cardLeft = clamp(tLeft + tr.width / 2 - cw / 2, margin, vw - cw - margin);
       } else {
-        var leftFree = pLeft - cw - gap;
-        var rightFree = vw - pRight - cw - gap;
+        var leftFree = tLeft - cw - gap;
+        var rightFree = vw - tRight - cw - gap;
         if (leftFree >= rightFree) {
           side = "left";
           cardLeft = Math.max(margin, leftFree);
-          cardTop = clamp(pTop + tr.height / 2 - ch / 2, pad, vh - ch - pad - footReserve);
+          cardTop = clamp(tTop + tr.height / 2 - ch / 2, pad, vh - ch - pad - footReserve);
         } else {
           side = "right";
-          cardLeft = Math.min(vw - cw - margin, pRight + gap);
-          cardTop = clamp(pTop + tr.height / 2 - ch / 2, pad, vh - ch - pad - footReserve);
+          cardLeft = Math.min(vw - cw - margin, tRight + gap);
+          cardTop = clamp(tTop + tr.height / 2 - ch / 2, pad, vh - ch - pad - footReserve);
         }
-      }
-    }
       }
     }
 
