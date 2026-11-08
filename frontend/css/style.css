@@ -399,7 +399,7 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  padding: 24px;
+  padding: 28px;
   position: relative;
   box-shadow: var(--elevation-0);
   transition: box-shadow 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
@@ -408,6 +408,17 @@ body {
 .tactical-card:hover {
   box-shadow: var(--elevation-1);
   border-color: var(--control-border);
+}
+
+/* Card with stronger visual presence (hero card) */
+.tactical-card--hero {
+  padding: 32px;
+  border-radius: 18px;
+  box-shadow: var(--elevation-1);
+}
+
+.tactical-card--hero:hover {
+  box-shadow: var(--elevation-2);
 }
 
 .card-header {
@@ -876,7 +887,7 @@ body {
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 20px clamp(20px, 3.2vw, 48px) 32px;
+  padding: 32px clamp(24px, 3.2vw, 56px) 48px;
 }
 
 .screen-heading {
@@ -884,23 +895,25 @@ body {
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
-  margin: 0 0 16px;
+  margin: 0 0 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
 }
 
 .screen-heading h1 {
   margin: 0;
   color: var(--text);
-  font-size: clamp(28px, 2.4vw, 36px);
+  font-size: clamp(32px, 3vw, 44px);
   font-weight: 700;
-  letter-spacing: -0.025em;
-  line-height: 1.1;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
 }
 
 .screen-heading p {
   max-width: 660px;
   margin: 10px 0 0;
   color: var(--muted);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.6;
 }
 
