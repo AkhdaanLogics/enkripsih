@@ -600,15 +600,14 @@ section { scroll-margin-top: 80px; }
 .footer-brand { color: var(--fg); font-weight: 600; }
 
 /* =====================================================================
-   Reveal: content is ALWAYS visible. [data-reveal] is a semantic no-op
-   kept so the markup stays simple; no JS class, no hidden state.
+   Reveal: [data-reveal] is a semantic no-op — content is ALWAYS visible.
+   Hero intro is a pure GSAP `.to()` sequence (no hidden CSS state), so
+   the first paint is already the final, fully-readable layout.
    ===================================================================== */
 [data-reveal] {
   opacity: 1;
   transform: none;
 }
-
-/* Hero intro line-mask is plain; no transform */
 .hero h1 .line {
   display: inline-block;
   overflow: hidden;

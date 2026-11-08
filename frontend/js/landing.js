@@ -19,29 +19,17 @@
     }
   }
 
-  // Decorative-only entrance motion. All [data-reveal] elements are already
-  // visible in CSS; GSAP merely slides them up from a small offset. It never
-  // hides content — the first frame is the final resting position.
+  // Hero-only entrance motion. Everything else on the page is ALWAYS visible:
+  // no ScrollTrigger, no hidden state, no [data-reveal] side effects.
+  // If motion is reduced or GSAP is missing, the page just shows content as-is.
   if (hasGsap && !reduce) {
     gsapL.registerPlugin(ScrollTrigger);
-
-    gsapL.from('.hero .hero-eyebrow', { y: 12, autoAlpha: 0, duration: 0.45, ease: 'power3.out', delay: 0.05 });
-    gsapL.from('.hero h1 .line > span', { yPercent: 60, autoAlpha: 0, duration: 0.7, ease: 'power3.out', delay: 0.12, stagger: 0.06 });
-    gsapL.from('.hero-lede', { y: 14, autoAlpha: 0, duration: 0.5, ease: 'power2.out', delay: 0.3 });
-    gsapL.from('.hero-cta', { y: 14, autoAlpha: 0, duration: 0.5, ease: 'power2.out', delay: 0.38 });
-    gsapL.from('.hero-meta', { autoAlpha: 0, duration: 0.5, delay: 0.46 });
-    gsapL.from('.hero-visual', { y: 20, autoAlpha: 0, duration: 0.6, ease: 'power2.out', delay: 0.5 });
-
-    gsapL.utils.toArray('[data-reveal]').forEach(function (el) {
-      if (el.closest('.hero') || el.closest('.ld-nav')) return;
-      gsapL.from(el, {
-        y: 20,
-        autoAlpha: 0,
-        duration: 0.55,
-        ease: 'power2.out',
-        scrollTrigger: { trigger: el, start: 'top 90%', once: true }
-      });
-    });
+    gsapL.to('.hero .hero-eyebrow', { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out', delay: 0.05 });
+    gsapL.to('.hero h1 .line > span', { opacity: 1, yPercent: 0, duration: 0.7, ease: 'power3.out', delay: 0.12, stagger: 0.06 });
+    gsapL.to('.hero-lede', { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out', delay: 0.3 });
+    gsapL.to('.hero-cta', { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out', delay: 0.38 });
+    gsapL.to('.hero-meta', { opacity: 1, duration: 0.5, delay: 0.46 });
+    gsapL.to('.hero-visual', { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out', delay: 0.5 });
   }
 
   window.addEventListener('beforeunload', function () {
