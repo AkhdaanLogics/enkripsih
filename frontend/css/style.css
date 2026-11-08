@@ -60,11 +60,8 @@
   --muted: #64748b;
   --dim: #94a3b8;
 
-  --accent: #0066FF;
-  --accent-line: #0066FF;
-  --accent-bg: #eff6ff;
-  --accent-hover: #1d4ed8;
-  --accent-tint: #dbeafe;
+  --accent-green: #0066FF;
+  --accent-amber: #0066FF;
 
   --positive: #1e7b4f;
   --negative: #c4242a;
