@@ -699,10 +699,7 @@
       var selectors = [
         ".commander-sent-scroll",
         ".receiver-chat-list-body",
-        ".receiver-message-container",
-        ".main-content",
-        "#appLayout",
-        "main",
+        ".receiver-message-container"
       ];
       selectors.forEach(function (sel) {
         document.querySelectorAll(sel).forEach(function (elm) {
@@ -826,9 +823,10 @@
 
     if (authGate) {
       var observer = new MutationObserver(function () {
-        var isLogin = !authGate.hidden;
-        if (btn) btn.hidden = isLogin;
-        if (isLogin && !menuDone("login")) {
+        var isAuthGateVisible = !authGate.hidden;
+        // The guide button should only be visible when NOT at the login screen.
+        if (btn) btn.hidden = isAuthGateVisible;
+        if (isAuthGateVisible && !menuDone("login")) {
           clearTimeout(window.__enkTourTimer);
           window.__enkTourTimer = setTimeout(function () {
             start("login");
