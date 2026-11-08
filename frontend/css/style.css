@@ -971,7 +971,7 @@ body {
 .receiver-message-header {
   height: var(--row-height);
   padding: 0 var(--pad);
-  background-color: var(--surface);
+  background-color: var(--ground);
   border-bottom: 1px solid var(--rule);
 }
 
