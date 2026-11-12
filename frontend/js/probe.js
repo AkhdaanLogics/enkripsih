@@ -46,7 +46,7 @@ async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
   console.log("Waiting for backend startup (Neon DB connection takes ~12s)...");
   for (let i = 0; i < 60; i++) {
     try {
-      const r = await fetch(`http://127.0.0.1:${PORT}/api/health`);
+      const r = await fetch(`https://127.0.0.1:${PORT}/api/health`, { agent: new (require('https').Agent)({ rejectUnauthorized: false }) });
       if (r.status === 200) { health = true; break; }
     } catch {}
     await sleep(500);
@@ -56,10 +56,11 @@ async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
   // login via API to obtain session cookie
   let sessionCookie = null;
   try {
-    const login = await fetch(`http://127.0.0.1:${PORT}/api/auth/login`, {
+    const login = await fetch(`https://127.0.0.1:${PORT}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password: process.env.ENKRIPSIH_PASSWORD || "npg_z25gJGferdMK" }),
+      agent: new (require('https').Agent)({ rejectUnauthorized: false })
     });
     const setCookie = login.headers.get("set-cookie") || "";
     console.log("login status:", login.status);

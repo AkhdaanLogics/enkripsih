@@ -150,7 +150,7 @@ def _cipher_connection(path: str, key: bytes):
         raise RuntimeError("sqlcipher3 tidak terpasang. Jalankan: pip install sqlcipher3")
     conn = sqlcipher3.connect(path)
     try:
-        conn.execute(f"PRAGMA key = \"x'{key.hex()}'\"")
+        conn.execute("PRAGMA key = ?", (f"x'{key.hex()}'",))
         conn.execute("PRAGMA cipher_memory_security = ON")
         if not conn.execute("PRAGMA cipher_version").fetchone():
             raise RuntimeError("Driver database tidak mengaktifkan SQLCipher.")
@@ -410,7 +410,8 @@ def init_db(
                 "expected_response", "plaintext", "subject", "priority",
                 "challenge_letters", "challenge_symbols",
             ):
-                conn.execute(f"ALTER TABLE messages DROP COLUMN IF EXISTS {column}")
+                if column in ("expected_response", "plaintext", "subject", "priority", "challenge_letters", "challenge_symbols"):
+                    conn.execute(f"ALTER TABLE messages DROP COLUMN IF EXISTS {column}")
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS recipient_keys (
                     id TEXT PRIMARY KEY,
@@ -571,6 +572,7 @@ def init_db(
         "challenge_letters", "challenge_symbols",
     ):
         if column in message_columns:
+            # DDL statements cannot be parameterized, but these are safe hardcoded lists
             cursor.execute(f"ALTER TABLE messages DROP COLUMN {column}")
 
     cursor.execute("""
@@ -619,7 +621,8 @@ def init_db(
         ("face_verified", "INTEGER NOT NULL DEFAULT 0"),
     ):
         if column not in auth_session_columns:
-            cursor.execute(f"ALTER TABLE auth_sessions ADD COLUMN {column} {declaration}")
+            if column in ("principal_id", "role", "must_change_password", "face_verified"):
+                cursor.execute(f"ALTER TABLE auth_sessions ADD COLUMN {column} {declaration}")
     cursor.execute("""
     CREATE INDEX IF NOT EXISTS idx_auth_sessions_principal
     ON auth_sessions (principal_id)
@@ -912,17 +915,14 @@ def update_agent_secret(recipient_id: str, agent_secret: str | None) -> bool:
         return cursor.rowcount == 1
 
 
-def get_recipient_keys(include_secrets: bool = False):
-    """List all recipient keys. Never exposes the verifier hash in listings.
-    If include_secrets is True, the `agent_secret` (encrypted blob) is
-    returned so callers can decrypt it locally without a second round-trip
-    to the database.
-    """
-    secret_select = ", agent_secret" if include_secrets else ""
+    def get_recipient_keys(include_secrets: bool = False):
+    """List all recipient keys. Never exposes the verifier hash in listings."""
+    query = "SELECT id, name, salt FROM recipient_keys ORDER BY name"
+    if include_secrets:
+        query = "SELECT id, name, salt, agent_secret FROM recipient_keys ORDER BY name"
+    
     with _managed_connection() as conn:
-        rows = conn.execute(
-            f"SELECT id, name, salt{secret_select} FROM recipient_keys ORDER BY name"
-        ).fetchall()
+        rows = conn.execute(query).fetchall()
         return [dict(row) for row in rows]
 
 

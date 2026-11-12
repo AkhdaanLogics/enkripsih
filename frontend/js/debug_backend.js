@@ -33,7 +33,7 @@ backend.stderr.on("data", d => { out += d.toString(); });
 
 setTimeout(async () => {
   try {
-    const r = await fetch("http://127.0.0.1:8099/api/health");
+    const r = await fetch("https://127.0.0.1:8099/api/health", { agent: new (require('https').Agent)({ rejectUnauthorized: false }) });
     console.log("status:", r.status);
   } catch (e) {
     console.log("err", e.message);
