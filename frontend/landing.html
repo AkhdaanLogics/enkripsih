@@ -204,19 +204,19 @@ AES-GCM.encrypt(plaintext) → <span class="ok">paket terkirim</span></pre>
     <script src="/js/landing_demo.js"></script>
     <div id="cursor" class="custom-cursor" aria-hidden="true"></div>
     <style>
-      body { cursor: none; }
+      body, button, a { cursor: none !important; }
       #cursor {
         position: fixed;
         top: 0; left: 0;
-        width: 20px; height: 20px;
+        width: 32px; height: 32px;
         pointer-events: none;
         z-index: 9999;
         display: grid; place-items: center;
         transition: transform 0.05s linear;
         color: var(--accent);
-        text-shadow: 0 0 8px rgba(0,102,255,0.4);
+        text-shadow: 0 0 12px rgba(0,102,255,0.6);
       }
-      #cursor::before { content: '△'; font-size: 20px; }
+      #cursor::before { content: '△'; font-size: 32px; }
       body.clicking #cursor { color: #FF4D4D; }
       body.clicking #cursor::before { content: '✕'; }
       body.scrolling #cursor { color: #FFD700; }
