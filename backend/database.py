@@ -916,8 +916,8 @@ def update_agent_secret(recipient_id: str, agent_secret: str | None) -> bool:
 
 
     def get_recipient_keys(include_secrets: bool = False):
-    """List all recipient keys. Never exposes the verifier hash in listings."""
-    query = "SELECT id, name, salt FROM recipient_keys ORDER BY name"
+        """List all recipient keys. Never exposes the verifier hash in listings."""
+        query = "SELECT id, name, salt FROM recipient_keys ORDER BY name"
     if include_secrets:
         query = "SELECT id, name, salt, agent_secret FROM recipient_keys ORDER BY name"
     
