@@ -215,8 +215,11 @@ AES-GCM.encrypt(plaintext) → <span class="ok">paket terkirim</span></pre>
         transition: transform 0.05s linear;
         color: var(--accent);
         text-shadow: 0 0 12px rgba(0,102,255,0.6);
+        /* Tambahkan mix-blend-mode untuk visibilitas kontras */
+        mix-blend-mode: difference;
       }
       #cursor::before { content: '△'; font-size: 32px; }
+      /* ... sisa style tetap sama ... */
       body.clicking #cursor { color: #FF4D4D; }
       body.clicking #cursor::before { content: '✕'; }
       body.scrolling #cursor { color: #FFD700; }
