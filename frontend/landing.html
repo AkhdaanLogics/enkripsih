@@ -148,17 +148,17 @@ AES-GCM.encrypt(plaintext) → <span class="ok">paket terkirim</span></pre>
           <p style="color:var(--fg-2);margin-top:14px;font-size:16px">Setiap challenge berbeda. Kombinasi challenge + respons menghasilkan kunci unik, jadi dua pesan tidak pernah berbagi kunci yang sama.</p>
           <a class="btn btn--ghost" style="margin-top:20px" href="https://wokwi.com/projects/478446530349223937" target="_blank" rel="noopener">Coba simulasi Wokwi</a>
         </div>
-        <div class="demo-card" data-reveal aria-hidden="true">
-          <div class="lbl">CHALLENGE</div>
-          <div class="demo-chips">
-            <span class="chip hot">△</span><span class="chip hot">▢</span><span class="chip hot">○</span><span class="chip hot">✕</span>
+          <div class="demo-card" data-reveal aria-hidden="true">
+            <div class="lbl">CHALLENGE</div>
+            <div class="demo-chips" id="challenge-chips">
+              <span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span>
+            </div>
+            <div class="lbl" style="margin-top:20px">RESPONSE (Cypher)</div>
+            <div class="demo-chips" id="response-chips">
+              <span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span>
+            </div>
+            <div class="foot"><span class="dot-pulse" aria-hidden="true"></span> Kunci sesi diturunkan dari respons</div>
           </div>
-          <div class="lbl" style="margin-top:20px">RESPONSE (Cypher)</div>
-          <div class="demo-chips">
-            <span class="chip">○</span><span class="chip">△</span><span class="chip">▢</span><span class="chip">✕</span><span class="chip">○</span><span class="chip">△</span><span class="chip">▢</span><span class="chip">✕</span><span class="chip">○</span><span class="chip">△</span><span class="chip">▢</span><span class="chip">✕</span>
-          </div>
-          <div class="foot"><span class="dot-pulse" aria-hidden="true"></span> Kunci sesi diturunkan dari respons</div>
-        </div>
       </div>
     </section>
 

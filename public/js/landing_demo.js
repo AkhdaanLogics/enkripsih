@@ -15,41 +15,45 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Animate Chips
-  const animateChips = async (container) => {
-    const chips = Array.from(container.querySelectorAll('.chip'));
+  const animateSequence = async () => {
     const symbols = ['△', '▢', '○', '✕'];
-    
-    // Reset
-    chips.forEach(c => {
-      c.style.opacity = '0';
-      c.style.transition = 'opacity 0.2s ease';
-    });
+    const containers = [
+      document.querySelector('#challenge-chips'),
+      document.querySelector('#response-chips')
+    ];
 
-    // Animate in
-    for (let i = 0; i < chips.length; i++) {
-      chips[i].textContent = symbols[Math.floor(Math.random() * symbols.length)];
-      chips[i].style.opacity = '1';
-      await new Promise(r => setTimeout(r, 80));
-    }
-
-    // Hold for 2s then fade out
-    await new Promise(r => setTimeout(r, 2000));
-    chips.forEach(c => c.style.opacity = '0');
-  };
-
-  const startLoop = async () => {
-    const demoChips = document.querySelectorAll('.demo-chips');
     while (true) {
-      for (const container of demoChips) {
-        await animateChips(container);
+      // Clear all
+      containers.forEach(cont => {
+        cont.querySelectorAll('.chip').forEach(c => {
+          c.textContent = '';
+          c.style.opacity = '0';
+        });
+      });
+
+      // Animate Challenge
+      for (const box of containers[0].querySelectorAll('.chip-box')) {
+        const chip = box.querySelector('.chip');
+        chip.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+        chip.style.opacity = '1';
+        await new Promise(r => setTimeout(r, 150));
       }
-      await new Promise(r => setTimeout(r, 500));
+
+      // Animate Response
+      for (const box of containers[1].querySelectorAll('.chip-box')) {
+        const chip = box.querySelector('.chip');
+        chip.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+        chip.style.opacity = '1';
+        await new Promise(r => setTimeout(r, 100));
+      }
+
+      await new Promise(r => setTimeout(r, 3000));
     }
   };
 
   const observer = new IntersectionObserver((entries) => {
     if (entries[0].isIntersecting) {
-      startLoop();
+      animateSequence();
       observer.disconnect();
     }
   }, { threshold: 0.5 });
