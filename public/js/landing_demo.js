@@ -16,21 +16,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Animate Chips
   const animateChips = async (container) => {
-    const chips = container.querySelectorAll('.chip');
+    const chips = Array.from(container.querySelectorAll('.chip'));
     const symbols = ['△', '▢', '○', '✕'];
-    chips.forEach(c => c.style.opacity = '0');
+    
+    // Reset
+    chips.forEach(c => {
+      c.style.opacity = '0';
+      c.style.transition = 'opacity 0.2s ease';
+    });
+
+    // Animate in
     for (let i = 0; i < chips.length; i++) {
       chips[i].textContent = symbols[Math.floor(Math.random() * symbols.length)];
       chips[i].style.opacity = '1';
-      chips[i].style.transition = 'opacity 0.2s ease';
       await new Promise(r => setTimeout(r, 80));
+    }
+
+    // Hold for 2s then fade out
+    await new Promise(r => setTimeout(r, 2000));
+    chips.forEach(c => c.style.opacity = '0');
+  };
+
+  const startLoop = async () => {
+    const demoChips = document.querySelectorAll('.demo-chips');
+    while (true) {
+      for (const container of demoChips) {
+        await animateChips(container);
+      }
+      await new Promise(r => setTimeout(r, 500));
     }
   };
 
   const observer = new IntersectionObserver((entries) => {
     if (entries[0].isIntersecting) {
-      const demoChips = document.querySelectorAll('.demo-chips');
-      demoChips.forEach((c, idx) => setTimeout(() => animateChips(c), idx * 1000));
+      startLoop();
       observer.disconnect();
     }
   }, { threshold: 0.5 });
