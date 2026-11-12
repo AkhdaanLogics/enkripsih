@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Animate Chips
   const animateSequence = async () => {
     const symbols = ['△', '▢', '○', '✕'];
+    const colors = ['c1', 'c2', 'c3', 'c4'];
     const containers = [
       document.querySelector('#challenge-chips'),
       document.querySelector('#response-chips')
@@ -28,13 +29,16 @@ document.addEventListener('DOMContentLoaded', () => {
         cont.querySelectorAll('.chip').forEach(c => {
           c.textContent = '';
           c.style.opacity = '0';
+          c.className = 'chip';
         });
       });
 
       // Animate Challenge
       for (const box of containers[0].querySelectorAll('.chip-box')) {
         const chip = box.querySelector('.chip');
-        chip.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+        const randIdx = Math.floor(Math.random() * symbols.length);
+        chip.textContent = symbols[randIdx];
+        chip.className = `chip ${colors[randIdx]}`;
         chip.style.opacity = '1';
         await new Promise(r => setTimeout(r, 150));
       }
@@ -42,7 +46,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Animate Response
       for (const box of containers[1].querySelectorAll('.chip-box')) {
         const chip = box.querySelector('.chip');
-        chip.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+        const randIdx = Math.floor(Math.random() * symbols.length);
+        chip.textContent = symbols[randIdx];
+        chip.className = `chip ${colors[randIdx]}`;
         chip.style.opacity = '1';
         await new Promise(r => setTimeout(r, 100));
       }
