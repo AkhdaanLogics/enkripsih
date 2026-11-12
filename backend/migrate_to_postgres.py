@@ -135,7 +135,7 @@ def migrate(source_path: Path, database_url: str, source_passphrase: str | None)
             column_list = ", ".join(columns)
             try:
                 source_columns = {
-                    row["name"] for row in source.execute(f"PRAGMA table_info({table})")
+                    row["name"] for row in source.execute("PRAGMA table_info(?)", (table,))
                 }
                 if not source_columns:
                     source_columns = {
@@ -153,18 +153,19 @@ def migrate(source_path: Path, database_url: str, source_passphrase: str | None)
                 if table == "users":
                     target.execute("DELETE FROM users WHERE id = ?", ("CMD-01",))
                 continue
-            rows = source.execute(
-                f"SELECT {', '.join(available_columns)} FROM {table}"
-            ).fetchall()
+        if table not in TABLE_COLUMNS:
+            continue
+        # ...
+        rows = source.execute(
+            f"SELECT {', '.join(available_columns)} FROM {table}"
+        ).fetchall()
             expected_counts[table] = len(rows)
             if table == "users" and not any(row["id"] == "CMD-01" for row in rows):
                 target.execute("DELETE FROM users WHERE id = ?", ("CMD-01",))
             if not rows:
                 continue
 
-            insert = (
-                f"INSERT INTO {table} ({column_list}) VALUES ({placeholders})"
-            )
+            insert = f"INSERT INTO {table} ({column_list}) VALUES ({placeholders})"
             if table == "users":
                 insert += """
                     ON CONFLICT (id) DO UPDATE SET
@@ -197,6 +198,7 @@ def migrate(source_path: Path, database_url: str, source_passphrase: str | None)
             table: target.execute(f"SELECT COUNT(*) AS count FROM {table}").fetchone()["count"]
             for table in TABLE_COLUMNS
         }
+
         if actual_counts != expected_counts:
             raise RuntimeError(
                 f"Jumlah record tidak cocok; sumber={expected_counts}, tujuan={actual_counts}."

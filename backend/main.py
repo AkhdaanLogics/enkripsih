@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
@@ -513,8 +514,8 @@ def _login_lockout_id(request: Request, account_id: str | None) -> str:
     if trusted_xff:
         forwarded = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
         if forwarded and _looks_like_ip(forwarded):
-            return f"ip:{forwarded}"
-    return f"ip:{client_host}"
+            return PlainTextResponse(f"ip:{forwarded}")
+    return PlainTextResponse(f"ip:{client_host}")
 
 
 def _is_trusted_proxy(request: Request) -> bool:
