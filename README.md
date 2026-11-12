@@ -15,7 +15,7 @@ Aplikasi web untuk mengirim pesan terenkripsi dari **Sender** ke banyak **Receiv
 - [Migrasi Lokal ke PostgreSQL](#migrasi-lokal-ke-postgresql)
 - [Pengujian](#pengujian)
 - [Catatan Keamanan](#catatan-keamanan)
-- [Dokumentasi & Materi](#dokumentasi--materi)
+- [Video Demo](#video-demo)
 
 ## Fitur Utama
 
@@ -123,7 +123,7 @@ Copy-Item .env.example .env
 notepad .env
 ```
 
-Atur `ENKRIPSIH_PASSWORD` ke password login unik minimal 16 karakter. Untuk Neon/PostgreSQL, isi `DATABASE_URL` menggunakan connection string dari panel provider dan pertahankan TLS (`sslmode=require`). Encode karakter khusus dalam password URL (misalnya `@` menjadi `%40`). Jangan memasukkan kredensial ke Git atau membagikannya.
+Atur `ENKRIPSIH_PASSWORD` ke password login unik minimal 16 karakter. Untuk Neon/PostgreSQL, isi `DATABASE_URL` menggunakan connection string dari panel provider dan pertahankan TLS (`sslmode=require`). Encode karakter khusus dalam password URL (misalnya `@` menjadi `%40`). Jangan memasukkan kredensial ke Git atau membagikannya. Jika teman Anda ingin testing lokal, berikan file `.env.example` dan minta dia membuat kredensial miliknya sendiri untuk keamanan.
 
 Sesi login otomatis berakhir setelah 5 menit tanpa aktivitas. Atur `ENKRIPSIH_SESSION_IDLE_TIMEOUT_SECONDS` di environment deployment untuk mengubahnya; nilainya harus antara 1 dan 86400 detik. Aktivitas aplikasi memperpanjang sesi, sedangkan heartbeat koneksi latar belakang tidak dihitung sebagai aktivitas.
 
@@ -175,7 +175,8 @@ Jalankan tes:
 
 Tes transmisi memeriksa endpoint pengiriman, penyimpanan ciphertext tanpa metadata/plaintext lama, verifikasi secret key, round-trip AES-GCM dengan kunci cocok, kegagalan kunci salah, autentikasi API, status pesan lama, serta penghapusan ciphertext. Saat ini: **34 test pass**.
 
-## Catatan Keamanan
+## Video Demo
+Lihat demonstrasi penggunaan alat fisik untuk membuka pesan di [`VIDEO_DEMO.md`](VIDEO_DEMO.md).
 
 - Gunakan hanya `localhost` untuk demo; API dan WebSocket memerlukan sesi login.
 - Secret key tidak dikirim sebagai field API, tetapi verifier dikirim untuk verifikasi. Kode frontend disajikan oleh aplikasi, sehingga server yang dikompromikan dapat mengubah kode enkripsi/dekripsi.

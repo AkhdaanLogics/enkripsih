@@ -13,3 +13,9 @@ _uv.out
 .taste-skill/
 node_modules/
 
+
+.agents/
+.claude/
+.taste-skill/
+logs/
+
