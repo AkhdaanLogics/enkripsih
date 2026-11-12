@@ -204,6 +204,7 @@ AES-GCM.encrypt(plaintext) → <span class="ok">paket terkirim</span></pre>
     <script src="/js/landing_demo.js"></script>
     <div id="cursor" class="custom-cursor" aria-hidden="true"></div>
     <style>
+      body { cursor: none; }
       #cursor {
         position: fixed;
         top: 0; left: 0;
@@ -211,14 +212,24 @@ AES-GCM.encrypt(plaintext) → <span class="ok">paket terkirim</span></pre>
         pointer-events: none;
         z-index: 9999;
         display: grid; place-items: center;
-        transition: transform 0.1s ease;
+        transition: transform 0.05s linear;
+        color: var(--accent);
+        text-shadow: 0 0 8px rgba(0,102,255,0.4);
       }
       #cursor::before { content: '△'; font-size: 20px; }
+      body.clicking #cursor { color: #FF4D4D; }
       body.clicking #cursor::before { content: '✕'; }
+      body.scrolling #cursor { color: #FFD700; }
       body.scrolling #cursor::before { content: '○'; }
+      body:has(button:disabled:hover) #cursor { color: #9dff8e; }
       body:has(button:disabled:hover) #cursor::before { content: '▢'; }
       body.glitching #cursor::before { animation: glitch 0.1s infinite; }
-      @keyframes glitch { 0%{content:'△'} 25%{content:'✕'} 50%{content:'▢'} 75%{content:'○'} }
+      @keyframes glitch { 
+        0%{content:'△'; color:#0066FF} 
+        25%{content:'✕'; color:#FF4D4D} 
+        50%{content:'▢'; color:#9dff8e} 
+        75%{content:'○'; color:#FFD700} 
+      }
     </style>
     <script>
       const cursor = document.getElementById('cursor');
