@@ -6,10 +6,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const video = demoCard.querySelector('#demoVideo');
   
   demoCard.addEventListener('mouseenter', () => {
-    video.play().catch(e => console.error("Autoplay prevented:", e));
+    // Gunakan promise untuk menghindari interrupt error
+    video.play().catch(e => {
+        if (e.name !== 'AbortError') console.error("Autoplay error:", e);
+    });
   });
 
   demoCard.addEventListener('mouseleave', () => {
+    // Reset video dengan aman
     video.pause();
     video.currentTime = 0;
   });
