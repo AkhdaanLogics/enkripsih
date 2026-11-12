@@ -290,9 +290,9 @@ section { scroll-margin-top: 80px; }
    ===================================================================== */
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   gap: 24px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .feature {
@@ -300,15 +300,20 @@ section { scroll-margin-top: 80px; }
   background: var(--bg-2);
   border: 1px solid var(--line);
   border-radius: var(--r);
-  padding: 28px;
+  padding: 32px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
-/* Membatasi kartu video agar tidak terlalu tinggi */
+/* Biarkan semua kartu memiliki tinggi yang sama dalam satu baris */
+.features-grid:has(.feature:nth-child(3n)) {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 .feature.demo-card {
-  height: auto;
+  height: 100%;
 }
 
 .demo-card .video-wrapper {
