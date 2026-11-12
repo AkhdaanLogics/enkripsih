@@ -197,10 +197,49 @@ AES-GCM.encrypt(plaintext) → <span class="ok">paket terkirim</span></pre>
   </footer>
 
   <!-- Vendored libs served via /static mount (CSP: script-src 'self') -->
-  <script src="/static/vendor/gsap.min.js"></script>
-  <script src="/static/vendor/ScrollTrigger.min.js"></script>
-  <script src="/static/vendor/lenis.min.js"></script>
-  <script src="/static/js/landing.js?v=enkripsih-v5"></script>
-  <script src="/js/landing_demo.js"></script>
+    <script src="/static/vendor/gsap.min.js"></script>
+    <script src="/static/vendor/ScrollTrigger.min.js"></script>
+    <script src="/static/vendor/lenis.min.js"></script>
+    <script src="/static/js/landing.js?v=enkripsih-v5"></script>
+    <script src="/js/landing_demo.js"></script>
+    <div id="cursor" class="custom-cursor" aria-hidden="true"></div>
+    <style>
+      #cursor {
+        position: fixed;
+        top: 0; left: 0;
+        width: 20px; height: 20px;
+        pointer-events: none;
+        z-index: 9999;
+        display: grid; place-items: center;
+        transition: transform 0.1s ease;
+      }
+      #cursor::before { content: '△'; font-size: 20px; }
+      body.clicking #cursor::before { content: '✕'; }
+      body.scrolling #cursor::before { content: '○'; }
+      body:has(button:disabled:hover) #cursor::before { content: '▢'; }
+      body.glitching #cursor::before { animation: glitch 0.1s infinite; }
+      @keyframes glitch { 0%{content:'△'} 25%{content:'✕'} 50%{content:'▢'} 75%{content:'○'} }
+    </style>
+    <script>
+      const cursor = document.getElementById('cursor');
+      document.addEventListener('mousemove', e => {
+        cursor.style.transform = `translate(${e.clientX - 10}px, ${e.clientY - 10}px)`;
+        resetGlitch();
+      });
+      document.addEventListener('mousedown', () => document.body.classList.add('clicking'));
+      document.addEventListener('mouseup', () => document.body.classList.remove('clicking'));
+      let scrollTimeout;
+      window.addEventListener('scroll', () => {
+        document.body.classList.add('scrolling');
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => document.body.classList.remove('scrolling'), 200);
+      });
+      let glitchTimeout = setTimeout(() => document.body.classList.add('glitching'), 60000);
+      function resetGlitch() {
+        document.body.classList.remove('glitching');
+        clearTimeout(glitchTimeout);
+        glitchTimeout = setTimeout(() => document.body.classList.add('glitching'), 60000);
+      }
+    </script>
 </body>
 </html>
