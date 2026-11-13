@@ -7,7 +7,7 @@
   <meta name="description" content="ENKRIPSIH: kirim pesan terenkripsi antar anggota terdaftar dengan passkey Cypher, HMAC-SHA256, dan enkripsi AES-GCM di browser.">
   <title>ENKRIPSIH · Pintar mengunci, tegas menjaga.</title>
 
-  <link rel="stylesheet" href="/static/css/landing.css?v=enkripsih-v7">
+  <link rel="stylesheet" href="/static/css/landing.css?v=enkripsih-v8">
 </head>
 <body>
 
@@ -102,8 +102,7 @@
               <h3>Enkripsi di browser, bukan di server</h3>
               <p>Pesan dienkripsi dengan AES-GCM 256-bit langsung di perangkatmu sebelum meninggalkan mesin. Server hanya meneruskan ciphertext, ia tidak memegang kunci untuk membacanya.</p>
             </div>
-            <pre class="code"><span class="hl">PBKDF2</span>(passkey, 200k) → kunci AES
-AES-GCM.encrypt(plaintext) → <span class="ok">paket terkirim</span></pre>
+            <pre class="code"><span><span class="hl">PBKDF2</span>(passkey, 200k) → kunci AES</span><span>AES-GCM.encrypt(plaintext) → <span class="ok">paket terkirim</span></span></pre>
           </article>
 
           <div class="features-sub">
