@@ -227,7 +227,7 @@ def list_agent_keys_from_db() -> list[tuple[str, str]]:
             continue
         try:
             key = decrypt_agent_secret(blob)
-        except Exception:
+        except Exception:  # nosec B112 — skip unparseable agent blobs; requires fresh registration
             # If the key can't be decrypted, skip it — the agent needs a
             # fresh registration or reissue.
             continue

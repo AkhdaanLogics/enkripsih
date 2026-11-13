@@ -392,7 +392,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 payload = json.loads(data)
                 if payload.get("type") == "PING":
                     await websocket.send_json({"type": "PONG", "time": datetime.now().isoformat()})
-            except Exception:  # noqa: B110 — WebSocket message parsing error, silently ignore
+            except Exception:  # nosec B110 — WebSocket message parsing error, silently ignore
                 pass
     except WebSocketDisconnect:
         manager.disconnect(websocket)
@@ -417,7 +417,7 @@ def api_health(request: Request):
     try:
         from .env_agents import list_agent_env_keys
         agent_key_count = len(list_agent_env_keys())
-    except Exception:  # noqa: B110 — agent key list is optional; failure should not crash the info endpoint
+    except Exception:  # nosec B110 — agent key list is optional; failure should not crash the info endpoint
         pass
     payload: dict = {
         "ok": bool(db_url) or has_password,
@@ -475,7 +475,7 @@ def login(req: LoginRequest, request: Request, response: Response):
     principal = {
         "principal_id": "CMD-01",
         "role": "COMMANDER",
-        "must_change_password": False,
+        "must_change_password": False,  # nosec B105 — literal bool flag, not a password
         "face_verified": False,
     }
     _store_session(token, expires_at, principal)
