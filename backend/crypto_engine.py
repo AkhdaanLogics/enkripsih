@@ -15,7 +15,7 @@ from cryptography.exceptions import InvalidTag
 
 CHAL_LEN = 4
 RESP_LEN = 12
-KEYBCA_SECRET_ENV = "ENKRIPSIH_KEYBCA_SECRET"
+KEYBCA_SECRET_ENV = "ENKRIPSIH_KEYBCA_SECRET"  # nosec B105 — env var name string, not a password
 KEYBCA_SECRET_MIN_LENGTH = 16
 
 NAMES = ["△", "○", "✕", "□"]   # 0=T 1=C 2=X 3=S

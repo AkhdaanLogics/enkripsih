@@ -101,7 +101,7 @@ def migrate(source_path: Path, database_url: str, source_passphrase: str | None)
         target = database.get_connection()
 
         counts_before = {
-            table: target.execute(f"SELECT COUNT(*) AS count FROM {table}").fetchone()["count"]
+            table: target.execute(f"SELECT COUNT(*) AS count FROM {table}").fetchone()["count"]  # nosec B608 — table from hardcoded list
             for table in (
                 "messages", "recipient_keys", "receiver_accounts", "audit_logs"
             )
@@ -157,7 +157,7 @@ def migrate(source_path: Path, database_url: str, source_passphrase: str | None)
             continue
         # ...
         rows = source.execute(
-            f"SELECT {', '.join(available_columns)} FROM {table}"
+            f"SELECT {', '.join(available_columns)} FROM {table}"  # nosec B608 — table/columns from hardcoded TABLE_COLUMNS allowlist
         ).fetchall()
             expected_counts[table] = len(rows)
             if table == "users" and not any(row["id"] == "CMD-01" for row in rows):
@@ -165,7 +165,7 @@ def migrate(source_path: Path, database_url: str, source_passphrase: str | None)
             if not rows:
                 continue
 
-            insert = f"INSERT INTO {table} ({column_list}) VALUES ({placeholders})"
+            insert = f"INSERT INTO {table} ({column_list}) VALUES ({placeholders})"  # nosec B608 — table/columns from hardcoded TABLE_COLUMNS allowlist
             if table == "users":
                 insert += """
                     ON CONFLICT (id) DO UPDATE SET
@@ -195,7 +195,7 @@ def migrate(source_path: Path, database_url: str, source_passphrase: str | None)
             FROM audit_logs
         """)
         actual_counts = {
-            table: target.execute(f"SELECT COUNT(*) AS count FROM {table}").fetchone()["count"]
+            table: target.execute(f"SELECT COUNT(*) AS count FROM {table}").fetchone()["count"]  # nosec B608 — table from hardcoded TABLE_COLUMNS allowlist
             for table in TABLE_COLUMNS
         }
 

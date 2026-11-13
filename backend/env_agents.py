@@ -18,7 +18,7 @@ _AGENT_LINE_RE = re.compile(
     re.MULTILINE,
 )
 
-_KEYBCA_SECRET_ENV = "ENKRIPSIH_KEYBCA_SECRET"
+_KEYBCA_SECRET_ENV = "ENKRIPSIH_KEYBCA_SECRET"  # nosec B105 — env var name string, not a password
 
 
 def _get_master_key() -> bytes:

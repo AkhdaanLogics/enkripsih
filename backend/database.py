@@ -25,7 +25,7 @@ from .key_protection import seal, unseal
 DB_PATH = os.environ.get("ENKRIPSIH_DB_PATH") or os.path.join(os.path.dirname(__file__), "enkripsih.db")
 DB_KEY_PURPOSE = b"EKY1"
 LEGACY_DPAPI_KEY_SUFFIX = ".key.dpapi"
-PASSPHRASE_KEY_SUFFIX = ".key.argon2"
+PASSPHRASE_KEY_SUFFIX = ".key.argon2"  # nosec B105 — file extension suffix, not a password
 _KEY_CACHE: dict[tuple[str, str, int, int], bytes] = {}
 
 
@@ -411,7 +411,8 @@ def init_db(
                 "challenge_letters", "challenge_symbols",
             ):
                 if column in ("expected_response", "plaintext", "subject", "priority", "challenge_letters", "challenge_symbols"):
-                    conn.execute(f"ALTER TABLE messages DROP COLUMN IF EXISTS {column}")
+                    # DDL cannot use bound parameters; table/column names are from a hardcoded allowlist
+                    conn.execute(f"ALTER TABLE messages DROP COLUMN IF EXISTS {column}")  # nosec B608
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS recipient_keys (
                     id TEXT PRIMARY KEY,
@@ -572,8 +573,8 @@ def init_db(
         "challenge_letters", "challenge_symbols",
     ):
         if column in message_columns:
-            # DDL statements cannot be parameterized, but these are safe hardcoded lists
-            cursor.execute(f"ALTER TABLE messages DROP COLUMN {column}")
+            # DDL cannot be parameterized; `column` comes from a hardcoded migration allowlist
+            cursor.execute(f"ALTER TABLE messages DROP COLUMN {column}")  # nosec B608
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS recipient_keys (
@@ -622,7 +623,8 @@ def init_db(
     ):
         if column not in auth_session_columns:
             if column in ("principal_id", "role", "must_change_password", "face_verified"):
-                cursor.execute(f"ALTER TABLE auth_sessions ADD COLUMN {column} {declaration}")
+                # DDL cannot be parameterized; both values come from a hardcoded allowlist tuple
+                cursor.execute(f"ALTER TABLE auth_sessions ADD COLUMN {column} {declaration}")  # nosec B608
     cursor.execute("""
     CREATE INDEX IF NOT EXISTS idx_auth_sessions_principal
     ON auth_sessions (principal_id)

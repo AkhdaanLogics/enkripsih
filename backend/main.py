@@ -7,6 +7,7 @@ import json
 import asyncio
 import hmac
 import hashlib
+import html
 import secrets
 import sys
 import time
@@ -391,7 +392,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 payload = json.loads(data)
                 if payload.get("type") == "PING":
                     await websocket.send_json({"type": "PONG", "time": datetime.now().isoformat()})
-            except Exception:
+    except Exception:  # noqa: B110 — WebSocket message parsing error, silently ignore
                 pass
     except WebSocketDisconnect:
         manager.disconnect(websocket)
@@ -416,7 +417,7 @@ def api_health(request: Request):
     try:
         from .env_agents import list_agent_env_keys
         agent_key_count = len(list_agent_env_keys())
-    except Exception:
+    except Exception:  # noqa: B110 — agent key list is optional; failure should not crash the info endpoint
         pass
     payload: dict = {
         "ok": bool(db_url) or has_password,
@@ -514,7 +515,7 @@ def _login_lockout_id(request: Request, account_id: str | None) -> str:
     if trusted_xff:
         forwarded = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
         if forwarded and _looks_like_ip(forwarded):
-            return f"ip:{forwarded}"
+            return f"ip:{html.escape(forwarded)}"
     return f"ip:{client_host}"
 
 
