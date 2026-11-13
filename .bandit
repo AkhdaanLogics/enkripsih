@@ -1,2 +1,4 @@
 [bandit]
+# Test fixtures legitimately use dummy passwords/tokens — suppress false positives.
+targets = backend/tests/
 skips = B105
