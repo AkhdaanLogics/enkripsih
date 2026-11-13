@@ -74,31 +74,40 @@
     return out;
   }
 
-  // ✕ real X — thick diagonal strokes, built from 4 circular arcs at inner corners
-  // Each inner corner is smoothed with a quarter-circle arc of radius rArc
-  // Outer corners remain sharp. Path closes without self-intersection.
+  // ✕ real X — build "+" then rotate 45°, resampled to N even points
   function buildCross() {
-    var R  = 9.2;   // arm tip distance from center
-    var hw = 2.8;   // half-width of each diagonal stroke (controls thickness)
-    var rArc = 2.5; // radius of rounded inner corners
+    var L = 8.5;   // arm length from center
+    var h = 2.2;   // half-width of each stroke
 
-    // Build N points along 4 symmetric arcs (one per quadrant), each spanning PI/2 radians
-    // Arc 1 (top-left quadrant): sweeps from left-tip direction (π) to top-tip direction (3π/2)
-    //   Centered at the rounded inner corner near (-hw, -hw) offset by (CX, CY)
-    var pts = [];
-    var segPts = N / 4;
-    for (var q = 0; q < 4; q++) {
-      var cx0 = CX + (q < 2 ? -hw : hw);
-      var cy0 = CY + (q % 2 === 0 ? -hw : hw);
-      // Arc starts perpendicular to arm direction, sweeps PI/2 CW
-      var startA = Math.PI       + q * Math.PI / 2;  // arc start tangent angle
-      for (var j = 0; j < segPts; j++) {
-        var t = j / segPts;
-        var a  = startA + t * Math.PI / 2;            // sweep PI/2 CW per quadrant
-        pts.push([cx0 + rArc * Math.cos(a), cy0 + rArc * Math.sin(a)]);
-      }
+    // 12 perimeter vertices of "+" in CW order
+    var plus = [
+      [-h, -L], [ h, -L], [ h, -h], [ L, -h],
+      [ L,  h], [ h,  h], [ h,  L], [-h,  L],
+      [-h,  h], [-L,  h], [-L, -h], [-h, -h]
+    ];
+
+    // Rotate 45° → becomes ✕
+    var c = Math.cos(Math.PI / 4), s = Math.sin(Math.PI / 4);
+    var poly = plus.map(function(p) {
+      return [CX + p[0] * c - p[1] * s, CY + p[0] * s + p[1] * c];
+    });
+
+    // Arc-length resample to N even points
+    var lens = [], total = 0;
+    for (var i = 0; i < poly.length; i++) {
+      var a = poly[i], b = poly[(i + 1) % poly.length];
+      var d = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      lens.push(d); total += d;
     }
-    return pts;
+    var out = [], seg = 0, acc = 0;
+    for (var k = 0; k < N; k++) {
+      var target = k / N * total;
+      while (acc + lens[seg] < target) { acc += lens[seg]; seg++; }
+      var t = (target - acc) / lens[seg];
+      var p0 = poly[seg], p1 = poly[(seg + 1) % poly.length];
+      out.push([lerp(p0[0], p1[0], t), lerp(p0[1], p1[1], t)]);
+    }
+    return out;
   }
 
   var SHAPES = [
