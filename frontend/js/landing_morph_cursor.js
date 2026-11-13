@@ -72,24 +72,29 @@
     }
     return out;
   }
-  // ✕ proper cross — 8-point silhouette (top → top-right inner → right → bottom-right inner → bottom → left → left inner → top)
+  // ✕ proper cross — 12-point perimeter: 4 diagonal arms + 4 horizontal + 4 vertical inner notches
   function buildCross() {
-    var L = 9, w = L * 0.42;
-    // 8 outer vertices of the X silhouette, ordered clockwise
+    var tip = 9.2, notch = 3.0;
+    // Perimeter traced CW starting from top arm:
+    //   top → notch-tr → right-inner-top → right tip → right-inner-bot → bottom → notch-bl → left → notch-tl → back to top
     var V = [
-      [CX,       CY-L],   // 0 top tip
-      [CX+w,     CY-w],   // 1 top-right inner corner
-      [CX+L,     CY  ],   // 2 right tip
-      [CX+w,     CY+w],   // 3 bottom-right inner corner
-      [CX,       CY+L],   // 4 bottom tip
-      [CX-w,     CY+w],   // 5 bottom-left inner corner
-      [CX-L,     CY  ],   // 6 left tip
-      [CX-w,     CY-w],   // 7 top-left inner corner
+      [CX,             CY-tip],     // 0 top tip
+      [CX+notch,       CY-notch],   // 1 top-right inner notch
+      [CX+tip*0.7,     CY-tip*0.35],// 2 horizontal-right upper
+      [CX+tip,         CY],         // 3 right tip
+      [CX+tip*0.7,     CY+tip*0.35],// 4 horizontal-right lower
+      [CX+notch,       CY+notch],   // 5 bottom-right inner notch
+      [CX,             CY+tip],     // 6 bottom tip
+      [CX-notch,       CY+notch],   // 7 bottom-left inner notch
+      [CX-tip*0.7,     CY+tip*0.35],// 8 horizontal-left lower
+      [CX-tip,         CY],         // 9 left tip
+      [CX-tip*0.7,     CY-tip*0.35],// 10 horizontal-left upper
+      [CX-notch,       CY-notch],   // 11 top-left inner notch
     ];
     var out = [];
     for (var i=0; i<N; i++) {
-      var f=i/N*8, seg=Math.floor(f)%8, t=easeS(f-Math.floor(f));
-      out.push([lerp(V[seg][0],V[(seg+1)%8][0],t), lerp(V[seg][1],V[(seg+1)%8][1],t)]);
+      var f=i/N*12, seg=Math.floor(f)%12, t=easeS(f-Math.floor(f));
+      out.push([lerp(V[seg][0],V[(seg+1)%12][0],t), lerp(V[seg][1],V[(seg+1)%12][1],t)]);
     }
     return out;
   }
