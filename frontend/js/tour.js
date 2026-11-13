@@ -298,10 +298,34 @@
     var inView = r.top >= v.offY + offset && r.bottom <= v.offY + v.h - offset - footClear;
     if (inView) return;
 
+    // Direct-known scrollers: these sit inside the right-side cards and
+    // scrolling them moves only the message list, keeping the card header
+    // (and refresh button) pinned at the top.
+    var direct = [
+      document.getElementById("commanderSentList"),
+      document.querySelector(".receiver-chat-list-body"),
+      document.querySelector(".receiver-message-container"),
+    ];
+    for (var i = 0; i < direct.length; i++) {
+      var el = direct[i];
+      if (!el) continue;
+      var st = window.getComputedStyle(el);
+      var ov = st.overflowY || st.overflow || "";
+      if (ov !== "auto" && ov !== "scroll") continue;
+      var er = el.getBoundingClientRect();
+      // Only touch this scroller if the target is physically inside it
+      if (r.top < er.top - 1 || r.bottom > er.bottom + 1) continue;
+      var inContainerView = r.top >= er.top + offset && r.bottom <= er.bottom - offset;
+      if (inContainerView) return;
+      el.scrollTop = Math.max(0, el.scrollTop + r.top - er.top - offset);
+      return;
+    }
+
+    // Fallback: walk up the ancestor chain looking for any scrollable parent.
     var p = elm.parentElement;
     while (p && p !== document.body && p !== document.documentElement) {
-      var st = window.getComputedStyle(p);
-      var overflowY = st.overflowY || st.overflow || "";
+      var st2 = window.getComputedStyle(p);
+      var overflowY = st2.overflowY || st2.overflow || "";
       if (overflowY === "auto" || overflowY === "scroll") {
         var rElm = elm.getBoundingClientRect();
         var rP = p.getBoundingClientRect();
@@ -312,12 +336,9 @@
       }
       p = p.parentElement;
     }
+
+    // Last resort: scroll document root.
     var sr = scrollRoot();
-    // Minimal scroll: park target near the top of the viewport (with a small
-    // offset) so the fixed card can sit BELOW it without covering it. This
-    // is far more predictable than centering, which forces the card up over
-    // the target. Footer clearance is reserved so the card never hides it.
-    var desiredTop = v.offY + offset + footClear;
     var desiredScroll = Math.max(0, sr.scrollTop + (r.top - v.offY) - offset - footClear);
     sr.scrollTop = desiredScroll;
   }
@@ -742,6 +763,14 @@
     overlay.hidden = false;
     overlay.classList.add("is-open");
     lockScroll(true);
+
+    // Reset inner scrollers to top so targets near the top of cards are visible.
+    // Body scroll is locked but inner overflow:auto containers retain their
+    // previous scroll positions from earlier interactions.
+    document.querySelectorAll(".sent-list-scroll, .receiver-chat-list-body, .receiver-message-container").forEach(function (el) {
+      el.scrollTop = 0;
+    });
+
     render();
     window.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", onResize);

@@ -115,8 +115,11 @@ const Commander = {
       }
       if (selectedId) select.value = selectedId;
       if (list) {
-        list.replaceChildren();
-        if (!data.recipients.length) {
+         list.replaceChildren();
+         const scrollWrap = document.createElement("div");
+         scrollWrap.className = "members-list-scroll";
+         list.appendChild(scrollWrap);
+         if (!data.recipients.length) {
           const empty = document.createElement("div");
           empty.className = "list-placeholder";
           const icon = document.createElement("div");
@@ -130,8 +133,8 @@ const Commander = {
           sub.className = "list-placeholder-sub";
           sub.textContent = "Daftarkan anggota di panel sebelah kiri untuk mulai mengirim pesan terenkripsi.";
           empty.append(icon, title, sub);
-          list.append(empty);
-        } else {
+           scrollWrap.append(empty);
+         } else {
           const members = document.createElement("div");
           members.className = "recipient-list";
           for (const recipient of data.recipients) {
@@ -174,9 +177,9 @@ const Commander = {
 
             actionRow.append(accountButton, reissueButton, deleteButton);
             item.append(info, actionRow);
-            members.append(item);
-          }
-          list.append(members);
+             members.append(item);
+           }
+           scrollWrap.append(members);
         }
       }
       } catch (error) {
