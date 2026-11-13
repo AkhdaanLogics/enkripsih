@@ -74,39 +74,31 @@
     return out;
   }
 
-  // ✕ real X — two diagonal thick strokes, traced as closed perimeter CW
-  // 8 perimeter vertices → 10 pts per vertex × 8 = N segments
-  // Order CW from top-left outer tip:
-  //   tl-out → tl-in → tr-in → tr-out → br-out → br-in → bl-in → bl-out → close
+  // ✕ real X — thick diagonal strokes, built from 4 circular arcs at inner corners
+  // Each inner corner is smoothed with a quarter-circle arc of radius rArc
+  // Outer corners remain sharp. Path closes without self-intersection.
   function buildCross() {
-    var R = 9.2;   // tip distance from center
-    var W = 3.0;   // half-width of stroke (controls thickness)
-    // Perimeter points (CW): outer corner → inner corner → …
-    // tl-out: top-left corner of upper-left arm   (upper-leftmost)
-    // tl-in:  inner junction of upper-left arm    (where it meets horizontal midline)
-    // tr-in:  inner junction of upper-right arm
-    // tr-out: top-right corner of upper-right arm
-    // br-out: bottom-right corner of lower-right arm
-    // br-in:  inner junction of lower-right arm
-    // bl-in:  inner junction of lower-left arm
-    // bl-out: bottom-left corner of lower-left arm
-    var P = [
-      [CX - R*0.7, CY - R       ],   // 0 tl-out  (upper-left tip)
-      [CX - W,     CY - W       ],   // 1 tl-in   (left of center, above midline)
-      [CX + W,     CY - W       ],   // 2 tr-in   (right of center, above midline)
-      [CX + R*0.7, CY - R       ],   // 3 tr-out  (upper-right tip)
-      [CX + R*0.7, CY + R       ],   // 4 br-out  (lower-right tip)
-      [CX + W,     CY + W       ],   // 5 br-in   (right of center, below midline)
-      [CX - W,     CY + W       ],   // 6 bl-in   (left of center, below midline)
-      [CX - R*0.7, CY + R       ],   // 7 bl-out  (lower-left tip)
-    ];
-    var out = [], segLen = N / P.length;
-    for (var i = 0; i < N; i++) {
-      var fi = i / segLen, seg = Math.floor(fi) % P.length, t = fi - Math.floor(fi);
-      out.push([lerp(P[seg][0],  P[(seg+1)%P.length][0],  t),
-                lerp(P[seg][1],  P[(seg+1)%P.length][1],  t)]);
+    var R  = 9.2;   // arm tip distance from center
+    var hw = 2.8;   // half-width of each diagonal stroke (controls thickness)
+    var rArc = 2.5; // radius of rounded inner corners
+
+    // Build N points along 4 symmetric arcs (one per quadrant), each spanning PI/2 radians
+    // Arc 1 (top-left quadrant): sweeps from left-tip direction (π) to top-tip direction (3π/2)
+    //   Centered at the rounded inner corner near (-hw, -hw) offset by (CX, CY)
+    var pts = [];
+    var segPts = N / 4;
+    for (var q = 0; q < 4; q++) {
+      var cx0 = CX + (q < 2 ? -hw : hw);
+      var cy0 = CY + (q % 2 === 0 ? -hw : hw);
+      // Arc starts perpendicular to arm direction, sweeps PI/2 CW
+      var startA = Math.PI       + q * Math.PI / 2;  // arc start tangent angle
+      for (var j = 0; j < segPts; j++) {
+        var t = j / segPts;
+        var a  = startA + t * Math.PI / 2;            // sweep PI/2 CW per quadrant
+        pts.push([cx0 + rArc * Math.cos(a), cy0 + rArc * Math.sin(a)]);
+      }
     }
-    return out;
+    return pts;
   }
 
   var SHAPES = [
