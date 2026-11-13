@@ -74,25 +74,22 @@
     return out;
   }
 
-  // ✕ two thick diagonal strokes forming an X
-  // Outline: trace around perimeter — 8 vertices, CW from top-left
+  // ✕ two thick diagonal strokes forming an X — 8-point CW perimeter
   function buildCross() {
-    var tip = 9.2, notch = 2.8;
-    // 8 vertices CW: top-left-out → top-inner → top-right-out → right-inner →
-    //                bottom-right-out → bottom-inner → bottom-left-out → left-inner → close
+    var tip = 9.2, mid = 4.0;
+    // Outer boundary traced CW: top-left-out → top-inner-l → top-inner-r → top-right-out
+    //                          → bot-right-out → bot-inner-r → bot-inner-l → bot-left-out → close
     var pts = [
-      [CX - tip,       CY - notch],   // 0 top-left outer
-      [CX - notch,     CY - tip],     // 1 top-inner
-      [CX + notch,     CY - tip],     // 2 top-right inner
-      [CX + tip,       CY - notch],   // 3 top-right outer
-      [CX + tip,       CY + notch],   // 4 bottom-right outer
-      [CX + notch,     CY + tip],     // 5 bottom-inner
-      [CX - notch,     CY + tip],     // 6 bottom-left inner
-      [CX - tip,       CY + notch],   // 7 bottom-left outer
+      [CX - tip,     CY - mid],   // 0 tl outer  (left-leaning, upper)
+      [CX - mid,     CY - tip],   // 1 tl inner  (top-leaning, left)
+      [CX + mid,     CY - tip],   // 2 tr inner  (top-leaning, right)
+      [CX + tip,     CY - mid],   // 3 tr outer  (right-leaning, upper)
+      [CX + tip,     CY + mid],   // 4 br outer  (right-leaning, lower)
+      [CX + mid,     CY + tip],   // 5 br inner  (bottom-leaning, right)
+      [CX - mid,     CY + tip],   // 6 bl inner  (bottom-leaning, left)
+      [CX - tip,     CY + mid],   // 7 bl outer  (left-leaning, lower)
     ];
-    // Resample to N points along the 8-segment perimeter
-    var out = [];
-    var perSeg = N / 8;
+    var out = [], perSeg = N / 8;
     for (var i = 0; i < N; i++) {
       var fi = i / perSeg, seg = Math.floor(fi) % 8, t = fi - Math.floor(fi);
       out.push([lerp(pts[seg][0], pts[(seg+1)%8][0], t),
