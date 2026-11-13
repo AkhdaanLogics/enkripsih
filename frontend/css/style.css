@@ -2606,28 +2606,6 @@ a:focus-visible {
 }
 
 
-/* === Transmission notice after send === */
-.transmission-notice {
-  margin-top: 18px;
-  padding: 14px 16px;
-  background: var(--pill-positive-bg);
-  border: 1px solid color-mix(in srgb, var(--positive) 25%, transparent);
-  border-radius: var(--radius-control);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.transmission-notice strong {
-  color: var(--pill-positive-ink);
-  font-size: 14px;
-}
-
-.transmission-notice p {
-  color: var(--muted);
-  font-size: 13px;
-}
-
 /* === Card full-width for receiver view === */
 #view-receiver .tactical-card {
   width: 100%;
@@ -3105,5 +3083,140 @@ body.is-tour-active {
   .tour-panel,
   .tour-highlight {
     transition: none;
+  }
+}
+
+/* === Confirmation Card Modal === */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+.confirm-overlay:not([hidden]) {
+  opacity: 1;
+  pointer-events: all;
+}
+.confirm-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 28px 32px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: var(--elevation-3);
+  animation: modal-pop-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes modal-pop-in {
+  from { transform: scale(0.92) translateY(12px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+.confirm-message {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  margin-bottom: 22px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* === Success Modal (checkmark) === */
+.success-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10002;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.success-overlay:not([hidden]) {
+  opacity: 1;
+  pointer-events: all;
+}
+.success-overlay.success-exit {
+  opacity: 0;
+}
+.success-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 36px 40px 32px;
+  text-align: center;
+  max-width: 360px;
+  width: 90%;
+  box-shadow: var(--elevation-3);
+  animation: modal-pop-in 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.success-icon-wrap {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 18px;
+}
+.success-checkmark {
+  width: 100%;
+  height: 100%;
+}
+.success-circle {
+  stroke: var(--positive);
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  animation: circle-stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+.success-path {
+  stroke: var(--positive);
+  stroke-dasharray: 86;
+  stroke-dashoffset: 86;
+  animation: checkmark-stroke 0.45s 0.55s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+@keyframes circle-stroke {
+  from { stroke-dashoffset: 166; }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes checkmark-stroke {
+  from { stroke-dashoffset: 86; }
+  to   { stroke-dashoffset: 0; }
+}
+.success-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+.success-detail {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+@media (max-width: 480px) {
+  .confirm-card,
+  .success-card {
+    padding: 22px 20px;
+    width: calc(100vw - 32px);
+  }
+  .confirm-actions {
+    flex-direction: column-reverse;
+  }
+  .confirm-actions .btn-tactical {
+    width: 100%;
   }
 }

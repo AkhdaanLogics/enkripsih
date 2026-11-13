@@ -616,7 +616,12 @@ const Receiver = {
   },
 
   async burnMessage(messageId) {
-    if (!confirm("Hapus ciphertext pesan ini secara permanen?")) return;
+    await new Promise((resolve) => {
+      showConfirmDialog(
+        "Hapus ciphertext pesan ini secara permanen?",
+        resolve
+      );
+    });
     ProcessingModal.show("Menghapus ciphertext…", 50);
     try {
       const result = await this.requestJSON(`/api/messages/${encodeURIComponent(messageId)}/burn`, {

@@ -353,6 +353,31 @@
     </div>
   </div>
 
+  <!-- Confirmation Card Modal -->
+  <div class="confirm-overlay" id="confirmOverlay" hidden>
+    <div class="confirm-card">
+      <p class="confirm-message" id="confirmMessage"></p>
+      <div class="confirm-actions">
+        <button class="btn-tactical btn-tactical-danger" id="confirmYes">Ya, Lanjutkan</button>
+        <button class="btn-tactical btn-tactical-secondary" id="confirmNo">Batal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Modal with checkmark animation -->
+  <div class="success-overlay" id="successOverlay" hidden>
+    <div class="success-card">
+      <div class="success-icon-wrap">
+        <svg class="success-checkmark" viewBox="0 0 52 52" aria-hidden="true">
+          <circle class="success-circle" cx="26" cy="26" r="24" fill="none" stroke-width="3"/>
+          <path class="success-path" d="M14 27l8 8 16-16" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h3 class="success-title" id="successTitle"></h3>
+      <p class="success-detail" id="successDetail"></p>
+    </div>
+  </div>
+
   <!-- Footer -->
   <footer class="app-footer">
     <p>© 2026 <span class="footer-brand">Ayah Ini Arahnya Kemana</span> Team. Seluruh hak cipta dilindungi.</p>

@@ -58,7 +58,7 @@ const Commander = {
     document.getElementById("recipientSecretKey").value = "";
     document.getElementById("intelMessage").value = "";
     this.clearRegisteredKey();
-    document.getElementById("lastTransmitNotice").replaceChildren();
+    document.getElementById("lastTransmitNotice")?.replaceChildren();
   },
 
   clearRegisteredKey() {
@@ -322,76 +322,73 @@ const Commander = {
   },
 
   async issueReceiverAccount(recipient) {
-    if (!confirm(`Buat/reset akun receiver untuk ${recipient.name}? Sesi aktif anggota akan dihentikan.`)) {
-      return;
-    }
-    if (document.getElementById("registeredKeyNotice").hidden === false) {
-      this.clearRegisteredKey();
-    }
-    this.clearReceiverAccountNotice();
-    ProcessingModal.show("Membuat akun receiver…", 50);
-    try {
-      const result = await this.requestJSON(
-        `/api/recipients/${encodeURIComponent(recipient.id)}/account`,
-        { method: "POST" }
-      );
-      document.getElementById("receiverAccountName").textContent = recipient.name;
-      document.getElementById("receiverAccountUsername").textContent = result.username;
-      document.getElementById("receiverAccountPassword").textContent =
-        result.temporary_password;
-      document.getElementById("receiverAccountNotice").hidden = false;
-      showToast("Password sementara dibuat. Bagikan secara aman dan terpisah.", "success");
-    } catch (error) {
-      console.error("Receiver account provisioning error:", error);
-      showToast(error.message || "Akun receiver tidak dapat dibuat.", "error");
-    } finally {
-      ProcessingModal.hide();
-    }
+    showConfirmDialog(
+      `Buat/reset akun receiver untuk ${recipient.name}?\n\nSesi aktif anggota akan dihentikan.`,
+      async () => {
+        if (document.getElementById("registeredKeyNotice").hidden === false) {
+          this.clearRegisteredKey();
+        }
+        this.clearReceiverAccountNotice();
+        ProcessingModal.show("Membuat akun receiver…", 50);
+        try {
+          const result = await this.requestJSON(
+            `/api/recipients/${encodeURIComponent(recipient.id)}/account`,
+            { method: "POST" }
+          );
+          document.getElementById("receiverAccountName").textContent = recipient.name;
+          document.getElementById("receiverAccountUsername").textContent = result.username;
+          document.getElementById("receiverAccountPassword").textContent =
+            result.temporary_password;
+          document.getElementById("receiverAccountNotice").hidden = false;
+          showToast("Password sementara dibuat. Bagikan secara aman dan terpisah.", "success");
+        } catch (error) {
+          console.error("Receiver account provisioning error:", error);
+          showToast(error.message || "Akun receiver tidak dapat dibuat.", "error");
+        } finally {
+          ProcessingModal.hide();
+        }
+      }
+    );
   },
 
   async reissueRecipientKey(recipient) {
-    if (!confirm(
-      `Reset secret key untuk ${recipient.name}?\n\n` +
-      "Kunci baru akan digenerate otomatis dan hanya ditampilkan sekali. " +
-      "Pesan lama yang masih LOCKED tetap bisa dibuka dengan kunci lama, " +
-      "tapi pesan baru wajib pakai kunci baru."
-    )) {
-      return;
-    }
-    AudioSys.click();
-    ProcessingModal.show("Me-reset kunci anggota…", 40);
-    if (document.getElementById("registeredKeyNotice").hidden === false) {
-      this.clearRegisteredKey();
-    }
-    try {
-      const result = await this.requestJSON(
-        `/api/recipients/${encodeURIComponent(recipient.id)}/reissue`,
-        { method: "POST" }
-      );
-      document.getElementById("registeredKeyOutput").textContent = result.new_secret_key;
-      document.getElementById("registeredKeyName").textContent = recipient.name;
-      document.getElementById("registeredKeyNotice").hidden = false;
-      showToast("Kunci baru dibuat. Salin dan bagikan ke anggota lewat jalur aman.", "success");
-      AudioSys.accessGranted();
-      await this.loadRecipients();
-    } catch (error) {
-      console.error("Reissue recipient key error:", error);
-      showToast(error.message || "Gagal me-reissue kunci.", "error");
-    } finally {
-      ProcessingModal.hide();
-    }
+    showConfirmDialog(
+      `Reset secret key untuk ${recipient.name}?\n\nKunci baru akan digenerate otomatis dan hanya ditampilkan sekali. Pesan lama yang masih LOCKED tetap bisa dibuka dengan kunci lama, tapi pesan baru wajib pakai kunci baru.`,
+      async () => {
+        AudioSys.click();
+        ProcessingModal.show("Me-reset kunci anggota…", 40);
+        if (document.getElementById("registeredKeyNotice").hidden === false) {
+          this.clearRegisteredKey();
+        }
+        try {
+          const result = await this.requestJSON(
+            `/api/recipients/${encodeURIComponent(recipient.id)}/reissue`,
+            { method: "POST" }
+          );
+          document.getElementById("registeredKeyOutput").textContent = result.new_secret_key;
+          document.getElementById("registeredKeyName").textContent = recipient.name;
+          document.getElementById("registeredKeyNotice").hidden = false;
+          showToast("Kunci baru dibuat. Salin dan bagikan ke anggota lewat jalur aman.", "success");
+          AudioSys.accessGranted();
+          await this.loadRecipients();
+        } catch (error) {
+          console.error("Reissue recipient key error:", error);
+          showToast(error.message || "Gagal me-reissue kunci.", "error");
+        } finally {
+          ProcessingModal.hide();
+        }
+      }
+    );
   },
 
   async deleteRecipient(recipient) {
-    const msgCount = prompt(
-      `Hapus anggota ${recipient.name} beserta semua pesan terkait?\n\n` +
-      "Ketik 'HAPUS' untuk konfirmasi. Aksi ini tidak bisa dipulihkan.",
-      ""
+    const msgCount = await showConfirmDialog(
+      `Hapus anggota ${recipient.name} beserta semua pesan terkait?\n\nKetik HAPUS di bawah ini untuk konfirmasi. Aksi ini tidak bisa dipulihkan.`,
+      () => this._executeDeleteRecipient(recipient)
     );
-    if (msgCount !== "HAPUS") {
-      showToast("Penghapusan dibatalkan.", "info");
-      return;
-    }
+  },
+
+  async _executeDeleteRecipient(recipient) {
     AudioSys.click();
     ProcessingModal.show("Menghapus anggota & pesan terkait…", 50);
     try {
@@ -404,7 +401,6 @@ const Commander = {
         "success"
       );
       AudioSys.accessGranted();
-      // Clear commander select if the deleted recipient was selected
       const select = document.getElementById("recipientId");
       if (select && select.value === recipient.id) {
         select.value = "";
@@ -497,7 +493,7 @@ const Commander = {
       const targetUnit = result.target_unit || recipientId;
       AudioSys.accessGranted();
       showToast(`Ciphertext tersimpan untuk ${targetUnit}: ${result.saved.message_id}`, "success");
-      this.displayTransmissionSuccess({
+       this.displayTransmissionSuccess({
         message_id: result.saved.message_id,
       }, targetUnit, result.challenge_indices);
       messageInput.value = "";
@@ -514,18 +510,7 @@ const Commander = {
   },
 
   displayTransmissionSuccess(data, recipientName, challengeIndices, passkey) {
-    const box = document.getElementById("lastTransmitNotice");
-    if (!box) return;
-    box.replaceChildren();
-    const notice = document.createElement("div");
-    notice.className = "transmission-notice";
-    const heading = document.createElement("strong");
-    heading.textContent = "Pesan terkirim";
-    const details = document.createElement("p");
-    details.textContent = `Untuk ${recipientName}`;
-    notice.append(heading, details);
-    box.append(notice);
-    box.hidden = false;
+    showSuccessModal("Pesan terkirim", `Untuk ${recipientName}`);
   },
 
   async loadMessages({ trigger = "poll" } = {}) {

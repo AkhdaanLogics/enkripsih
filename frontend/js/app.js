@@ -95,7 +95,7 @@ function showToast(message, type = 'info') {
 
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
-  
+
   let label = '[INFO]';
   if (type === 'success') label = '[SUCCESS]';
   if (type === 'error') label = '[ALERT]';
@@ -113,6 +113,68 @@ function showToast(message, type = 'info') {
     toast.classList.add('toast-exit');
     setTimeout(() => toast.remove(), 200);
   }, 4000);
+}
+
+// Confirmation Modal — centered card, replaces window.confirm()
+function showConfirmDialog(message, onConfirm) {
+  const overlay = document.getElementById('confirmOverlay');
+  const confirmBody = document.getElementById('confirmMessage');
+  const confirmYes = document.getElementById('confirmYes');
+  const confirmNo = document.getElementById('confirmNo');
+  if (!overlay || !confirmBody) return;
+
+  confirmBody.textContent = message;
+
+  // Remove old listeners by cloning
+  const yesNew = confirmYes.cloneNode(true);
+  const noNew = confirmNo.cloneNode(true);
+  confirmYes.replaceWith(yesNew);
+  confirmNo.replaceWith(noNew);
+
+  yesNew.addEventListener('click', () => {
+    overlay.hidden = true;
+    if (onConfirm) onConfirm();
+  });
+  noNew.addEventListener('click', () => {
+    overlay.hidden = true;
+  });
+
+  overlay.hidden = false;
+}
+
+// Success Modal — centered card with animated checkmark
+function showSuccessModal(title, detail) {
+  const overlay = document.getElementById('successOverlay');
+  const sTitle = document.getElementById('successTitle');
+  const sDetail = document.getElementById('successDetail');
+  if (!overlay || !sTitle) return;
+
+  sTitle.textContent = title;
+  if (sDetail) sDetail.textContent = detail || '';
+
+  // Reset animation
+  const circle = overlay.querySelector('.success-circle');
+  const check = overlay.querySelector('.success-checkmark');
+  if (circle) {
+    circle.style.animation = 'none';
+    circle.offsetHeight; // reflow
+    circle.style.animation = '';
+  }
+  if (check) {
+    check.style.animation = 'none';
+    check.offsetHeight;
+    check.style.animation = '';
+  }
+
+  overlay.hidden = false;
+
+  setTimeout(() => {
+    overlay.classList.add('success-exit');
+    setTimeout(() => {
+      overlay.hidden = true;
+      overlay.classList.remove('success-exit');
+    }, 400);
+  }, 2500);
 }
 
   // Processing Modal - shows overlay during long-running operations
