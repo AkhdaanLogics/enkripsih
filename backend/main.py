@@ -392,7 +392,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 payload = json.loads(data)
                 if payload.get("type") == "PING":
                     await websocket.send_json({"type": "PONG", "time": datetime.now().isoformat()})
-    except Exception:  # noqa: B110 — WebSocket message parsing error, silently ignore
+            except Exception:  # noqa: B110 — WebSocket message parsing error, silently ignore
                 pass
     except WebSocketDisconnect:
         manager.disconnect(websocket)
