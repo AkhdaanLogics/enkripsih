@@ -11,7 +11,6 @@
   var CX = 22, CY = 22;
   var lerp   = function(a, b, t) { return a + (b - a) * t; };
   var easeIO = function(t) { return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2; };
-  var easeS  = function(t) { return t*t*(3-2*t); };
   var interpPts = function(a, b, t) {
     var o = [];
     for (var i = 0; i < a.length; i++)
@@ -20,15 +19,15 @@
   };
   var interpColor = function(c1, c2, t) {
     var h = function(h){return parseInt(h.slice(1),16);};
-    var r=Math.round(lerp(h(c1)>>16,  h(c2)>>16,  t)),
-        g=Math.round(lerp((h(c1)>>8)&255,(h(c2)>>8)&255,t)),
-        b=Math.round(lerp(h(c1)&255,    h(c2)&255,    t));
+    var r=Math.round(lerp(h(c1)>>16,        h(c2)>>16,        t)),
+        g=Math.round(lerp((h(c1)>>8)&255,   (h(c2)>>8)&255,   t)),
+        b=Math.round(lerp(h(c1)&255,        h(c2)&255,        t));
     return '#'+[r,g,b].map(function(v){return v.toString(16).padStart(2,'0');}).join('');
   };
   var ptsToPath = function(pts) {
-    var d = 'M ' + pts[0][0].toFixed(2) + ' ' + pts[0][1].toFixed(2);
-    for (var i = 1; i < pts.length; i++) d += ' L ' + pts[i][0].toFixed(2) + ' ' + pts[i][1].toFixed(2);
-    return d + ' Z';
+    var d = 'M '+pts[0][0].toFixed(2)+' '+pts[0][1].toFixed(2);
+    for (var i = 1; i < pts.length; i++) d += ' L '+pts[i][0].toFixed(2)+' '+pts[i][1].toFixed(2);
+    return d+' Z';
   };
   var draw = function(fi, ti, t) {
     var p = interpPts(SHAPES[fi].pts, SHAPES[ti].pts, t);
@@ -37,74 +36,67 @@
     PATH.style.stroke = col;
     PATH.style.setProperty('--stroke-color', col);
   };
-  var resetIdle = function() {
-    // Snap back to solid triangle whenever user becomes active again
-    IDLE_ACTIVE = false;
-    segIdx = 0; nxtIdx = 0; tRatio = 0;
-  };
+  var resetIdle = function() { IDLE_ACTIVE = false; segIdx = 0; nxtIdx = 0; tRatio = 0; };
 
-  /* ── shape builders (N points each) ─────────────────────────────── */
+  /* ── shape builders — all N points, closed path ─────────────────── */
   var N = 80;
 
-  // △ triangle — 3 vertices
+  // △ equilateral triangle pointing up
   function buildTri() {
-    var s=9, angs=[Math.PI*1.5, Math.PI*1.5+Math.PI*2/3, Math.PI*1.5+Math.PI*4/3], out=[];
-    for (var i=0; i<N; i++) {
-      var f=i/N*3, seg=Math.floor(f), t=easeS(f-seg);
-      out.push([lerp(CX+s*Math.cos(angs[seg%3]),CX+s*Math.cos(angs[(seg+1)%3]),t),
-                lerp(CY+s*Math.sin(angs[seg%3]),CY+s*Math.sin(angs[(seg+1)%3]),t)]);
+    var s = 9, angs = [Math.PI*1.5, Math.PI*1.5+Math.PI*2/3, Math.PI*1.5+Math.PI*4/3];
+    var out = [], step = N / 3;
+    for (var i = 0; i < N; i++) {
+      var fi = i / step, seg = Math.floor(fi), t = fi - seg;
+      var a0 = angs[seg % 3], a1 = angs[(seg + 1) % 3];
+      out.push([CX + s*Math.cos(a0) + t*(s*Math.cos(a1)-s*Math.cos(a0)),
+                CY + s*Math.sin(a0) + t*(s*Math.sin(a1)-s*Math.sin(a0))]);
     }
     return out;
   }
+
   // ○ circle
   function buildCir() {
-    var r=8.5, out=[];
-    for (var i=0; i<N; i++) { var a=i/N*Math.PI*2-Math.PI/2; out.push([CX+r*Math.cos(a),CY+r*Math.sin(a)]); }
+    var r = 8.5, out = [];
+    for (var i = 0; i < N; i++) { var a = i/N*Math.PI*2-Math.PI/2;
+      out.push([CX+r*Math.cos(a), CY+r*Math.sin(a)]); }
     return out;
   }
-  // □ square — 4 vertices
+
+  // □ axis-aligned square
   function buildSq() {
-    var s=7.5, sides=[[-1,-1],[1,-1],[1,1],[-1,1]], out=[];
-    for (var i=0; i<N; i++) {
-      var f=i/N*4, seg=Math.floor(f)%4, t=easeS(f-Math.floor(f));
-      out.push([lerp(CX+s*sides[seg][0],CX+s*sides[(seg+1)%4][0],t),
-                lerp(CY+s*sides[seg][1],CY+s*sides[(seg+1)%4][1],t)]);
+    var s = 7.5, sides = [[-1,-1],[1,-1],[1,1],[-1,1]];
+    var out = [], step = N / 4;
+    for (var i = 0; i < N; i++) {
+      var fi = i / step, seg = Math.floor(fi) % 4, t = fi - Math.floor(fi);
+      out.push([lerp(CX+s*sides[seg][0], CX+s*sides[(seg+1)%4][0], t),
+                lerp(CY+s*sides[seg][1], CY+s*sides[(seg+1)%4][1], t)]);
     }
     return out;
   }
-  // ✕ proper cross — 12-point perimeter: 4 diagonal arms + 4 horizontal + 4 vertical inner notches
+
+  // ✕ two thick diagonal strokes forming an X
+  // Outline: trace around perimeter — 8 vertices, CW from top-left
   function buildCross() {
-    var tip = 9.2, notch = 3.0;
-    // Perimeter traced CW starting from top arm:
-    //   top → notch-tr → right-inner-top → right tip → right-inner-bot → bottom → notch-bl → left → notch-tl → back to top
-    var V = [
-      [CX,             CY-tip],     // 0 top tip
-      [CX+notch,       CY-notch],   // 1 top-right inner notch
-      [CX+tip*0.7,     CY-tip*0.35],// 2 horizontal-right upper
-      [CX+tip,         CY],         // 3 right tip
-      [CX+tip*0.7,     CY+tip*0.35],// 4 horizontal-right lower
-      [CX+notch,       CY+notch],   // 5 bottom-right inner notch
-      [CX,             CY+tip],     // 6 bottom tip
-      [CX-notch,       CY+notch],   // 7 bottom-left inner notch
-      [CX-tip*0.7,     CY+tip*0.35],// 8 horizontal-left lower
-      [CX-tip,         CY],         // 9 left tip
-      [CX-tip*0.7,     CY-tip*0.35],// 10 horizontal-left upper
-      [CX-notch,       CY-notch],   // 11 top-left inner notch
+    var tip = 9.2, notch = 2.8;
+    // 8 vertices CW: top-left-out → top-inner → top-right-out → right-inner →
+    //                bottom-right-out → bottom-inner → bottom-left-out → left-inner → close
+    var pts = [
+      [CX - tip,       CY - notch],   // 0 top-left outer
+      [CX - notch,     CY - tip],     // 1 top-inner
+      [CX + notch,     CY - tip],     // 2 top-right inner
+      [CX + tip,       CY - notch],   // 3 top-right outer
+      [CX + tip,       CY + notch],   // 4 bottom-right outer
+      [CX + notch,     CY + tip],     // 5 bottom-inner
+      [CX - notch,     CY + tip],     // 6 bottom-left inner
+      [CX - tip,       CY + notch],   // 7 bottom-left outer
     ];
+    // Resample to N points along the 8-segment perimeter
     var out = [];
-    for (var i=0; i<N; i++) {
-      var f=i/N*12, seg=Math.floor(f)%12, t=easeS(f-Math.floor(f));
-      out.push([lerp(V[seg][0],V[(seg+1)%12][0],t), lerp(V[seg][1],V[(seg+1)%12][1],t)]);
-    }
-    return out;
-  }
-  // ◇ diamond — 4 vertices rotated square
-  function buildDia() {
-    var s=9.5, corners=[[0,-1],[1,0],[0,1],[-1,0]], out=[];
-    for (var i=0; i<N; i++) {
-      var f=i/N*4, seg=Math.floor(f)%4, t=easeS(f-Math.floor(f));
-      out.push([lerp(CX+s*corners[seg][0],CX+s*corners[(seg+1)%4][0],t),
-                lerp(CY+s*corners[seg][1],CY+s*corners[(seg+1)%4][1],t)]);
+    var perSeg = N / 8;
+    for (var i = 0; i < N; i++) {
+      var fi = i / perSeg, seg = Math.floor(fi) % 8, t = fi - Math.floor(fi);
+      out.push([lerp(pts[seg][0], pts[(seg+1)%8][0], t),
+                lerp(pts[seg][1], pts[(seg+1)%8][1], t)]);
     }
     return out;
   }
@@ -112,9 +104,8 @@
   var SHAPES = [
     { pts: buildTri(),   color: '#0066FF' },
     { pts: buildCir(),   color: '#FFD700' },
-    { pts: buildSq(),    color: '#9dff8e' },
     { pts: buildCross(), color: '#FF4D4D' },
-    { pts: buildDia(),   color: '#c084fc' },
+    { pts: buildSq(),    color: '#9dff8e' },
   ];
 
   /* ── config ─────────────────────────────────────────────────────── */
@@ -125,30 +116,21 @@
   /* ── state ──────────────────────────────────────────────────────── */
   var mx = window.innerWidth/2, my = window.innerHeight/2;
   var cx = mx, cy = my;
-  var visible = false;
   var idleSince = Infinity;
   var lastTick = performance.now();
-
   var segIdx = 0, nxtIdx = 1, tRatio = 0;
   var IDLE_ACTIVE = false;
 
   function tick(now) {
     var dt = (now - lastTick) / 1000;
     lastTick = now;
-
     cx = lerp(cx, mx, FOLLOW);
     cy = lerp(cy, my, FOLLOW);
-    ELEM.style.transform = 'translate(' + cx.toFixed(1) + 'px,' + cy.toFixed(1) + 'px)';
+    ELEM.style.transform = 'translate('+cx.toFixed(1)+'px,'+cy.toFixed(1)+'px)';
 
     var dur = Date.now() - idleSince;
-
-    if (dur >= IDLE_MS && !IDLE_ACTIVE) {
-      // Enter idle mode — start morphing
-      IDLE_ACTIVE = true;
-    } else if (dur < IDLE_MS && IDLE_ACTIVE) {
-      // User became active again — snap back to triangle
-      resetIdle();
-    }
+    if (dur >= IDLE_MS && !IDLE_ACTIVE) { IDLE_ACTIVE = true; }
+    else if (dur < IDLE_MS && IDLE_ACTIVE) { resetIdle(); }
 
     if (IDLE_ACTIVE) {
       tRatio += dt / MORPH_SEC;
@@ -159,25 +141,23 @@
       }
       draw(segIdx, nxtIdx, easeIO(tRatio));
     } else {
-      draw(0, 0, 0); // solid triangle
+      draw(0, 0, 0);
     }
-
     requestAnimationFrame(tick);
   }
 
-  /* ── event wiring ────────────────────────────────────────────────── */
+  /* ── events ─────────────────────────────────────────────────────── */
   function onActivity() { idleSince = Date.now(); }
-  document.addEventListener('mousemove', function(e) { mx = e.clientX; my = e.clientY; onActivity(); });
-  ['mousedown','mouseup','scroll'].forEach(function(evt) {
-    document.addEventListener(evt, onActivity, {passive:true});
+  document.addEventListener('mousemove', function(e) { mx=e.clientX; my=e.clientY; onActivity(); });
+  ['mousedown','mouseup','scroll'].forEach(function(ev){
+    document.addEventListener(ev, onActivity, {passive:true});
   });
-
   var firstMove = false;
   document.addEventListener('mousemove', function onFirst() {
     if (!firstMove) {
       firstMove = true;
       ELEM.classList.add('visible');
-      draw(0, 0, 0);
+      draw(0,0,0);
       requestAnimationFrame(tick);
     }
   });
