@@ -36,7 +36,7 @@ from .database import (
     change_receiver_password,
     get_receiver_account, provision_receiver_account,
     get_login_lockout, record_failed_login, clear_login_lockout,
-    mark_message_decrypted, mark_face_verified,
+    mark_message_decrypted,
 )
 from .crypto_engine import (
     calculate_response_symbols, response_to_string,
@@ -119,7 +119,6 @@ def _session_principal(token: Optional[str]) -> dict | None:
             "principal_id": session["principal_id"],
             "role": session["role"],
             "must_change_password": bool(session["must_change_password"]),
-            "face_verified": bool(session["face_verified"]),
         }
 
     session = active_sessions.get(token)
@@ -132,7 +131,6 @@ def _session_principal(token: Optional[str]) -> dict | None:
         "principal_id": session["principal_id"],
         "role": session["role"],
         "must_change_password": session["must_change_password"],
-        "face_verified": session.get("face_verified", False),
     }
 
 
@@ -325,10 +323,6 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 # --- Pydantic Schemas ---
-class FaceAuthRequest(BaseModel):
-    image_base64: str
-    user_id: Optional[str] = "CMD-01"
-
 class LoginRequest(BaseModel):
     password: str
 
@@ -476,7 +470,6 @@ def login(req: LoginRequest, request: Request, response: Response):
         "principal_id": "CMD-01",
         "role": "COMMANDER",
         "must_change_password": False,  # nosec B105 — literal bool flag, not a password
-        "face_verified": False,
     }
     _store_session(token, expires_at, principal)
     _set_session_cookie(response, request, token)
@@ -742,31 +735,8 @@ def get_commander_status():
             "name": profile["name"],
             "rank": profile["rank"],
             "role": profile["role"],
-            "face_enrolled": bool(profile["face_enrolled"]),
         } if profile else None,
     }
-
-@app.post("/api/auth/verify-face")
-def verify_face_endpoint(req: FaceAuthRequest, request: Request):
-    principal = request.state.principal
-    if principal["role"] != "COMMANDER":
-        raise HTTPException(status_code=403, detail="Hanya komandan yang dapat verifikasi wajah.")
-    from .face_auth import verify_commander_face
-    result = verify_commander_face(req.image_base64, req.user_id or "CMD-01")
-    if result.get("success"):
-        token = request.cookies.get(SESSION_COOKIE)
-        if token and token in active_sessions:
-            active_sessions[token]["face_verified"] = True
-        if os.environ.get("DATABASE_URL"):
-            mark_face_verified(token)
-        log_event("AUTH", "SUCCESS", f"Verifikasi wajah komandan {principal['principal_id']} BERHASIL.")
-    return result
-
-@app.post("/api/auth/register-face")
-def register_face_endpoint(req: FaceAuthRequest):
-    from .face_auth import register_commander_face
-
-    return register_commander_face(req.image_base64, req.user_id or "CMD-01")
 
 # --- Agent key helpers (reads .env directly, no in-memory cache) ---
 
