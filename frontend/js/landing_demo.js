@@ -1,20 +1,19 @@
 // Auto-play video on hover + animate chips (△○✕▢) for passkey demo card
 document.addEventListener('DOMContentLoaded', () => {
-  const demoCard = document.querySelector('.demo-card');
-  if (!demoCard) return;
-
-  const video = demoCard.querySelector('#demoVideo');
-  let loaded = false;
-
-  demoCard.addEventListener('mouseenter', () => {
-    if (!loaded) { video.load(); loaded = true; }
-    video.play().catch(e => { if (e.name !== 'AbortError') console.error("Autoplay error:", e); });
-  });
-
-  demoCard.addEventListener('mouseleave', () => {
-    video.pause();
-    video.currentTime = 0;
-  });
+  // Video card (first .demo-card in features grid)
+  const demoCard = document.querySelector('.feature.demo-card');
+  if (demoCard) {
+    const video = demoCard.querySelector('#demoVideo');
+    let loaded = false;
+    demoCard.addEventListener('mouseenter', () => {
+      if (!loaded) { video.load(); loaded = true; }
+      video.play().catch(e => { if (e.name !== 'AbortError') console.error("Autoplay error:", e); });
+    });
+    demoCard.addEventListener('mouseleave', () => {
+      video.pause();
+      video.currentTime = 0;
+    });
+  }
 
   // Chip animation — challenge then response, looping forever
   const symbols = ['△', '▢', '○', '✕'];
