@@ -7,7 +7,7 @@
   <meta name="description" content="ENKRIPSIH: kirim pesan terenkripsi antar anggota terdaftar dengan passkey Cypher, HMAC-SHA256, dan enkripsi AES-GCM di browser.">
   <title>ENKRIPSIH · Pintar mengunci, tegas menjaga.</title>
 
-  <link rel="stylesheet" href="/static/css/landing.css?v=enkripsih-v13">
+  <link rel="stylesheet" href="/static/css/landing.css?v=enkripsih-v14">
 </head>
 <body>
 
@@ -206,58 +206,11 @@
     <script src="/static/vendor/lenis.min.js"></script>
     <script src="/static/js/landing.js?v=enkripsih-v5"></script>
     <script src="/static/js/landing_demo.js"></script>
-    <div id="cursor" class="custom-cursor" aria-hidden="true"></div>
-    <style>
-      body, button, a { cursor: none !important; }
-      #cursor {
-        position: fixed;
-        top: 0; left: 0;
-        width: 32px; height: 32px;
-        pointer-events: none;
-        z-index: 9999;
-        display: grid; place-items: center;
-        transition: transform 0.05s linear;
-        color: var(--accent);
-        text-shadow: 0 0 12px rgba(0,102,255,0.6);
-        /* Tambahkan mix-blend-mode untuk visibilitas kontras */
-        mix-blend-mode: difference;
-      }
-      #cursor::before { content: '△'; font-size: 32px; }
-      /* ... sisa style tetap sama ... */
-      body.clicking #cursor { color: #FF4D4D; }
-      body.clicking #cursor::before { content: '✕'; }
-      body.scrolling #cursor { color: #FFD700; }
-      body.scrolling #cursor::before { content: '○'; }
-      body:has(button:disabled:hover) #cursor { color: #9dff8e; }
-      body:has(button:disabled:hover) #cursor::before { content: '▢'; }
-      body.glitching #cursor::before { animation: glitch 0.1s infinite; }
-      @keyframes glitch { 
-        0%{content:'△'; color:#0066FF} 
-        25%{content:'✕'; color:#FF4D4D} 
-        50%{content:'▢'; color:#9dff8e} 
-        75%{content:'○'; color:#FFD700} 
-      }
-    </style>
-    <script>
-      const cursor = document.getElementById('cursor');
-      document.addEventListener('mousemove', e => {
-        cursor.style.transform = `translate(${e.clientX - 10}px, ${e.clientY - 10}px)`;
-        resetGlitch();
-      });
-      document.addEventListener('mousedown', () => document.body.classList.add('clicking'));
-      document.addEventListener('mouseup', () => document.body.classList.remove('clicking'));
-      let scrollTimeout;
-      window.addEventListener('scroll', () => {
-        document.body.classList.add('scrolling');
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => document.body.classList.remove('scrolling'), 200);
-      });
-      let glitchTimeout = setTimeout(() => document.body.classList.add('glitching'), 60000);
-      function resetGlitch() {
-        document.body.classList.remove('glitching');
-        clearTimeout(glitchTimeout);
-        glitchTimeout = setTimeout(() => document.body.classList.add('glitching'), 60000);
-      }
-    </script>
+    <div id="morph-cursor" aria-hidden="true">
+      <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
+        <path class="morph-path" id="morph-path"></path>
+      </svg>
+    </div>
+    <script src="/static/js/landing_morph_cursor.js?v=enkripsih-v1"></script>
 </body>
 </html>
