@@ -7,7 +7,7 @@
   <meta name="description" content="ENKRIPSIH: kirim pesan terenkripsi antar anggota terdaftar dengan passkey Cypher, HMAC-SHA256, dan enkripsi AES-GCM di browser.">
   <title>ENKRIPSIH · Pintar mengunci, tegas menjaga.</title>
 
-  <link rel="stylesheet" href="/static/css/landing.css?v=enkripsih-v11">
+  <link rel="stylesheet" href="/static/css/landing.css?v=enkripsih-v12">
 </head>
 <body>
 
@@ -80,12 +80,13 @@
         <div class="features-grid">
           <!-- Demo Video Card -->
           <article class="feature big demo-card" data-reveal>
-            <div class="video-wrapper">
-               <video id="demoVideo" muted loop playsinline poster="/assets/demo_cypher_poster.jpg">
-                 <source src="/assets/demo_cypher.mp4" type="video/mp4">
-               </video>
-               <div class="overlay-text">Demo Cypher</div>
-            </div>
+             <div class="video-wrapper">
+                <video id="demoVideo" muted loop playsinline preload="none">
+                  <source src="/static/assets/demo_cypher.mp4" type="video/mp4">
+                </video>
+                <div class="overlay-text">Demo Cypher</div>
+                <div class="video-hint">Hover untuk demo</div>
+             </div>
             <div class="demo-card-body">
               <h3>Praktek Fisik: Buka Pesan</h3>
               <p>Lihat bagaimana tantangan fisik diubah menjadi kunci kriptografi secara instan.</p>

@@ -384,6 +384,26 @@ section { scroll-margin-top: 80px; }
   border-radius: 4px;
   backdrop-filter: blur(4px);
 }
+.feature.demo-card .video-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.65);
+  background: rgba(0,0,0,0.55);
+  opacity: 1;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+  backdrop-filter: blur(2px);
+}
+.feature.demo-card:hover .video-hint {
+  opacity: 0;
+}
 .feature.demo-card .demo-card-body {
   padding: 24px 28px 28px;
   display: flex;

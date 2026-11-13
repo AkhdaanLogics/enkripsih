@@ -4,16 +4,19 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!demoCard) return;
 
   const video = demoCard.querySelector('#demoVideo');
-  
+  let loaded = false;
+
   demoCard.addEventListener('mouseenter', () => {
-    // Gunakan promise untuk menghindari interrupt error
+    if (!loaded) {
+      video.load();
+      loaded = true;
+    }
     video.play().catch(e => {
         if (e.name !== 'AbortError') console.error("Autoplay error:", e);
     });
   });
 
   demoCard.addEventListener('mouseleave', () => {
-    // Reset video dengan aman
     video.pause();
     video.currentTime = 0;
   });
