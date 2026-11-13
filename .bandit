@@ -1,4 +1,2 @@
 [bandit]
-# Skip hardcoded-password checks on test code — test fixtures legitimately use dummy passwords/tokens.
-skips: B105
-targets: backend/tests/
+skips = B105

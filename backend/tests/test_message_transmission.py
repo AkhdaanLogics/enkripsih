@@ -109,7 +109,7 @@ class MessageTransmissionTests(unittest.TestCase):
         request.state.principal = {
             "principal_id": "CMD-01",
             "role": "COMMANDER",
-            "must_change_password": False,
+            "must_change_password": False,  # nosec B105 -- literal bool, not a password
         }
         return request
 
@@ -326,7 +326,7 @@ class MessageTransmissionTests(unittest.TestCase):
         self.assertTrue(target.rolled_back)
 
     def test_registered_key_verifier_and_aes_gcm_package_round_trip(self):
-        secret = "B" * 32
+        secret = "B"  # nosec B105 -- test fixture * 32
         recipient_salt = os.urandom(16)
         verifier = hashlib.pbkdf2_hmac(
             "sha256",
@@ -556,7 +556,7 @@ class MessageTransmissionTests(unittest.TestCase):
         database.DB_PATH = str(self.db_path)
 
     def test_api_requires_password_session_and_logout_revokes_it(self):
-        password = "enkripsih-test-password-2026"
+        password = "enkripsih-test-password-2026"  # nosec B105 -- test fixture
         with patch.dict(os.environ, {"ENKRIPSIH_PASSWORD": password}):
             with TestClient(main.app) as client:
                 self.assertEqual(client.get("/api/messages").status_code, 401)
@@ -626,7 +626,7 @@ class MessageTransmissionTests(unittest.TestCase):
                 self.assertEqual(client.get("/api/messages").status_code, 401)
 
     def test_authenticated_activity_slides_idle_expiry_and_idle_session_is_rejected(self):
-        password = "enkripsih-test-password-2026"
+        password = "enkripsih-test-password-2026"  # nosec B105 -- test fixture
         clock = [1_000.0]
         with (
             patch.dict(os.environ, {"ENKRIPSIH_PASSWORD": password}),
@@ -649,7 +649,7 @@ class MessageTransmissionTests(unittest.TestCase):
                 self.assertFalse(client.get("/api/auth/session").json()["authenticated"])
 
     def test_login_lockout_persists_across_restart_and_resets_after_cooldown(self):
-        password = "enkripsih-test-password-2026"
+        password = "enkripsih-test-password-2026"  # nosec B105 -- test fixture
         for attempt in range(main.LOGIN_MAX_ATTEMPTS):
             with patch.dict(os.environ, {"ENKRIPSIH_PASSWORD": password}), \
                     patch.object(main.time, "time") as time_mock:
@@ -685,7 +685,7 @@ class MessageTransmissionTests(unittest.TestCase):
                 self.assertIn("Sisa", first_fail.json()["detail"])
 
     def test_receiver_accounts_change_password_and_scope_inbox_to_member(self):
-        password = "enkripsih-test-password-2026"
+        password = "enkripsih-test-password-2026"  # nosec B105 -- test fixture
         with patch.dict(os.environ, {"ENKRIPSIH_PASSWORD": password}):
             with TestClient(main.app) as client:
                 commander_login = client.post(
@@ -878,7 +878,7 @@ class MessageTransmissionTests(unittest.TestCase):
         )
 
     def test_auth_sessions_persist_and_expire_in_database(self):
-        token = "test-session-token"
+        token = "test-session-token"  # nosec B105 -- test fixture
         expires_at = 2_000_000_000.0
         database.save_auth_session(token, expires_at)
         self.assertEqual(database.get_auth_session_expiry(token), expires_at)
@@ -1014,7 +1014,7 @@ class MessageTransmissionTests(unittest.TestCase):
             self.assertEqual(main_module.app.openapi_url, "/openapi.json")
 
     def test_sender_spoofing_is_prevented(self):
-        password = "enkripsih-test-password-2026"
+        password = "enkripsih-test-password-2026"  # nosec B105 -- test fixture
         with patch.dict(os.environ, {
             "ENKRIPSIH_PASSWORD": password,
             "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
@@ -1052,7 +1052,7 @@ class MessageTransmissionTests(unittest.TestCase):
                 self.assertEqual(failed_send.status_code, 401)
 
     def test_security_response_headers_are_present(self):
-        password = "enkripsih-test-password-2026"
+        password = "enkripsih-test-password-2026"  # nosec B105 -- test fixture
         with patch.dict(os.environ, {
             "ENKRIPSIH_PASSWORD": password,
             "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
@@ -1071,7 +1071,7 @@ class MessageTransmissionTests(unittest.TestCase):
 
 
     def test_receiver_burn_requires_prior_unlock(self):
-        password = "enkripsih-test-password-2026"
+        password = "enkripsih-test-password-2026"  # nosec B105 -- test fixture
         with patch.dict(os.environ, {
             "ENKRIPSIH_PASSWORD": password,
             "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
@@ -1130,7 +1130,7 @@ class MessageTransmissionTests(unittest.TestCase):
                 self.assertEqual(burn_cmd.status_code, 200)
 
     def test_receiver_cannot_burn_foreign_message(self):
-        password = "enkripsih-test-password-2026"
+        password = "enkripsih-test-password-2026"  # nosec B105 -- test fixture
         with patch.dict(os.environ, {
             "ENKRIPSIH_PASSWORD": password,
             "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
@@ -1189,7 +1189,7 @@ class MessageTransmissionTests(unittest.TestCase):
         return body["recipient_id"], secret, body["temporary_password"]
 
     def test_agent_secret_key_is_stored_encrypted_in_db(self):
-        password = "enkripsih-test-password-2026"
+        password = "enkripsih-test-password-2026"  # nosec B105 -- test fixture
         with patch.dict(os.environ, {
             "ENKRIPSIH_PASSWORD": password,
             "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
@@ -1197,7 +1197,7 @@ class MessageTransmissionTests(unittest.TestCase):
         }):
             with TestClient(main.app) as client:
                 client.post("/api/auth/login", json={"password": password})
-                secret = "agent-secret-key-0123456789abcdef"
+                secret = "agent-secret-key-0123456789abcdef"  # nosec B105 -- test fixture
                 recipient_id, _, _ = self._register_real_secret_recipient(
                     client, f"Db Agent {self.test_suffix}", secret_key=secret,
                 )
@@ -1209,7 +1209,7 @@ class MessageTransmissionTests(unittest.TestCase):
                 self.assertEqual(decrypt_agent_secret(row["agent_secret"]), secret)
 
     def test_encrypt_agent_uses_db_stored_secret_key_without_env(self):
-        password = "enkripsih-test-password-2026"
+        password = "enkripsih-test-password-2026"  # nosec B105 -- test fixture
         with patch.dict(os.environ, {
             "ENKRIPSIH_PASSWORD": password,
             "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
@@ -1217,7 +1217,7 @@ class MessageTransmissionTests(unittest.TestCase):
         }):
             with TestClient(main.app) as client:
                 client.post("/api/auth/login", json={"password": password})
-                secret = "agent-round-trip-secret-0123456789"
+                secret = "agent-round-trip-secret-0123456789"  # nosec B105 -- test fixture
                 recipient_id, _, _ = self._register_real_secret_recipient(
                     client, f"Agent RT {self.test_suffix}", secret_key=secret,
                 )
@@ -1246,7 +1246,7 @@ class MessageTransmissionTests(unittest.TestCase):
                 self.assertEqual(plaintext, "pesan agen baru")
 
     def test_encrypt_endpoint_rejects_wrong_secret_key(self):
-        password = "enkripsih-test-password-2026"
+        password = "enkripsih-test-password-2026"  # nosec B105 -- test fixture
         with patch.dict(os.environ, {
             "ENKRIPSIH_PASSWORD": password,
             "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
@@ -1268,7 +1268,7 @@ class MessageTransmissionTests(unittest.TestCase):
                 self.assertIn("tidak cocok", response.json()["detail"])
 
     def test_encrypt_and_decrypt_round_trip(self):
-        password = "enkripsih-test-password-2026"
+        password = "enkripsih-test-password-2026"  # nosec B105 -- test fixture
         with patch.dict(os.environ, {
             "ENKRIPSIH_PASSWORD": password,
             "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
@@ -1346,7 +1346,7 @@ class MessageTransmissionTests(unittest.TestCase):
                 self.assertIn("salah", bad_decrypt.json()["detail"])
 
     def test_reissue_rotates_verifier_and_old_key_stops_working(self):
-        password = "enkripsih-test-password-2026"
+        password = "enkripsih-test-password-2026"  # nosec B105 -- test fixture
         with patch.dict(os.environ, {
             "ENKRIPSIH_PASSWORD": password,
             "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
@@ -1380,7 +1380,7 @@ class MessageTransmissionTests(unittest.TestCase):
                 self.assertEqual(new_key_accepted.status_code, 200)
 
     def test_delete_recipient_cascades_messages_and_account(self):
-        password = "enkripsih-test-password-2026"
+        password = "enkripsih-test-password-2026"  # nosec B105 -- test fixture
         with patch.dict(os.environ, {
             "ENKRIPSIH_PASSWORD": password,
             "ENKRIPSIH_DB_PASSPHRASE": self.database_passphrase,
