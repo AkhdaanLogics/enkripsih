@@ -36,8 +36,8 @@ class MessageTransmissionTests(unittest.TestCase):
         self.db_path = Path(self.temp_dir.name) / "messages.db"
         self.db_path_patch = patch.object(database, "DB_PATH", str(self.db_path))
         self.db_path_patch.start()
-        self.database_passphrase = "a-distinct-test-database-passphrase"
-        self.keybca_secret = "test-keybca-secret-2026"
+        self.database_passphrase = "a-distinct-test-database-passphrase"  # nosec B105 — test fixture only
+        self.keybca_secret = "test-keybca-secret-2026"  # nosec B105 — test fixture only
         self.test_suffix = self._testMethodName
         # Force isolated SQLite/SQLCipher mode so tests do not touch Postgres.
         self.environ_patch = patch.dict(
@@ -60,7 +60,7 @@ class MessageTransmissionTests(unittest.TestCase):
         with database._managed_connection() as conn:
             for table in ("auth_sessions", "messages", "receiver_accounts",
                           "recipient_keys", "login_lockouts", "audit_logs"):
-                conn.execute(f"DELETE FROM {table}")
+                conn.execute(f"DELETE FROM {table}")  # nosec B608 — table name from hardcoded allowlist tuple
 
     def tearDown(self):
         self._clean_test_data()
