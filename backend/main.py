@@ -514,8 +514,8 @@ def _login_lockout_id(request: Request, account_id: str | None) -> str:
     if trusted_xff:
         forwarded = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
         if forwarded and _looks_like_ip(forwarded):
-            return PlainTextResponse(f"ip:{forwarded}")
-    return PlainTextResponse(f"ip:{client_host}")
+            return f"ip:{forwarded}"
+    return f"ip:{client_host}"
 
 
 def _is_trusted_proxy(request: Request) -> bool:
