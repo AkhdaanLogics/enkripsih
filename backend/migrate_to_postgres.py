@@ -153,12 +153,9 @@ def migrate(source_path: Path, database_url: str, source_passphrase: str | None)
                 if table == "users":
                     target.execute("DELETE FROM users WHERE id = ?", ("CMD-01",))
                 continue
-        if table not in TABLE_COLUMNS:
-            continue
-        # ...
-        rows = source.execute(
-            f"SELECT {', '.join(available_columns)} FROM {table}"  # nosec B608 — table/columns from hardcoded TABLE_COLUMNS allowlist
-        ).fetchall()
+            rows = source.execute(
+                f"SELECT {', '.join(available_columns)} FROM {table}"  # nosec B608 — table/columns from hardcoded TABLE_COLUMNS allowlist
+            ).fetchall()
             expected_counts[table] = len(rows)
             if table == "users" and not any(row["id"] == "CMD-01" for row in rows):
                 target.execute("DELETE FROM users WHERE id = ?", ("CMD-01",))
