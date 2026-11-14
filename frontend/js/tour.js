@@ -428,6 +428,10 @@
     if (!isMobileViewport() && stepChanged) {
       lastStepKey = stepKey;
       if (t && index > 0) {
+        // Reset inner scrollers first so the target starts near the top
+        document.querySelectorAll(".sent-list-scroll, .receiver-chat-list-body, .receiver-message-container, .members-list-scroll").forEach(function (el) {
+          el.scrollTop = 0;
+        });
         scrollTargetIntoView(t, 16, true);
       } else if (t) {
         var initialRect = t.getBoundingClientRect();
@@ -768,7 +772,7 @@
     // Reset inner scrollers to top so targets near the top of cards are visible.
     // Body scroll is locked but inner overflow:auto containers retain their
     // previous scroll positions from earlier interactions.
-    document.querySelectorAll(".sent-list-scroll, .receiver-chat-list-body, .receiver-message-container").forEach(function (el) {
+    document.querySelectorAll(".sent-list-scroll, .receiver-chat-list-body, .receiver-message-container, .members-list-scroll").forEach(function (el) {
       el.scrollTop = 0;
     });
 

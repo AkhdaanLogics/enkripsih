@@ -146,10 +146,7 @@ const Commander = {
             const name = document.createElement("strong");
             name.className = "recipient-name";
             name.textContent = recipient.name;
-            const hint = document.createElement("span");
-            hint.className = "recipient-meta";
-            hint.textContent = "Secret key dan password tidak dapat dipulihkan";
-            info.append(name, hint);
+            info.append(name);
 
             const actionRow = document.createElement("div");
             actionRow.className = "recipient-actions";
