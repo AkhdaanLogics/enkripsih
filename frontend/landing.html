@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0b0d10">
-  <meta name="description" content="ENKRIPSIH: kirim pesan terenkripsi antar anggota terdaftar dengan passkey Cypher, HMAC-SHA256, dan enkripsi AES-GCM di browser.">
+  <meta name="description" content="ENKRIPSIH: kirim pesan terenkripsi antar anggota terdaftar. Backend mengenkripsi pesan sebelum menyimpan ciphertext dan mendekripsinya saat dibuka.">
   <title>ENKRIPSIH · Pintar mengunci, tegas menjaga.</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 
-  <link rel="stylesheet" href="/static/css/landing.css?v=enkripsih-v17">
+  <link rel="stylesheet" href="/static/css/landing.css?v=enkripsih-v18">
 </head>
 <body>
 
@@ -36,15 +36,16 @@
     <!-- HERO -->
     <section class="hero" id="top">
       <div class="container hero-inner">
-        <span class="hero-eyebrow" data-reveal>End-to-end · Browser-side crypto</span>
+        <span class="hero-eyebrow" data-reveal>Enkripsi AES-GCM · Passkey Cypher</span>
         <h1 data-reveal>
           <span class="line"><span>Pintar mengunci,</span></span><br>
           <span class="line"><span>tegas <em class="accent">menjaga</em>.</span></span>
         </h1>
         <p class="hero-lede" data-reveal>
-          ENKRIPSIH mengirim pesan antar anggota terdaftar dengan enkripsi AES-GCM
-          langsung di browser, autentikasi perangkat Cypher, dan tanda tangan
-          HMAC-SHA256. Server tidak pernah melihat isi pesanmu.
+          ENKRIPSIH mengirim pesan antar anggota terdaftar. Backend mengenkripsi
+          isi pesan dengan AES-GCM sebelum menyimpan paket ciphertext. Saat
+          penerima membuka pesan dengan respons perangkat Cypher, backend
+          melakukan dekripsi.
         </p>
         <div class="hero-cta" data-reveal>
           <a class="btn" href="/?a=1">Mulai mengirim</a>
@@ -63,7 +64,7 @@
     <!-- STATS -->
     <section class="stats" aria-label="Angka utama">
       <div class="container stats-grid">
-        <div class="stat" data-reveal><div class="num">0</div><div class="lbl">Pesan bocor di server</div></div>
+        <div class="stat" data-reveal><div class="num">DB</div><div class="lbl">Menyimpan paket ciphertext</div></div>
         <div class="stat" data-reveal><div class="num">256<span class="suffix">-bit</span></div><div class="lbl">AES-GCM per pesan</div></div>
         <div class="stat" data-reveal><div class="num">12</div><div class="lbl">Simbol passkey per kunci</div></div>
         <div class="stat" data-reveal><div class="num">1<span class="suffix">:1</span></div><div class="lbl">Perangkat ↔ anggota</div></div>
@@ -75,8 +76,8 @@
       <div class="container">
         <div class="section-head" data-reveal>
           <div class="kicker">Fitur</div>
-          <h2>Keamanan yang tidak bisa kamu lihat, tapi bisa kamu percaya.</h2>
-          <p>Setiap lapisan dirancang supaya isi pesan hanya bisa dibuka oleh pemilik kunci yang sah, bukan oleh siapa pun di tengah jalan.</p>
+          <h2>Alur pesan dari pengiriman hingga dibuka.</h2>
+          <p>Backend mengenkripsi pesan sebelum menyimpan ciphertext. Saat penerima mengirim respons passkey, backend mendekripsi pesan untuk ditampilkan.</p>
         </div>
         <div class="features-grid">
           <!-- Demo Video Card -->
@@ -101,10 +102,10 @@
               <div class="ico" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
               </div>
-              <h3>Enkripsi di browser, bukan di server</h3>
-              <p>Pesan dienkripsi dengan AES-GCM 256-bit langsung di perangkatmu sebelum meninggalkan mesin. Server hanya meneruskan ciphertext, ia tidak memegang kunci untuk membacanya.</p>
+              <h3>Pesan tersimpan sebagai ciphertext</h3>
+              <p>Backend mengenkripsi isi pesan dengan AES-GCM sebelum menyimpannya. Saat pesan dibuka, backend mendekripsinya untuk penerima. Database menyimpan paket ciphertext, bukan teks pesan.</p>
             </div>
-            <pre class="code"><span><span class="hl">PBKDF2</span>(passkey, 200k) → kunci AES</span><span>AES-GCM.encrypt(plaintext) → <span class="ok">paket terkirim</span></span></pre>
+            <pre class="code"><span>Backend: <span class="hl">PBKDF2</span>(respons, 200k) → kunci AES</span><span>AES-GCM.encrypt(pesan) → <span class="ok">ciphertext</span></span></pre>
           </article>
 
           <div class="features-sub">
@@ -121,7 +122,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12h4l2-6 4 12 2-6h4"/></svg>
               </div>
               <h3>HMAC-SHA256</h3>
-              <p>Seluruh jalur perangkat ditandatangani, jadi pesan dari sumber tidak sah akan langsung ditolak.</p>
+              <p>Perangkat Wemos menghitung respons 12 simbol dari challenge menggunakan HMAC-SHA256.</p>
             </article>
           </div>
         </div>
@@ -133,13 +134,13 @@
       <div class="container">
         <div class="section-head" data-reveal>
           <div class="kicker">Cara kerja</div>
-          <h2>Dari pesan mentah ke ciphertext, dalam empat langkah.</h2>
+          <h2>Dari pengiriman, penyimpanan, hingga pembukaan.</h2>
         </div>
         <div class="steps">
           <div class="step" data-reveal><span class="tag">Sender</span><h4>Tulis &amp; pilih</h4><p>Ketik pesan dan pilih anggota penerima di panel kirim.</p></div>
-          <div class="step" data-reveal><span class="tag">Browser</span><h4>Tantang perangkat</h4><p>Browser meminta passkey dan menerima 12 simbol respons dari Cypher.</p></div>
-          <div class="step" data-reveal><span class="tag">Crypto</span><h4>Enkripsi</h4><p>PBKDF2 + AES-GCM mengubah pesan menjadi paket yang tidak terbaca.</p></div>
-          <div class="step" data-reveal><span class="tag">Receiver</span><h4>Buka &amp; bakar</h4><p>Penerima membuka dengan kunci yang sama, lalu bisa menghancurkan pesan.</p></div>
+          <div class="step" data-reveal><span class="tag">Backend</span><h4>Enkripsi pesan</h4><p>Backend mengenkripsi isi pesan dengan AES-GCM sebelum menyimpannya sebagai ciphertext.</p></div>
+          <div class="step" data-reveal><span class="tag">Database</span><h4>Simpan ciphertext</h4><p>Database menyimpan paket ciphertext dan challenge untuk penerima.</p></div>
+          <div class="step" data-reveal><span class="tag">Receiver</span><h4>Buka pesan</h4><p>Penerima memasukkan respons 12 simbol. Backend mendekripsi pesan dan mengirim isinya ke browser.</p></div>
         </div>
       </div>
     </section>
@@ -150,7 +151,7 @@
         <div data-reveal>
           <div class="kicker" style="font-family:var(--font-mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:14px">Passkey</div>
           <h2 style="font-size:clamp(28px,4.4vw,44px);line-height:1.08;letter-spacing:-.02em">Respons 12 simbol menjadi kunci sesi.</h2>
-          <p style="color:var(--fg-2);margin-top:14px;font-size:16px">Setiap challenge berbeda. Kombinasi challenge + respons menghasilkan kunci unik, jadi dua pesan tidak pernah berbagi kunci yang sama.</p>
+          <p style="color:var(--fg-2);margin-top:14px;font-size:16px">Perangkat menghitung respons dari challenge dengan HMAC-SHA256. Backend menurunkan kunci AES dari respons dan salt acak pesan.</p>
           <a class="btn btn--ghost" style="margin-top:20px" href="https://wokwi.com/projects/478446530349223937" target="_blank" rel="noopener">Coba simulasi Wokwi</a>
         </div>
           <div class="demo-card" data-reveal aria-hidden="true" id="chip-demo-card">
@@ -180,7 +181,7 @@
     <!-- CTA -->
     <section class="section cta">
       <div class="container cta-inner" data-reveal>
-        <h2>Siap mengirim pesan yang tidak bisa disadap?</h2>
+        <h2>Kirim pesan ke anggota terdaftar.</h2>
         <p>Masuk sebagai Sender untuk mengirim, atau sebagai Receiver untuk membuka pesan.</p>
         <a class="btn" href="/?a=1">Buka ENKRIPSIH</a>
       </div>
@@ -212,6 +213,6 @@
         <path class="morph-path" id="morph-path"></path>
       </svg>
     </div>
-    <script src="/static/js/landing_morph_cursor.js?v=enkripsih-v10"></script>
+    <script src="/static/js/landing_morph_cursor.js?v=enkripsih-v13"></script>
 </body>
 </html>

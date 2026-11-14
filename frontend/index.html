@@ -57,7 +57,7 @@
     <section class="auth-gate">
       <div class="auth-gate-eyebrow" aria-hidden="true">ENKRIPSIH</div>
       <h2 class="auth-gate-title">Pilih peran, masuk, kirim.</h2>
-      <p class="auth-gate-subtitle">Sender mengirim pesan terenkripsi. Receiver membuka pesan yang ditujukan kepadanya. Semua kunci ada di browser, tidak pernah di server.</p>
+      <p class="auth-gate-subtitle">Sender mengirim pesan untuk dienkripsi oleh backend dan disimpan sebagai ciphertext. Receiver membuka pesan melalui backend dengan respons perangkat passkey.</p>
       <form id="loginForm">
         <div class="form-group">
           <label class="form-label" for="loginRole">Jenis akun</label>
@@ -122,7 +122,7 @@
     <div class="screen-heading" id="workspaceHeading">
       <div>
         <h1 id="workspaceTitle">Kirim pesan</h1>
-        <p id="workspaceDescription">Tulis pesan, pilih anggota, lalu kirim dengan enkripsi di browser.</p>
+        <p id="workspaceDescription">Tulis pesan, pilih anggota, lalu kirim ke backend untuk dienkripsi.</p>
       </div>
     </div>
 
@@ -133,7 +133,7 @@
           <div class="card-header">
             <div>
               <h2 class="card-title">Kirim pesan terenkripsi</h2>
-              <div class="card-subtitle">Pesan dienkripsi di browser sebelum dikirim</div>
+              <div class="card-subtitle">Backend mengenkripsi pesan sebelum disimpan sebagai ciphertext</div>
             </div>
             <span class="logo-badge" aria-hidden="true">AES-GCM</span>
           </div>

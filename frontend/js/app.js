@@ -302,7 +302,7 @@ function switchTab(tabName) {
   const screen = {
     commander: {
       title: 'Kirim pesan',
-      description: 'Tulis pesan, pilih anggota, enkripsi di browser, kirim.'
+      description: 'Tulis pesan, pilih anggota, lalu kirim ke backend untuk dienkripsi.'
     },
     receiver: {
       title: 'Kotak masuk',

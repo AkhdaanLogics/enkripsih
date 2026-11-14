@@ -13,7 +13,7 @@
       {
         target: "#intelMessage",
         title: "Tulis pesan",
-        desc: "Isi pesan yang akan dienkripsi di browser. Tidak ada plaintext yang meninggalkan perangkatmu.",
+        desc: "Isi pesan yang akan dikirim ke backend untuk dienkripsi. Database menyimpan hasilnya sebagai ciphertext.",
       },
       {
         target: "#recipientId",
@@ -23,7 +23,7 @@
       {
         target: "#btnTransmitIntel",
         title: "Enkripsi dan kirim",
-        desc: "Tombol ini mengenkripsi pesan di perangkat lalu menyimpan ciphertext.",
+        desc: "Backend mengenkripsi pesan lalu menyimpan ciphertext.",
       },
       {
         target: "#btnRefreshCommanderMsgs",

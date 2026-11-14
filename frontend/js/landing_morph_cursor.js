@@ -1,7 +1,9 @@
 (function () {
   'use strict';
 
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var hasFinePointer = window.matchMedia('(pointer: fine)').matches;
+  if (!hasFinePointer) return;
 
   const ELEM = document.getElementById('morph-cursor');
   const PATH = document.getElementById('morph-path');
@@ -29,15 +31,6 @@
     for (var i = 1; i < pts.length; i++) d += ' L '+pts[i][0].toFixed(2)+' '+pts[i][1].toFixed(2);
     return d+' Z';
   };
-  var draw = function(fi, ti, t) {
-    var p = interpPts(SHAPES[fi].pts, SHAPES[ti].pts, t);
-    PATH.setAttribute('d', ptsToPath(p));
-    var col = interpColor(SHAPES[fi].color, SHAPES[ti].color, t);
-    PATH.style.stroke = col;
-    PATH.style.setProperty('--stroke-color', col);
-  };
-  var resetIdle = function() { IDLE_ACTIVE = false; segIdx = 0; nxtIdx = 0; tRatio = 0; };
-
   /* ── shape builders (N pts each, closed loop) ──────────────────── */
   var N = 80;
 
@@ -117,57 +110,164 @@
     { pts: buildSq(),    color: '#9dff8e' },
   ];
 
-  /* ── config ─────────────────────────────────────────────────────── */
-  var IDLE_MS   = 3000;
-  var MORPH_SEC = 3.5;
-  var FOLLOW    = 0.20;
-
-  /* ── state ──────────────────────────────────────────────────────── */
+  var FOLLOW = 0.20;
+  var IDLE_MS = 3000;
+  var MORPH_MS = 160;
+  var IDLE_MORPH_MS = 3500;
+  var SCROLL_HOLD_MS = 220;
+  var CLICK_HOLD_MS = 180;
   var mx = window.innerWidth/2, my = window.innerHeight/2;
   var cx = mx, cy = my;
-  var idleSince = Infinity;
-  var lastTick = performance.now();
-  var segIdx = 0, nxtIdx = 1, tRatio = 0;
-  var IDLE_ACTIVE = false;
+  var lastActivity = performance.now();
+  var transitionStart = lastActivity;
+  var transitionDuration = MORPH_MS;
+  var fromPts = SHAPES[0].pts;
+  var fromColor = SHAPES[0].color;
+  var targetShape = SHAPES[0];
+  var scrollUntil = 0;
+  var clickUntil = 0;
+  var pointerDown = false;
+  var running = false;
+  var motionAllowed = !motionPreference.matches;
+  var idleSegment = -1;
+
+  function draw(now) {
+    var t = Math.min((now - transitionStart) / transitionDuration, 1);
+    var eased = easeIO(t);
+    var points = interpPts(fromPts, targetShape.pts, eased);
+    var color = interpColor(fromColor, targetShape.color, eased);
+    PATH.setAttribute('d', ptsToPath(points));
+    PATH.style.stroke = color;
+    PATH.style.setProperty('--stroke-color', color);
+
+    if (t >= 1) {
+      fromPts = targetShape.pts;
+      fromColor = targetShape.color;
+    }
+  }
+
+  function setShape(index, now) {
+    if (targetShape === SHAPES[index] && transitionDuration === MORPH_MS) return;
+    var t = Math.min((now - transitionStart) / transitionDuration, 1);
+    var eased = easeIO(t);
+    fromPts = interpPts(fromPts, targetShape.pts, eased);
+    fromColor = interpColor(fromColor, targetShape.color, eased);
+    targetShape = SHAPES[index];
+    transitionStart = now;
+    transitionDuration = MORPH_MS;
+  }
+
+  function markActivity() {
+    lastActivity = performance.now();
+    idleSegment = -1;
+  }
+
+  function syncShape(now) {
+    if (pointerDown || now < clickUntil) {
+      setShape(2, now);
+      return;
+    }
+    if (now < scrollUntil) {
+      setShape(1, now);
+      return;
+    }
+
+    var idleDuration = now - lastActivity;
+    if (idleDuration < IDLE_MS) {
+      idleSegment = -1;
+      setShape(0, now);
+      return;
+    }
+
+    var elapsed = idleDuration - IDLE_MS;
+    var segment = Math.floor(elapsed / IDLE_MORPH_MS);
+    if (segment !== idleSegment) {
+      var fromIndex = segment % SHAPES.length;
+      fromPts = SHAPES[fromIndex].pts;
+      fromColor = SHAPES[fromIndex].color;
+      targetShape = SHAPES[(fromIndex + 1) % SHAPES.length];
+      transitionStart = lastActivity + IDLE_MS + segment * IDLE_MORPH_MS;
+      transitionDuration = IDLE_MORPH_MS;
+      idleSegment = segment;
+    }
+  }
 
   function tick(now) {
-    var dt = (now - lastTick) / 1000;
-    lastTick = now;
     cx = lerp(cx, mx, FOLLOW);
     cy = lerp(cy, my, FOLLOW);
     ELEM.style.transform = 'translate('+cx.toFixed(1)+'px,'+cy.toFixed(1)+'px)';
+    syncShape(now);
+    draw(now);
+    if (running) requestAnimationFrame(tick);
+  }
 
-    var dur = Date.now() - idleSince;
-    if (dur >= IDLE_MS && !IDLE_ACTIVE) { IDLE_ACTIVE = true; }
-    else if (dur < IDLE_MS && IDLE_ACTIVE) { resetIdle(); }
-
-    if (IDLE_ACTIVE) {
-      tRatio += dt / MORPH_SEC;
-      if (tRatio >= 1) {
-        tRatio -= 1;
-        segIdx = nxtIdx;
-        nxtIdx = (nxtIdx + 1) % SHAPES.length;
-      }
-      draw(segIdx, nxtIdx, easeIO(tRatio));
-    } else {
-      draw(0, 0, 0);
-    }
+  function start() {
+    if (running || !motionAllowed) return;
+    running = true;
+    document.body.classList.add('has-morph-cursor');
+    ELEM.classList.add('visible');
     requestAnimationFrame(tick);
   }
 
-  /* ── events ─────────────────────────────────────────────────────── */
-  function onActivity() { idleSince = Date.now(); }
-  document.addEventListener('mousemove', function(e) { mx=e.clientX; my=e.clientY; onActivity(); });
-  ['mousedown','mouseup','scroll'].forEach(function(ev){
-    document.addEventListener(ev, onActivity, {passive:true});
+  document.addEventListener('pointermove', function(e) {
+    if (!motionAllowed || e.pointerType !== 'mouse') return;
+    mx = e.clientX;
+    my = e.clientY;
+    markActivity();
+    start();
+  }, {passive:true});
+
+  document.addEventListener('pointerdown', function(e) {
+    if (!motionAllowed || e.pointerType !== 'mouse' || e.button !== 0) return;
+    mx = e.clientX;
+    my = e.clientY;
+    pointerDown = true;
+    markActivity();
+    start();
+  }, {passive:true});
+
+  window.addEventListener('pointerup', function(e) {
+    if (e.pointerType !== 'mouse' || !pointerDown) return;
+    mx = e.clientX;
+    my = e.clientY;
+    pointerDown = false;
+    clickUntil = performance.now() + CLICK_HOLD_MS;
+    markActivity();
+  }, {passive:true});
+
+  window.addEventListener('pointercancel', function() {
+    pointerDown = false;
+    clickUntil = 0;
+    markActivity();
+  }, {passive:true});
+
+  window.addEventListener('blur', function() {
+    pointerDown = false;
+    clickUntil = 0;
+    markActivity();
   });
-  var firstMove = false;
-  document.addEventListener('mousemove', function onFirst() {
-    if (!firstMove) {
-      firstMove = true;
-      ELEM.classList.add('visible');
-      draw(0,0,0);
-      requestAnimationFrame(tick);
+
+  window.addEventListener('scroll', function() {
+    scrollUntil = performance.now() + SCROLL_HOLD_MS;
+    markActivity();
+  }, {passive:true});
+
+  document.addEventListener('mouseleave', function() {
+    pointerDown = false;
+    clickUntil = 0;
+    ELEM.classList.remove('visible');
+    document.body.classList.remove('has-morph-cursor');
+    running = false;
+  });
+
+  motionPreference.addEventListener('change', function(e) {
+    motionAllowed = !e.matches;
+    if (!motionAllowed) {
+      pointerDown = false;
+      clickUntil = 0;
+      ELEM.classList.remove('visible');
+      document.body.classList.remove('has-morph-cursor');
+      running = false;
     }
   });
 

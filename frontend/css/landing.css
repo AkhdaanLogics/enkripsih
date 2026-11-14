@@ -742,7 +742,14 @@ section { scroll-margin-top: 80px; }
   filter: drop-shadow(0 0 6px var(--stroke-color, #0066FF));
   transition: stroke 0.5s ease;
 }
-/* Hide native pointer cursor everywhere on landing */
-body, a, button, input, select, textarea, .btn, [role="button"] {
+/* Hide the native pointer only after the custom cursor starts. */
+body.has-morph-cursor,
+body.has-morph-cursor a,
+body.has-morph-cursor button,
+body.has-morph-cursor input,
+body.has-morph-cursor select,
+body.has-morph-cursor textarea,
+body.has-morph-cursor .btn,
+body.has-morph-cursor [role="button"] {
   cursor: none !important;
 }
