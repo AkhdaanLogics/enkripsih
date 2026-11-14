@@ -507,7 +507,7 @@ def init_db(
     conn = _cipher_connection(DB_PATH, key)
     cursor = conn.cursor()
 
-        cursor.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
@@ -988,5 +988,5 @@ def get_messages_count_for_recipient(recipient_id: str) -> int:
 
 def get_commander_profile(user_id: str = "CMD-01"):
     with _managed_connection() as conn:
-    row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-    return dict(row) if row else None
+        row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        return dict(row) if row else None
