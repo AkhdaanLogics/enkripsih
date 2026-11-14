@@ -262,6 +262,7 @@ body {
 .tabs-container { display: flex; flex-direction: column; gap: 2px; }
 
 .tab-btn {
+  position: relative;
   display: flex; align-items: center; gap: 10px;
   width: 100%;
   padding: 9px 12px;
