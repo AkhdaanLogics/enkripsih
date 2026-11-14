@@ -11,14 +11,14 @@
     ],
     commander: [
       {
+        target: "#recipientId",
+        title: "Pilih anggota penerima",
+        desc: "Pilih anggota tujuan terlebih dahulu. Kunci agen akan terisi otomatis.",
+      },
+      {
         target: "#intelMessage",
         title: "Tulis pesan",
         desc: "Isi pesan yang akan dikirim ke backend untuk dienkripsi. Database menyimpan hasilnya sebagai ciphertext.",
-      },
-      {
-        target: "#recipientId",
-        title: "Pilih anggota penerima",
-        desc: "Pilih anggota tujuan. Kunci agen terisi otomatis jika tersedia di server.",
       },
       {
         target: "#btnTransmitIntel",
@@ -58,6 +58,7 @@
         target: "#btnRefreshReceiverMsgs",
         title: "Refresh pesan",
         desc: "Tekan ini untuk menarik pesan terbaru dari server.",
+        scrollBottomFirst: true,
       },
     ],
   };
@@ -350,6 +351,17 @@
     return document.scrollingElement || document.documentElement;
   }
 
+  function findScrollParent(elm) {
+    var p = elm && elm.parentElement;
+    while (p && p !== document.body && p !== document.documentElement) {
+      var st = window.getComputedStyle(p);
+      var ov = st.overflowY || st.overflow || "";
+      if (ov === "auto" || ov === "scroll") return p;
+      p = p.parentElement;
+    }
+    return null;
+  }
+
   function clamp(v, a, b) {
     return Math.max(a, Math.min(b, v));
   }
@@ -427,9 +439,21 @@
 
     if (!isMobileViewport() && stepChanged) {
       lastStepKey = stepKey;
-      if (t && index > 0) {
+      // Scroll known inner scrollers to bottom before highlighting, so the
+      // card-header (with refresh button) stays pinned at the top.
+      if (step.scrollBottomFirst) {
+        // Scroll inner lists to bottom BEFORE highlighting so the pinned
+        // card-header (refresh button) stays visible at the top.
+        var bottomScrollers = document.querySelectorAll(
+          ".sent-list-scroll, .members-list-scroll, .receiver-chat-list-body"
+        );
+        bottomScrollers.forEach(function (el) {
+          el.scrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+        });
+        scheduleRender();
+      } else if (t && index > 0) {
         // Reset inner scrollers first so the target starts near the top
-        document.querySelectorAll(".sent-list-scroll, .receiver-chat-list-body, .receiver-message-container, .members-list-scroll").forEach(function (el) {
+        document.querySelectorAll(".sent-list-scroll, .receiver-message-container, .members-list-scroll").forEach(function (el) {
           el.scrollTop = 0;
         });
         scrollTargetIntoView(t, 16, true);
