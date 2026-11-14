@@ -249,10 +249,10 @@ async def protect_api(request: Request, call_next):
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "script-src 'self'; "
-        "style-src 'self'; "
+        "style-src 'self' https://fonts.googleapis.com; "
         "img-src 'self' data:; "
         "connect-src 'self'; "
-        "font-src 'self'; "
+        "font-src 'self' https://fonts.gstatic.com; "
         "frame-ancestors 'none'; "
         "base-uri 'self'; "
         "form-action 'self'"

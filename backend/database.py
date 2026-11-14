@@ -361,8 +361,6 @@ def init_db(
                     name TEXT NOT NULL,
                     rank TEXT NOT NULL,
                     role TEXT NOT NULL,
-                    face_enrolled INTEGER DEFAULT 0,
-                    face_template TEXT,
                     created_at TEXT NOT NULL
                 )
             """)
@@ -460,8 +458,7 @@ def init_db(
                     expires_at DOUBLE PRECISION NOT NULL,
                     principal_id TEXT NOT NULL DEFAULT 'CMD-01',
                     role TEXT NOT NULL DEFAULT 'COMMANDER',
-                    must_change_password INTEGER NOT NULL DEFAULT 0,
-                    face_verified INTEGER NOT NULL DEFAULT 0
+                    must_change_password INTEGER NOT NULL DEFAULT 0
                 )
             """)
             conn.execute("""
@@ -477,26 +474,20 @@ def init_db(
                 ADD COLUMN IF NOT EXISTS must_change_password INTEGER NOT NULL DEFAULT 0
             """)
             conn.execute("""
-                ALTER TABLE auth_sessions
-                ADD COLUMN IF NOT EXISTS face_verified INTEGER NOT NULL DEFAULT 0
-            """)
-            conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_auth_sessions_principal
                 ON auth_sessions (principal_id)
             """)
             conn.execute("""
                 INSERT INTO users (
-                    id, name, rank, role, face_enrolled, face_template, created_at
+                    id, name, rank, role, created_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?)
                 ON CONFLICT (id) DO NOTHING
             """, (
                 "CMD-01",
                 "Kolonel M. Haris",
                 "Panglima Operasi Siber Intelijen",
                 "COMMANDER",
-                0,
-                None,
                 datetime.now().isoformat(),
             ))
             conn.commit()
@@ -516,14 +507,12 @@ def init_db(
     conn = _cipher_connection(DB_PATH, key)
     cursor = conn.cursor()
 
-    cursor.execute("""
+        cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         rank TEXT NOT NULL,
         role TEXT NOT NULL,
-        face_enrolled INTEGER DEFAULT 0,
-        face_template TEXT,
         created_at TEXT NOT NULL
     )
     """)
@@ -608,8 +597,7 @@ def init_db(
         expires_at REAL NOT NULL,
         principal_id TEXT NOT NULL DEFAULT 'CMD-01',
         role TEXT NOT NULL DEFAULT 'COMMANDER',
-        must_change_password INTEGER NOT NULL DEFAULT 0,
-        face_verified INTEGER NOT NULL DEFAULT 0
+        must_change_password INTEGER NOT NULL DEFAULT 0
     )
     """)
     auth_session_columns = {
@@ -619,10 +607,9 @@ def init_db(
         ("principal_id", "TEXT NOT NULL DEFAULT 'CMD-01'"),
         ("role", "TEXT NOT NULL DEFAULT 'COMMANDER'"),
         ("must_change_password", "INTEGER NOT NULL DEFAULT 0"),
-        ("face_verified", "INTEGER NOT NULL DEFAULT 0"),
     ):
         if column not in auth_session_columns:
-            if column in ("principal_id", "role", "must_change_password", "face_verified"):
+            if column in ("principal_id", "role", "must_change_password"):
                 # DDL cannot be parameterized; both values come from a hardcoded allowlist tuple
                 cursor.execute(f"ALTER TABLE auth_sessions ADD COLUMN {column} {declaration}")  # nosec B608
     cursor.execute("""
@@ -650,15 +637,13 @@ def init_db(
     cursor.execute("SELECT COUNT(*) AS count FROM users WHERE id = 'CMD-01'")
     if cursor.fetchone()["count"] == 0:
         cursor.execute("""
-        INSERT INTO users (id, name, rank, role, face_enrolled, face_template, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO users (id, name, rank, role, created_at)
+        VALUES (?, ?, ?, ?, ?)
         """, (
             "CMD-01",
             "Kolonel M. Haris",
             "Panglima Operasi Siber Intelijen",
             "COMMANDER",
-            0,
-            None,
             datetime.now().isoformat(),
         ))
 
@@ -672,16 +657,15 @@ def save_auth_session(
     principal_id: str = "CMD-01",
     role: str = "COMMANDER",
     must_change_password: bool = False,
-    face_verified: bool = False,
 ) -> None:
     with _managed_connection() as conn:
         conn.execute(
             """
             INSERT INTO auth_sessions (
-                token, expires_at, principal_id, role, must_change_password, face_verified
-            ) VALUES (?, ?, ?, ?, ?, ?)
+                token, expires_at, principal_id, role, must_change_password
+            ) VALUES (?, ?, ?, ?, ?)
             """,
-            (token, expires_at, principal_id, role, int(must_change_password), int(face_verified)),
+            (token, expires_at, principal_id, role, int(must_change_password)),
         )
 
 
@@ -689,7 +673,7 @@ def get_auth_session(token: str) -> dict | None:
     with _managed_connection() as conn:
         row = conn.execute(
             """
-            SELECT token, expires_at, principal_id, role, must_change_password, face_verified
+            SELECT token, expires_at, principal_id, role, must_change_password
             FROM auth_sessions WHERE token = ?
             """,
             (token,),
@@ -737,14 +721,6 @@ def update_auth_session_expiry(token: str, expires_at: float) -> None:
         conn.execute(
             "UPDATE auth_sessions SET expires_at = ? WHERE token = ?",
             (expires_at, token),
-        )
-
-
-def mark_face_verified(token: str) -> None:
-    with _managed_connection() as conn:
-        conn.execute(
-            "UPDATE auth_sessions SET face_verified = 1 WHERE token = ?",
-            (token,),
         )
 
 
@@ -1012,12 +988,5 @@ def get_messages_count_for_recipient(recipient_id: str) -> int:
 
 def get_commander_profile(user_id: str = "CMD-01"):
     with _managed_connection() as conn:
-        row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-        return dict(row) if row else None
-
-
-def update_face_template(user_id: str, template_data: list):
-    with _managed_connection() as conn:
-        conn.execute("""
-        UPDATE users SET face_enrolled = 1, face_template = ? WHERE id = ?
-        """, (json.dumps(template_data), user_id))
+    row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    return dict(row) if row else None

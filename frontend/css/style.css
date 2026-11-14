@@ -3,7 +3,7 @@
    Prinsip: semua variabel terdefinisi, satu definisi per komponen,
    skala spasi 4/8/12/16/24/32, tidak ada override saling tabrak.
    Nama class dipertahankan, jadi HTML/JS tidak perlu diubah.
-   Font tetap Inter woff2 lokal (CSP: font-src 'self').
+   Font Inter woff2 lokal (CSP: font-src 'self').
    ========================================================================== */
 
 /* Inter: woff2 lokal (CSP: font-src 'self') */

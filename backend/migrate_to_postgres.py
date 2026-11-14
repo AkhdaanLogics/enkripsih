@@ -16,8 +16,6 @@ TABLE_COLUMNS = {
         "name",
         "rank",
         "role",
-        "face_enrolled",
-        "face_template",
         "created_at",
     ),
     "messages": (
@@ -169,8 +167,6 @@ def migrate(source_path: Path, database_url: str, source_passphrase: str | None)
                     name = EXCLUDED.name,
                     rank = EXCLUDED.rank,
                     role = EXCLUDED.role,
-                    face_enrolled = EXCLUDED.face_enrolled,
-                    face_template = EXCLUDED.face_template,
                     created_at = EXCLUDED.created_at
                 """
             values = []

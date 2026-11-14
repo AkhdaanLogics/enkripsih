@@ -28,7 +28,6 @@ from backend import database
 
 class MessageTransmissionTests(unittest.TestCase):
     def test_main_app_does_not_load_optional_opencv_on_import(self):
-        self.assertNotIn("backend.face_auth", sys.modules)
         self.assertNotIn("cv2", sys.modules)
 
     def setUp(self):
@@ -250,10 +249,10 @@ class MessageTransmissionTests(unittest.TestCase):
         source.executescript("""
             CREATE TABLE users (
                 id TEXT PRIMARY KEY, name TEXT, rank TEXT, role TEXT,
-                face_enrolled INTEGER, face_template TEXT, created_at TEXT
+                created_at TEXT
             );
             INSERT INTO users VALUES (
-                'CMD-01', 'Komandan', 'Rank', 'COMMANDER', 0, NULL, '2026-10-24'
+                'CMD-01', 'Komandan', 'Rank', 'COMMANDER', '2026-10-24'
             );
             CREATE TABLE messages (
                 id TEXT, sender_id TEXT, sender_name TEXT, target_unit TEXT,
@@ -520,8 +519,7 @@ class MessageTransmissionTests(unittest.TestCase):
             connection.execute("""
                 CREATE TABLE users (
                     id TEXT PRIMARY KEY, name TEXT NOT NULL, rank TEXT NOT NULL,
-                    role TEXT NOT NULL, face_enrolled INTEGER DEFAULT 0,
-                    face_template TEXT, created_at TEXT NOT NULL
+                    role TEXT NOT NULL, created_at TEXT NOT NULL
                 )
             """)
             connection.execute("""
