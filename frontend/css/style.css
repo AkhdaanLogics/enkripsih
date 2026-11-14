@@ -14,53 +14,54 @@
 
 /* ── Tokens ─────────────────────────────────────────────────────────────── */
 :root {
-  --ground: #f4f6fa;
-  --surface: #ffffff;
-  --raised: #f8fafc;
-  --active: #e2e8f0;
-  --border: #e2e8f0;
-  --rule: #edf1f6;
-  --control: #f1f5f9;
-  --control-hover: #e2e8f0;
-  --control-border: #cbd5e1;
+  --ground:   #0b0d10;
+  --surface:  #10131a;
+  --raised:   #161a23;
+  --active:   rgba(255,255,255,0.07);
+  --border:   rgba(255,255,255,0.08);
+  --rule:     rgba(255,255,255,0.05);
+  --control:  #1a1f2c;
+  --control-hover: #222838;
+  --control-border: rgba(255,255,255,0.10);
 
-  --text: #0f172a;
-  --muted: #5b6b82;
-  --dim: #8392a7;
+  --text:     #f4f6fa;
+  --muted:    #939aa7;
+  --dim:      #5b6b82;
 
-  --accent: #0066ff;
-  --accent-hover: #1d4ed8;
-  --accent-bg: #eff6ff;
-  --accent-tint: #dbeafe;
-  --accent-line: #0066ff;
-  --accent-green: #1e7b4f;
-  --accent-amber: #92400e;
+  --accent:       #0066FF;
+  --accent-hover: #1d7aff;
+  --accent-bg:    rgba(0,102,255,0.10);
+  --accent-tint:  rgba(0,102,255,0.15);
+  --accent-line:  rgba(0,102,255,0.35);
+  --accent-green: #22c55e;
+  --accent-amber: #f59e0b;
+  --accent-glow:  rgba(0,102,255,0.30);
 
-  --positive: #1e7b4f;
-  --negative: #c4242a;
-  --warning: #92400e;
+  --positive: #22c55e;
+  --negative: #ef4444;
+  --warning:  #f59e0b;
 
-  --pill-positive-bg: #dcfae5;
-  --pill-negative-bg: #ffedea;
-  --pill-negative-ink: #831c1e;
-  --pill-warning-bg: #fffbeb;
-  --pill-neutral-bg: #ebedee;
+  --pill-positive-bg: rgba(34,197,94,0.10);
+  --pill-negative-bg: rgba(239,68,68,0.10);
+  --pill-negative-ink: #fca5a5;
+  --pill-warning-bg:  rgba(245,158,11,0.10);
+  --pill-neutral-bg:  rgba(255,255,255,0.05);
 
   --radius-card: 10px;
   --radius-control: 8px;
   --radius-sheet: 14px;
   --radius-pill: 999px;
 
-  --elevation-0: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --elevation-1: 0 2px 6px rgba(15, 23, 42, 0.07);
-  --elevation-2: 0 6px 16px rgba(15, 23, 42, 0.10);
-  --elevation-3: 0 16px 40px rgba(15, 23, 42, 0.18);
+  --elevation-0: 0 1px 2px rgba(0,0,0,0.30);
+  --elevation-1: 0 2px 8px rgba(0,0,0,0.40);
+  --elevation-2: 0 6px 20px rgba(0,0,0,0.50);
+  --elevation-3: 0 16px 48px rgba(0,0,0,0.65);
   --shadow-sm: var(--elevation-0);
   --shadow-md: var(--elevation-1);
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
-  --font-sans: "IBM Plex Sans", Inter, system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-body: var(--font-sans);
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
@@ -72,8 +73,8 @@
   --header-h: 60px;
   --footer-h: 52px;
   --sidebar-width: 224px;
-  --sheet-inset: 12px;   /* jarak sheet putih dari tepi layar */
-  --pad: 24px;           /* padding dalam sheet */
+  --sheet-inset: 12px;
+  --pad: 24px;
   --row-height: 64px;
 
   --app-max-width: 1800px;
@@ -107,6 +108,7 @@ body {
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--accent-bg);
 }
 .tab-btn:focus-visible { outline-offset: 1px; }
 
@@ -186,7 +188,10 @@ body {
 .btn-tactical:disabled { opacity: .5; cursor: not-allowed; }
 
 .btn-tactical-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn-tactical-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); box-shadow: 0 2px 8px rgba(0, 102, 255, .25); }
+.btn-tactical-primary:hover:not(:disabled) {
+  background: var(--accent-hover); border-color: var(--accent-hover);
+  box-shadow: 0 0 18px var(--accent-glow), 0 2px 8px rgba(0,102,255,0.30);
+}
 
 .btn-tactical-secondary { background: var(--surface); border-color: var(--control-border); color: var(--muted); }
 .btn-tactical-secondary:hover:not(:disabled) { background: var(--control); color: var(--text); }
@@ -615,7 +620,7 @@ body.view-receiver .app-sidebar { display: none; }
 #webcamVideo { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 #webcamCanvas { display: none; }
 .biometric-reticle { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
-.reticle-box { position: relative; width: 200px; height: 230px; border: 1px dashed rgba(255, 255, 255, .35); transition: border-color .2s ease; }
+.reticle-box { position: relative; width: 200px; height: 230px; border: 1px dashed rgba(255, 255, 255, .25); transition: border-color .2s ease; }
 .reticle-box.detected { border-color: var(--accent); }
 .reticle-corner { position: absolute; width: 14px; height: 14px; border: 0 solid var(--accent); }
 .corner-tl { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
@@ -696,7 +701,7 @@ body.view-receiver .app-sidebar { display: none; }
   position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
   opacity: 0; pointer-events: none; transition: opacity .2s ease;
 }
-.processing-overlay { z-index: 10000; background: rgba(255, 255, 255, .7); }
+.processing-overlay { z-index: 10000; background: rgba(11, 13, 16, .80); }
 .confirm-overlay { z-index: 10001; background: rgba(15, 23, 42, .55); backdrop-filter: blur(4px); }
 .success-overlay { z-index: 10002; background: rgba(15, 23, 42, .5); backdrop-filter: blur(4px); }
 .processing-overlay:not([hidden]), .confirm-overlay:not([hidden]), .success-overlay:not([hidden]) { opacity: 1; pointer-events: all; }
@@ -729,7 +734,7 @@ body.view-receiver .app-sidebar { display: none; }
 .tour-overlay { position: fixed; inset: 0; z-index: 10001; opacity: 0; transition: opacity .22s ease; }
 .tour-overlay.is-open { opacity: 1; }
 .tour-panel { position: absolute; z-index: 1; display: none; background: rgba(15, 23, 42, .55); pointer-events: none; }
-.tour-highlight { position: fixed; z-index: 2; display: none; border: 2px solid rgba(255, 255, 255, .95); border-radius: 8px; box-shadow: 0 0 0 3px rgba(0, 102, 255, .6), 0 4px 16px rgba(15, 23, 42, .25); pointer-events: none; }
+.tour-highlight { position: fixed; z-index: 2; display: none; border: 2px solid var(--accent); border-radius: 8px; box-shadow: 0 0 0 3px var(--accent-glow), 0 4px 16px rgba(0, 0, 0, .4); pointer-events: none; }
 .tour-arrow { position: fixed; left: 0; top: 0; z-index: 3; pointer-events: none; filter: drop-shadow(0 2px 6px rgba(15, 23, 42, .45)); }
 .tour-card {
   position: fixed; left: 50%; top: 50%; z-index: 10003;

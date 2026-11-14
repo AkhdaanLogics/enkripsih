@@ -1,218 +1,389 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0b0d10">
-  <meta name="description" content="ENKRIPSIH: kirim pesan terenkripsi antar anggota terdaftar. Backend mengenkripsi pesan sebelum menyimpan ciphertext dan mendekripsinya saat dibuka.">
-  <title>ENKRIPSIH · Pintar mengunci, tegas menjaga.</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b0d10" />
+    <meta
+      name="description"
+      content="ENKRIPSIH: kirim pesan terenkripsi antar anggota terdaftar. Backend mengenkripsi pesan sebelum menyimpan ciphertext dan mendekripsinya saat dibuka."
+    />
+    <title>ENKRIPSIH · Pintar mengunci, tegas menjaga.</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-  <link rel="stylesheet" href="/static/css/landing.css?v=enkripsih-v18">
-</head>
-<body>
+    <link rel="stylesheet" href="/static/css/landing.css?v=enkripsih-v19" />
+  </head>
+  <body>
+    <a class="visually-hidden" href="#main">Lewati ke konten</a>
 
-  <a class="visually-hidden" href="#main">Lewati ke konten</a>
-
-  <!-- NAV -->
-  <header class="ld-nav" data-reveal>
-    <div class="container ld-nav-inner">
-      <a class="ld-brand" href="#top" aria-label="ENKRIPSIH">
-        <span class="ld-brand-mark" aria-hidden="true">E</span>
-        ENKRIPSIH
-      </a>
-      <nav class="ld-nav-links" aria-label="Navigasi">
-        <a href="#features">Fitur</a>
-        <a href="#how">Cara kerja</a>
-        <a href="#demo">Passkey</a>
-        <a href="#team">Tim</a>
-      </nav>
-      <a class="btn" href="/?a=1">Buka aplikasi</a>
-    </div>
-  </header>
-
-  <main id="main">
-
-    <!-- HERO -->
-    <section class="hero" id="top">
-      <div class="container hero-inner">
-        <span class="hero-eyebrow" data-reveal>Enkripsi AES-GCM · Passkey Cypher</span>
-        <h1 data-reveal>
-          <span class="line"><span>Pintar mengunci,</span></span><br>
-          <span class="line"><span>tegas <em class="accent">menjaga</em>.</span></span>
-        </h1>
-        <p class="hero-lede" data-reveal>
-          ENKRIPSIH mengirim pesan antar anggota terdaftar. Backend mengenkripsi
-          isi pesan dengan AES-GCM sebelum menyimpan paket ciphertext. Saat
-          penerima membuka pesan dengan respons perangkat Cypher, backend
-          melakukan dekripsi.
-        </p>
-        <div class="hero-cta" data-reveal>
-          <a class="btn" href="/?a=1">Mulai mengirim</a>
-          <a class="btn btn--ghost" href="#how">Lihat cara kerja</a>
-        </div>
-        <p class="hero-meta" data-reveal>
-          Dibuat oleh <strong class="footer-brand" style="color:var(--fg)">Ayah Ini Arahnya Kemana</strong>
-          <span class="dot" aria-hidden="true">•</span>
-          Kartika Cyber Hackathon 2026
-        </p>
-
-
+    <!-- NAV -->
+    <header class="ld-nav" data-reveal>
+      <div class="container ld-nav-inner">
+        <a class="ld-brand" href="#top" aria-label="ENKRIPSIH">
+          <span class="ld-brand-mark" aria-hidden="true">E</span>
+          ENKRIPSIH
+        </a>
+        <nav class="ld-nav-links" aria-label="Navigasi">
+          <a href="#features">Fitur</a>
+          <a href="#how">Cara kerja</a>
+          <a href="#demo">Passkey</a>
+          <a href="#team">Tim</a>
+        </nav>
+        <a class="btn" href="/?a=1">Buka aplikasi</a>
       </div>
-    </section>
+    </header>
 
-    <!-- STATS -->
-    <section class="stats" aria-label="Angka utama">
-      <div class="container stats-grid">
-        <div class="stat" data-reveal><div class="num">DB</div><div class="lbl">Menyimpan paket ciphertext</div></div>
-        <div class="stat" data-reveal><div class="num">256<span class="suffix">-bit</span></div><div class="lbl">AES-GCM per pesan</div></div>
-        <div class="stat" data-reveal><div class="num">12</div><div class="lbl">Simbol passkey per kunci</div></div>
-        <div class="stat" data-reveal><div class="num">1<span class="suffix">:1</span></div><div class="lbl">Perangkat ↔ anggota</div></div>
-      </div>
-    </section>
-
-    <!-- FEATURES -->
-    <section class="section" id="features">
-      <div class="container">
-        <div class="section-head" data-reveal>
-          <div class="kicker">Fitur</div>
-          <h2>Alur pesan dari pengiriman hingga dibuka.</h2>
-          <p>Backend mengenkripsi pesan sebelum menyimpan ciphertext. Saat penerima mengirim respons passkey, backend mendekripsi pesan untuk ditampilkan.</p>
+    <main id="main">
+      <!-- HERO -->
+      <section class="hero" id="top">
+        <div class="container hero-inner">
+          <span class="hero-eyebrow" data-reveal
+            >Enkripsi AES-GCM · Passkey Cypher</span
+          >
+          <h1 data-reveal>
+            <span class="line"><span>Pintar mengunci,</span></span
+            ><br />
+            <span class="line"
+              ><span>tegas <em class="accent">menjaga</em>.</span></span
+            >
+          </h1>
+          <p class="hero-lede" data-reveal>
+            ENKRIPSIH mengirim pesan antar anggota terdaftar. Backend
+            mengenkripsi isi pesan dengan AES-GCM sebelum menyimpan paket
+            ciphertext. Saat penerima membuka pesan dengan respons perangkat
+            Cypher, backend melakukan dekripsi.
+          </p>
+          <div class="hero-cta" data-reveal>
+            <a class="btn" href="/?a=1">Mulai mengirim</a>
+            <a class="btn btn--ghost" href="#how">Lihat cara kerja</a>
+          </div>
+          <p class="hero-meta" data-reveal>
+            Dibuat oleh
+            <strong class="footer-brand" style="color: var(--fg)"
+              >AYAH INI ARAHNYA KEMANA?</strong
+            >
+            <span class="dot" aria-hidden="true">•</span>
+            Kartika Cyber Hackathon 2026
+          </p>
         </div>
-        <div class="features-grid">
-          <!-- Demo Video Card -->
-          <article class="feature big demo-card" data-reveal>
-             <div class="video-wrapper">
+      </section>
+
+      <!-- STATS -->
+      <section class="stats" aria-label="Angka utama">
+        <div class="container stats-grid">
+          <div class="stat" data-reveal>
+            <div class="num">DB</div>
+            <div class="lbl">Menyimpan paket ciphertext</div>
+          </div>
+          <div class="stat" data-reveal>
+            <div class="num">256<span class="suffix">-bit</span></div>
+            <div class="lbl">AES-GCM per pesan</div>
+          </div>
+          <div class="stat" data-reveal>
+            <div class="num">12</div>
+            <div class="lbl">Simbol passkey per kunci</div>
+          </div>
+          <div class="stat" data-reveal>
+            <div class="num">1<span class="suffix">:1</span></div>
+            <div class="lbl">Perangkat ↔ anggota</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURES -->
+      <section class="section" id="features">
+        <div class="container">
+          <div class="section-head" data-reveal>
+            <div class="kicker">Fitur</div>
+            <h2>Alur pesan dari pengiriman hingga dibuka.</h2>
+            <p>
+              Backend mengenkripsi pesan sebelum menyimpan ciphertext. Saat
+              penerima mengirim respons passkey, backend mendekripsi pesan untuk
+              ditampilkan.
+            </p>
+          </div>
+          <div class="features-grid">
+            <!-- Demo Video Card -->
+            <article class="feature big demo-card" data-reveal>
+              <div class="video-wrapper">
                 <video id="demoVideo" muted loop playsinline preload="none">
-                  <source src="/static/assets/demo_cypher.mp4" type="video/mp4">
+                  <source
+                    src="/static/assets/demo_cypher.mp4"
+                    type="video/mp4"
+                  />
                 </video>
                 <div class="overlay-text">Demo Cypher</div>
                 <div class="video-hint">Hover untuk demo</div>
-             </div>
-            <div class="demo-card-body">
-              <h3>Praktek Fisik: Buka Pesan</h3>
-              <p>Lihat bagaimana tantangan fisik diubah menjadi kunci kriptografi secara instan.</p>
-              <a class="btn btn--ghost" href="#" style="margin-top:8px;align-self:flex-start">Demo Lengkap</a>
-            </div>
-           </article>
-
-
-          <article class="feature big" data-reveal>
-            <div>
-              <div class="ico" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
               </div>
-              <h3>Pesan tersimpan sebagai ciphertext</h3>
-              <p>Backend mengenkripsi isi pesan dengan AES-GCM sebelum menyimpannya. Saat pesan dibuka, backend mendekripsinya untuk penerima. Database menyimpan paket ciphertext, bukan teks pesan.</p>
-            </div>
-            <pre class="code"><span>Backend: <span class="hl">PBKDF2</span>(respons, 200k) → kunci AES</span><span>AES-GCM.encrypt(pesan) → <span class="ok">ciphertext</span></span></pre>
-          </article>
-
-          <div class="features-sub">
-            <article class="feature" data-reveal>
-              <div class="ico" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"/></svg>
+              <div class="demo-card-body">
+                <h3>Praktek Fisik: Buka Pesan</h3>
+                <p>
+                  Lihat bagaimana tantangan fisik diubah menjadi kunci
+                  kriptografi secara instan.
+                </p>
+                <a
+                  class="btn btn--ghost"
+                  href="#"
+                  style="margin-top: 8px; align-self: flex-start"
+                  >Demo Lengkap</a
+                >
               </div>
-              <h3>Passkey Cypher</h3>
-              <p>Perangkat Wemos menjawab challenge 4 simbol dengan respons 12 simbol.</p>
             </article>
 
-            <article class="feature" data-reveal>
-              <div class="ico" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12h4l2-6 4 12 2-6h4"/></svg>
+            <article class="feature big" data-reveal>
+              <div>
+                <div class="ico" aria-hidden="true">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                  >
+                    <rect x="4" y="10" width="16" height="10" rx="2" />
+                    <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                  </svg>
+                </div>
+                <h3>Pesan tersimpan sebagai ciphertext</h3>
+                <p>
+                  Backend mengenkripsi isi pesan dengan AES-GCM sebelum
+                  menyimpannya. Saat pesan dibuka, backend mendekripsinya untuk
+                  penerima. Database menyimpan paket ciphertext, bukan teks
+                  pesan.
+                </p>
               </div>
-              <h3>HMAC-SHA256</h3>
-              <p>Perangkat Wemos menghitung respons 12 simbol dari challenge menggunakan HMAC-SHA256.</p>
+              <pre
+                class="code"
+              ><span>Backend: <span class="hl">PBKDF2</span>(respons, 200k) → kunci AES</span><span>AES-GCM.encrypt(pesan) → <span class="ok">ciphertext</span></span></pre>
             </article>
+
+            <div class="features-sub">
+              <article class="feature" data-reveal>
+                <div class="ico" aria-hidden="true">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                  >
+                    <path
+                      d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"
+                    />
+                  </svg>
+                </div>
+                <h3>Passkey Cypher</h3>
+                <p>
+                  Perangkat Wemos menjawab challenge 4 simbol dengan respons 12
+                  simbol.
+                </p>
+              </article>
+
+              <article class="feature" data-reveal>
+                <div class="ico" aria-hidden="true">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                  >
+                    <path d="M4 12h4l2-6 4 12 2-6h4" />
+                  </svg>
+                </div>
+                <h3>HMAC-SHA256</h3>
+                <p>
+                  Perangkat Wemos menghitung respons 12 simbol dari challenge
+                  menggunakan HMAC-SHA256.
+                </p>
+              </article>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- HOW IT WORKS -->
-    <section class="section" id="how">
-      <div class="container">
-        <div class="section-head" data-reveal>
-          <div class="kicker">Cara kerja</div>
-          <h2>Dari pengiriman, penyimpanan, hingga pembukaan.</h2>
+      <!-- HOW IT WORKS -->
+      <section class="section" id="how">
+        <div class="container">
+          <div class="section-head" data-reveal>
+            <div class="kicker">Cara kerja</div>
+            <h2>Dari pengiriman, penyimpanan, hingga pembukaan.</h2>
+          </div>
+          <div class="steps">
+            <div class="step" data-reveal>
+              <span class="tag">Sender</span>
+              <h4>Tulis &amp; pilih</h4>
+              <p>Ketik pesan dan pilih anggota penerima di panel kirim.</p>
+            </div>
+            <div class="step" data-reveal>
+              <span class="tag">Backend</span>
+              <h4>Enkripsi pesan</h4>
+              <p>
+                Backend mengenkripsi isi pesan dengan AES-GCM sebelum
+                menyimpannya sebagai ciphertext.
+              </p>
+            </div>
+            <div class="step" data-reveal>
+              <span class="tag">Database</span>
+              <h4>Simpan ciphertext</h4>
+              <p>
+                Database menyimpan paket ciphertext dan challenge untuk
+                penerima.
+              </p>
+            </div>
+            <div class="step" data-reveal>
+              <span class="tag">Receiver</span>
+              <h4>Buka pesan</h4>
+              <p>
+                Penerima memasukkan respons 12 simbol. Backend mendekripsi pesan
+                dan mengirim isinya ke browser.
+              </p>
+            </div>
+          </div>
         </div>
-        <div class="steps">
-          <div class="step" data-reveal><span class="tag">Sender</span><h4>Tulis &amp; pilih</h4><p>Ketik pesan dan pilih anggota penerima di panel kirim.</p></div>
-          <div class="step" data-reveal><span class="tag">Backend</span><h4>Enkripsi pesan</h4><p>Backend mengenkripsi isi pesan dengan AES-GCM sebelum menyimpannya sebagai ciphertext.</p></div>
-          <div class="step" data-reveal><span class="tag">Database</span><h4>Simpan ciphertext</h4><p>Database menyimpan paket ciphertext dan challenge untuk penerima.</p></div>
-          <div class="step" data-reveal><span class="tag">Receiver</span><h4>Buka pesan</h4><p>Penerima memasukkan respons 12 simbol. Backend mendekripsi pesan dan mengirim isinya ke browser.</p></div>
-        </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- DEMO / PASSKEY -->
-    <section class="section demo" id="demo">
-      <div class="container demo-inner">
-        <div data-reveal>
-          <div class="kicker" style="font-family:var(--font-mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:14px">Passkey</div>
-          <h2 style="font-size:clamp(28px,4.4vw,44px);line-height:1.08;letter-spacing:-.02em">Respons 12 simbol menjadi kunci sesi.</h2>
-          <p style="color:var(--fg-2);margin-top:14px;font-size:16px">Perangkat menghitung respons dari challenge dengan HMAC-SHA256. Backend menurunkan kunci AES dari respons dan salt acak pesan.</p>
-          <a class="btn btn--ghost" style="margin-top:20px" href="https://wokwi.com/projects/478446530349223937" target="_blank" rel="noopener">Coba simulasi Wokwi</a>
-        </div>
-          <div class="demo-card" data-reveal aria-hidden="true" id="chip-demo-card">
+      <!-- DEMO / PASSKEY -->
+      <section class="section demo" id="demo">
+        <div class="container demo-inner">
+          <div data-reveal>
+            <div
+              class="kicker"
+              style="
+                font-family: var(--font-mono);
+                font-size: 12px;
+                letter-spacing: 0.16em;
+                text-transform: uppercase;
+                color: var(--accent);
+                margin-bottom: 14px;
+              "
+            >
+              Passkey
+            </div>
+            <h2
+              style="
+                font-size: clamp(28px, 4.4vw, 44px);
+                line-height: 1.08;
+                letter-spacing: -0.02em;
+              "
+            >
+              Respons 12 simbol menjadi kunci sesi.
+            </h2>
+            <p style="color: var(--fg-2); margin-top: 14px; font-size: 16px">
+              Perangkat menghitung respons dari challenge dengan HMAC-SHA256.
+              Backend menurunkan kunci AES dari respons dan salt acak pesan.
+            </p>
+            <a
+              class="btn btn--ghost"
+              style="margin-top: 20px"
+              href="https://wokwi.com/projects/478446530349223937"
+              target="_blank"
+              rel="noopener"
+              >Coba simulasi Wokwi</a
+            >
+          </div>
+          <div
+            class="demo-card"
+            data-reveal
+            aria-hidden="true"
+            id="chip-demo-card"
+          >
             <div class="lbl">CHALLENGE</div>
             <div class="demo-chips" id="challenge-chips">
-              <span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span>
+              <span class="chip-box"><span class="chip"></span></span
+              ><span class="chip-box"><span class="chip"></span></span
+              ><span class="chip-box"><span class="chip"></span></span
+              ><span class="chip-box"><span class="chip"></span></span>
             </div>
-            <div class="lbl" style="margin-top:20px">RESPONSE (Cypher)</div>
+            <div class="lbl" style="margin-top: 20px">RESPONSE (Cypher)</div>
             <div class="demo-chips" id="response-chips">
-              <span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span><span class="chip-box"><span class="chip"></span></span>
+              <span class="chip-box"><span class="chip"></span></span
+              ><span class="chip-box"><span class="chip"></span></span
+              ><span class="chip-box"><span class="chip"></span></span
+              ><span class="chip-box"><span class="chip"></span></span
+              ><span class="chip-box"><span class="chip"></span></span
+              ><span class="chip-box"><span class="chip"></span></span
+              ><span class="chip-box"><span class="chip"></span></span
+              ><span class="chip-box"><span class="chip"></span></span
+              ><span class="chip-box"><span class="chip"></span></span
+              ><span class="chip-box"><span class="chip"></span></span
+              ><span class="chip-box"><span class="chip"></span></span
+              ><span class="chip-box"><span class="chip"></span></span>
             </div>
-            <div class="foot"><span class="dot-pulse" aria-hidden="true"></span> Kunci sesi diturunkan dari respons</div>
+            <div class="foot">
+              <span class="dot-pulse" aria-hidden="true"></span> Kunci sesi
+              diturunkan dari respons
+            </div>
           </div>
+        </div>
+      </section>
+
+      <!-- TEAM -->
+      <section class="section team" id="team">
+        <div class="container" data-reveal>
+          <div
+            class="kicker"
+            style="
+              font-family: var(--font-mono);
+              font-size: 12px;
+              letter-spacing: 0.16em;
+              text-transform: uppercase;
+              color: var(--accent);
+              margin-bottom: 18px;
+            "
+          >
+            Dibuat oleh
+          </div>
+          <div class="team-name">
+            Ayah Ini<br /><span class="accent">Arahnya</span> Kemana
+          </div>
+          <p class="team-sub">
+            Tim yang membangun ENKRIPSIH untuk Kartika Cyber Hackathon 2026.
+          </p>
+          <span class="team-tag">Kartika Cyber Hackathon · 2026</span>
+        </div>
+      </section>
+
+      <!-- CTA -->
+      <section class="section cta">
+        <div class="container cta-inner" data-reveal>
+          <h2>Kirim pesan ke anggota terdaftar.</h2>
+          <p>
+            Masuk sebagai Sender untuk mengirim, atau sebagai Receiver untuk
+            membuka pesan.
+          </p>
+          <a class="btn" href="/?a=1">Buka ENKRIPSIH</a>
+        </div>
+      </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+      <div class="container footer-inner">
+        <span
+          >© 2026
+          <span class="footer-brand">AYAH INI ARAHNYA KEMANA?</span> Team</span
+        >
+        <nav
+          aria-label="Tautan kaki"
+          style="display: flex; gap: 20px; flex-wrap: wrap"
+        >
+          <a href="#features">Fitur</a>
+          <a href="#how">Cara kerja</a>
+          <a href="/?a=1">Masuk</a>
+        </nav>
+        <span>AES-GCM · HMAC-SHA256 · PBKDF2</span>
       </div>
-    </section>
+    </footer>
 
-    <!-- TEAM -->
-    <section class="section team" id="team">
-      <div class="container" data-reveal>
-        <div class="kicker" style="font-family:var(--font-mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:18px">Dibuat oleh</div>
-        <div class="team-name">Ayah Ini<br><span class="accent">Arahnya</span> Kemana</div>
-        <p class="team-sub">Tim yang membangun ENKRIPSIH untuk Kartika Cyber Hackathon 2026.</p>
-        <span class="team-tag">Kartika Cyber Hackathon · 2026</span>
-      </div>
-    </section>
-
-    <!-- CTA -->
-    <section class="section cta">
-      <div class="container cta-inner" data-reveal>
-        <h2>Kirim pesan ke anggota terdaftar.</h2>
-        <p>Masuk sebagai Sender untuk mengirim, atau sebagai Receiver untuk membuka pesan.</p>
-        <a class="btn" href="/?a=1">Buka ENKRIPSIH</a>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- FOOTER -->
-  <footer class="footer">
-    <div class="container footer-inner">
-      <span>© 2026 <span class="footer-brand">Ayah Ini Arahnya Kemana</span> Team</span>
-      <nav aria-label="Tautan kaki" style="display:flex;gap:20px;flex-wrap:wrap">
-        <a href="#features">Fitur</a>
-        <a href="#how">Cara kerja</a>
-        <a href="/?a=1">Masuk</a>
-      </nav>
-      <span>AES-GCM · HMAC-SHA256 · PBKDF2</span>
-    </div>
-  </footer>
-
-  <!-- Vendored libs served via /static mount (CSP: script-src 'self') -->
+    <!-- Vendored libs served via /static mount (CSP: script-src 'self') -->
     <script src="/static/vendor/gsap.min.js"></script>
     <script src="/static/vendor/ScrollTrigger.min.js"></script>
     <script src="/static/vendor/lenis.min.js"></script>
-    <script src="/static/js/landing.js?v=enkripsih-v5"></script>
+    <script src="/static/js/landing.js?v=enkripsih-v6"></script>
     <script src="/static/js/landing_demo.js?v=enkripsih-v12"></script>
     <div id="morph-cursor" aria-hidden="true">
       <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
         <path class="morph-path" id="morph-path"></path>
       </svg>
     </div>
-    <script src="/static/js/landing_morph_cursor.js?v=enkripsih-v13"></script>
-</body>
+    <script src="/static/js/landing_morph_cursor.js?v=enkripsih-v14"></script>
+  </body>
 </html>
