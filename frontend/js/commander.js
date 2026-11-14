@@ -383,7 +383,7 @@ const Commander = {
 
   async deleteRecipient(recipient) {
     const msgCount = await showConfirmDialog(
-      `Hapus anggota ${recipient.name} beserta semua pesan terkait?\n\nKetik HAPUS di bawah ini untuk konfirmasi. Aksi ini tidak bisa dipulihkan.`,
+      `Hapus anggota ${recipient.name} beserta semua pesan terkait?\n\nAksi ini tidak bisa dipulihkan.`,
       () => this._executeDeleteRecipient(recipient)
     );
   },
