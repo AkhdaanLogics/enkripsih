@@ -289,14 +289,14 @@
     return Math.min(72, Math.max(40, (window.innerHeight - r.top) || 40));
   }
 
-  function scrollTargetIntoView(elm, offsetPx) {
+  function scrollTargetIntoView(elm, offsetPx, center) {
     if (!elm) return;
     var v = viewport();
     var r = elm.getBoundingClientRect();
     var offset = offsetPx != null ? offsetPx : 16;
     var footClear = isMobileViewport() ? 0 : footerClearancePx();
     var inView = r.top >= v.offY + offset && r.bottom <= v.offY + v.h - offset - footClear;
-    if (inView) return;
+    if (inView && !center) return;
 
     // Direct-known scrollers: these sit inside the right-side cards and
     // scrolling them moves only the message list, keeping the card header
@@ -316,8 +316,9 @@
       // Only touch this scroller if the target is physically inside it
       if (r.top < er.top - 1 || r.bottom > er.bottom + 1) continue;
       var inContainerView = r.top >= er.top + offset && r.bottom <= er.bottom - offset;
-      if (inContainerView) return;
-      el.scrollTop = Math.max(0, el.scrollTop + r.top - er.top - offset);
+      if (inContainerView && !center) return;
+      var directOffset = center ? Math.max(offset, (el.clientHeight - elm.offsetHeight) / 2) : offset;
+      el.scrollTop = clamp(el.scrollTop + r.top - er.top - directOffset, 0, el.scrollHeight - el.clientHeight);
       return;
     }
 
@@ -329,8 +330,9 @@
       if (overflowY === "auto" || overflowY === "scroll") {
         var rElm = elm.getBoundingClientRect();
         var rP = p.getBoundingClientRect();
-        if (rElm.top < rP.top || rElm.bottom > rP.bottom) {
-          p.scrollTop += (rElm.top - rP.top) - 16;
+        if (center || rElm.top < rP.top || rElm.bottom > rP.bottom) {
+          var parentOffset = center ? Math.max(offset, (p.clientHeight - elm.offsetHeight) / 2) : 16;
+          p.scrollTop = clamp(p.scrollTop + rElm.top - rP.top - parentOffset, 0, p.scrollHeight - p.clientHeight);
         }
         return;
       }
@@ -339,8 +341,9 @@
 
     // Last resort: scroll document root.
     var sr = scrollRoot();
-    var desiredScroll = Math.max(0, sr.scrollTop + (r.top - v.offY) - offset - footClear);
-    sr.scrollTop = desiredScroll;
+    var rootOffset = center ? Math.max(offset, (v.h - elm.offsetHeight) / 2) : offset + footClear;
+    var desiredScroll = sr.scrollTop + (r.top - v.offY) - rootOffset;
+    sr.scrollTop = clamp(desiredScroll, 0, sr.scrollHeight - sr.clientHeight);
   }
 
   function scrollRoot() {
@@ -419,6 +422,21 @@
     if (i !== index) index = i;
     var step = MENUS[activeMenu][index];
     var t = step && step.target ? document.querySelector(step.target) : null;
+    var stepKey = activeMenu + ":" + index;
+    var stepChanged = stepKey !== lastStepKey;
+
+    if (!isMobileViewport() && stepChanged) {
+      lastStepKey = stepKey;
+      if (t && index > 0) {
+        scrollTargetIntoView(t, 16, true);
+      } else if (t) {
+        var initialRect = t.getBoundingClientRect();
+        var initialViewport = viewport();
+        if (initialRect.top < initialViewport.offY || initialRect.bottom > initialViewport.offY + initialViewport.h) {
+          scrollTargetIntoView(t);
+        }
+      }
+    }
 
     titleEl.textContent = step.title;
     descEl.textContent = step.desc;
@@ -568,23 +586,6 @@
     card.style.left = pos.left + "px";
     card.style.top = pos.top + "px";
     card.style.margin = "";
-
-    // Scroll target into view only when the step actually changed AND the
-    // target is not already visible. Body scroll is locked while the tour
-    // runs, so we only scroll the innermost container that actually
-    // contains the target; otherwise the page would shift under the card.
-    var stepKey = activeMenu + ":" + index;
-    if (stepKey !== lastStepKey) {
-      lastStepKey = stepKey;
-      var r0 = t.getBoundingClientRect();
-      var v0 = viewport();
-      var inView = r0.top >= v0.offY && r0.bottom <= v0.offY + v0.h;
-      if (!inView) {
-        scrollTargetIntoView(t);
-        clearTimeout(window.__enkTourScrollT);
-        window.__enkTourScrollT = setTimeout(scheduleRender, 40);
-      }
-    }
 
     var spotlightGap = 8;
     var x0 = pLeft - spotlightGap;
