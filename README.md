@@ -14,8 +14,6 @@ Aplikasi web untuk mengirim pesan terenkripsi dari **Sender** ke banyak **Receiv
 - [Menjalankan di Vercel](#menjalankan-di-vercel)
 - [Migrasi Lokal ke PostgreSQL](#migrasi-lokal-ke-postgresql)
 - [Pengujian](#pengujian)
-- [Catatan Keamanan](#catatan-keamanan)
-- [Video Demo](#video-demo)
 - [Dokumentasi & Materi](#dokumentasi--materi)
 
 ## Fitur Utama
@@ -27,7 +25,7 @@ Aplikasi web untuk mengirim pesan terenkripsi dari **Sender** ke banyak **Receiv
 | Kunci agen di DB | `agent_secret` disimpan terenkripsi di database — deploy Vercel tanpa perlu env vars |
 | Perangkat passkey | Wemos D1 Mini (ESP8266) menjalankan firmware KeyBCA, menghasilkan 12 simbol respons dari 4 simbol challenge |
 | Burn pesan | Hapus ciphertext permanen dari database |
-| Throttle brute-force | 5 percobaan gagal → lock 5 menit untuk login, decrypt, dan face verify |
+| Throttle brute-force | 5 percobaan gagal → lock 5 menit untuk login, decrypt |
 | UI anti-slop | Design system "tactical data terminal", mobile-first, onboarding tour per peran |
 | WebSocket real-time | Broadcast event (pesan baru, dibakar, dibuka) ke semua client |
 | Dark OLED theme | Palet gelap `#0066FF`, landing.css v19 + style.css v10 |
@@ -64,7 +62,6 @@ Aplikasi web untuk mengirim pesan terenkripsi dari **Sender** ke banyak **Receiv
 | Backend | Python 3.9+, FastAPI + Uvicorn, `cryptography`, `psycopg`, `argon2-cffi`, Vercel serverless |
 | Database | PostgreSQL Neon (cloud), SQLite + SQLCipher (lokal dev) |
 | IoT | Wemos D1 Mini (ESP8266), firmware C++ (Arduino IDE), BearSSL, OLED SSD1306 |
-| Face Auth | OpenCV + numpy (Haar Cascade, cosine similarity) — *backend ready, belum di-wire ke UI* |
 
 ## Alur Pemakaian
 
@@ -87,41 +84,29 @@ enkripsih/
 ├── requirements.txt           # Dependency Python
 ├── pyproject.toml
 ├── .env.example               # Template env vars
-├── frontend/
-│   ├── index.html             # UI utama (Sender & Receiver)
-│   ├── landing.html           # Marketing page / public landing
-│   ├── video_demo.html        # Motion graphic penjelas (HTML → MP4 via Playwright+FFmpeg)
-│   ├── css/
-│   │   ├── style.css          # Design system "tactical data terminal" (v10)
-│   │   ├── landing.css        # Dark OLED palette v19 (landing page)
-│   │   └── video_demo.css     # Styling demo video
-│   └── js/
-│       ├── app.js             # State + router
-│       ├── auth.js            # Login, session, cookie
-│       ├── commander.js       # Alur kirim pesan (Sender)
-│       ├── receiver.js        # Alur buka pesan (Receiver)
-│       ├── message_crypto.js  # Web Crypto: derive verifier
-│       ├── keybca_token.js    # Helper 12-simbol response
-│       ├── tour.js            # Onboarding tour (login/commander/receiver/members)
-│       └── video_demo.js      # GSAP timeline untuk render MP4
 ├── backend/
 │   ├── main.py                # FastAPI app + semua endpoint
 │   ├── database.py            # Schema + migrasi + CRUD
 │   ├── crypto_engine.py       # KeyBCA: HMAC, PBKDF2, AES-GCM
+│   ├── key_protection.py      # Kunci agen terenkripsi di DB
 │   ├── env_agents.py          # Encrypt/decrypt agent_secret di DB
-│   ├── face_auth.py           # Face auth (backend only, belum di-wire ke UI)
 │   ├── secure_backup.py       # Backup terenkripsi SQLite
 │   ├── migrate_to_postgres.py # Migrator lokal → PostgreSQL
 │   └── tests/                 # pytest (34 test)
-├── scripts/
-│   └── render_enkripsih.mjs   # Renderer video demo (Chrome headless + FFmpeg)
-├── iot_microcontroller/
-│   ├── wemos_d1_mini/         # Sketch Arduino + OLED + tombol
-│   └── esp32_keybca/         # Versi ESP32
-├── slides/
-│   ├── tools-tech.md          # Tabel tools & teknologi
-│   └── diagrams/              # Flowchart Mermaid
-└── video-output/              # Hasil render MP4
+└── frontend/
+    ├── index.html             # UI utama (Sender & Receiver)
+    ├── landing.html           # Marketing page / public landing
+    ├── css/
+    │   ├── style.css          # Design system "tactical data terminal" (v10)
+    │   └── landing.css        # Dark OLED palette v19 (landing page)
+    └── js/
+        ├── app.js             # State + router
+        ├── auth.js            # Login, session, cookie
+        ├── commander.js       # Alur kirim pesan (Sender)
+        ├── receiver.js        # Alur buka pesan (Receiver)
+        ├── message_crypto.js  # Web Crypto: derive verifier
+        ├── keybca_token.js    # Helper 12-simbol response
+        └── tour.js            # Onboarding tour (login/commander/receiver/members)
 ```
 
 ## Menjalankan di Windows
@@ -187,27 +172,10 @@ Jalankan tes:
 
 Tes transmisi memeriksa endpoint pengiriman, penyimpanan ciphertext tanpa metadata/plaintext lama, verifikasi secret key, round-trip AES-GCM dengan kunci cocok, kegagalan kunci salah, autentikasi API, status pesan lama, serta penghapusan ciphertext. Saat ini: **34 test pass**.
 
-## Video Demo
-
-Motion graphic penjelas alur Enkripsih — bukan rekaman demo aplikasi. Lihat detail di [`VIDEO_DEMO.md`](VIDEO_DEMO.md).
-
-**Pratinjau lokal:**
-```powershell
-npm run video:render
-```
-Hasil MP4 tersimpan di `video-output/`. Pratinjau HTML di `http://localhost:8000/static/video_demo.html`.
-
-- Gunakan hanya `localhost` untuk demo; API dan WebSocket memerlukan sesi login.
-- Secret key tidak dikirim sebagai field API, tetapi verifier dikirim untuk verifikasi. Kode frontend disajikan oleh aplikasi, sehingga server yang dikompromikan dapat mengubah kode enkripsi/dekripsi.
-- Jangan mencatat, menempelkan, atau mengirim secret key maupun connection string ke log, chat, issue publik, atau repositori.
-
 ## Dokumentasi & Materi
 
 | Materi | Link |
 |---|---|
 | Flowchart & diagram alur | [Google Drive](https://drive.google.com/drive/folders/1GI7Vqc96OBDakjI7JJHdpANcP_7V6cju?usp=sharing) |
 | Simulasi Wemos D1 Mini (Wokwi) | [wokwi.com/projects/479672497803902977](https://wokwi.com/projects/479672497803902977) |
-| Tabel tools & teknologi | [`slides/tools-tech.md`](slides/tools-tech.md) |
-| Diagram Mermaid (source) | [`slides/diagrams/00-ringkasan.mmd`](slides/diagrams/00-ringkasan.mmd) |
 | Live demo | <https://enkripsih.vercel.app> |
-| Video demo (MP4) | `npm run video:render` → `video-output/` |
