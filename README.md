@@ -179,4 +179,3 @@ Tes transmisi memeriksa endpoint pengiriman, penyimpanan ciphertext tanpa metada
 | Flowchart & diagram alur | [Google Drive](https://drive.google.com/drive/folders/1GI7Vqc96OBDakjI7JJHdpANcP_7V6cju?usp=sharing) |
 | Simulasi Wemos D1 Mini (Wokwi) | [wokwi.com/projects/479672497803902977](https://wokwi.com/projects/479672497803902977) |
 | Live demo | <https://enkripsih.vercel.app> |
-| Slide PPT | <https://canva.link/rsydg0trb2mg5nl> |
