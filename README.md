@@ -16,6 +16,7 @@ Aplikasi web untuk mengirim pesan terenkripsi dari **Sender** ke banyak **Receiv
 - [Pengujian](#pengujian)
 - [Catatan Keamanan](#catatan-keamanan)
 - [Video Demo](#video-demo)
+- [Dokumentasi & Materi](#dokumentasi--materi)
 
 ## Fitur Utama
 
@@ -27,8 +28,9 @@ Aplikasi web untuk mengirim pesan terenkripsi dari **Sender** ke banyak **Receiv
 | Perangkat passkey | Wemos D1 Mini (ESP8266) menjalankan firmware KeyBCA, menghasilkan 12 simbol respons dari 4 simbol challenge |
 | Burn pesan | Hapus ciphertext permanen dari database |
 | Throttle brute-force | 5 percobaan gagal → lock 5 menit untuk login, decrypt, dan face verify |
-| UI anti-slop | Design system "tactical data terminal", mobile-first, onboarding tour |
+| UI anti-slop | Design system "tactical data terminal", mobile-first, onboarding tour per peran |
 | WebSocket real-time | Broadcast event (pesan baru, dibakar, dibuka) ke semua client |
+| Dark OLED theme | Palet gelap `#0066FF`, landing.css v19 + style.css v10 |
 
 ## Arsitektur
 
@@ -87,7 +89,12 @@ enkripsih/
 ├── .env.example               # Template env vars
 ├── frontend/
 │   ├── index.html             # UI utama (Sender & Receiver)
-│   ├── css/style.css          # Design system tactical data terminal
+│   ├── landing.html           # Marketing page / public landing
+│   ├── video_demo.html        # Motion graphic penjelas (HTML → MP4 via Playwright+FFmpeg)
+│   ├── css/
+│   │   ├── style.css          # Design system "tactical data terminal" (v10)
+│   │   ├── landing.css        # Dark OLED palette v19 (landing page)
+│   │   └── video_demo.css     # Styling demo video
 │   └── js/
 │       ├── app.js             # State + router
 │       ├── auth.js            # Login, session, cookie
@@ -95,21 +102,26 @@ enkripsih/
 │       ├── receiver.js        # Alur buka pesan (Receiver)
 │       ├── message_crypto.js  # Web Crypto: derive verifier
 │       ├── keybca_token.js    # Helper 12-simbol response
-│       └── tour.js            # Onboarding tour
+│       ├── tour.js            # Onboarding tour (login/commander/receiver/members)
+│       └── video_demo.js      # GSAP timeline untuk render MP4
 ├── backend/
 │   ├── main.py                # FastAPI app + semua endpoint
 │   ├── database.py            # Schema + migrasi + CRUD
 │   ├── crypto_engine.py       # KeyBCA: HMAC, PBKDF2, AES-GCM
 │   ├── env_agents.py          # Encrypt/decrypt agent_secret di DB
-│   ├── face_auth.py           # Face auth (backend only)
+│   ├── face_auth.py           # Face auth (backend only, belum di-wire ke UI)
 │   ├── secure_backup.py       # Backup terenkripsi SQLite
+│   ├── migrate_to_postgres.py # Migrator lokal → PostgreSQL
 │   └── tests/                 # pytest (34 test)
+├── scripts/
+│   └── render_enkripsih.mjs   # Renderer video demo (Chrome headless + FFmpeg)
 ├── iot_microcontroller/
 │   ├── wemos_d1_mini/         # Sketch Arduino + OLED + tombol
 │   └── esp32_keybca/         # Versi ESP32
-└── slides/
-    ├── tools-tech.md          # Tabel tools & teknologi
-    └── diagrams/              # Flowchart Mermaid
+├── slides/
+│   ├── tools-tech.md          # Tabel tools & teknologi
+│   └── diagrams/              # Flowchart Mermaid
+└── video-output/              # Hasil render MP4
 ```
 
 ## Menjalankan di Windows
@@ -176,12 +188,18 @@ Jalankan tes:
 Tes transmisi memeriksa endpoint pengiriman, penyimpanan ciphertext tanpa metadata/plaintext lama, verifikasi secret key, round-trip AES-GCM dengan kunci cocok, kegagalan kunci salah, autentikasi API, status pesan lama, serta penghapusan ciphertext. Saat ini: **34 test pass**.
 
 ## Video Demo
-Lihat demonstrasi penggunaan alat fisik untuk membuka pesan di [`VIDEO_DEMO.md`](VIDEO_DEMO.md).
+
+Motion graphic penjelas alur Enkripsih — bukan rekaman demo aplikasi. Lihat detail di [`VIDEO_DEMO.md`](VIDEO_DEMO.md).
+
+**Pratinjau lokal:**
+```powershell
+npm run video:render
+```
+Hasil MP4 tersimpan di `video-output/`. Pratinjau HTML di `http://localhost:8000/static/video_demo.html`.
 
 - Gunakan hanya `localhost` untuk demo; API dan WebSocket memerlukan sesi login.
 - Secret key tidak dikirim sebagai field API, tetapi verifier dikirim untuk verifikasi. Kode frontend disajikan oleh aplikasi, sehingga server yang dikompromikan dapat mengubah kode enkripsi/dekripsi.
 - Jangan mencatat, menempelkan, atau mengirim secret key maupun connection string ke log, chat, issue publik, atau repositori.
-- Endpoint token IoT lama bukan bagian dari alur UI pesan dan bukan pengganti autentikasi perangkat yang aman.
 
 ## Dokumentasi & Materi
 
@@ -192,3 +210,4 @@ Lihat demonstrasi penggunaan alat fisik untuk membuka pesan di [`VIDEO_DEMO.md`]
 | Tabel tools & teknologi | [`slides/tools-tech.md`](slides/tools-tech.md) |
 | Diagram Mermaid (source) | [`slides/diagrams/00-ringkasan.mmd`](slides/diagrams/00-ringkasan.mmd) |
 | Live demo | <https://enkripsih.vercel.app> |
+| Video demo (MP4) | `npm run video:render` → `video-output/` |
