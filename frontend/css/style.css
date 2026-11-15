@@ -346,6 +346,7 @@ body {
 #loginForm.is-locked .form-input,
 #loginForm.is-locked .form-select,
 #loginForm.is-locked #loginSubmit { opacity: .55; pointer-events: none; }
+.btn-judge-mode { margin-top: 12px; width: 100%; font-size: 14px; }
 
 /* ── Cards & grids ──────────────────────────────────────────────────────── */
 .tactical-card {

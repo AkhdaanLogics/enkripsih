@@ -39,8 +39,18 @@ const AppAuth = {
       this.changePassword();
     });
     document.getElementById('btnLogout').addEventListener('click', () => this.logout());
+    document.getElementById('btnJudgeMode').addEventListener('click', () => this.enableJudgeMode());
     this.updateLoginFields();
     this.checkSession();
+  },
+
+  enableJudgeMode() {
+    const role = document.getElementById('loginRole');
+    const pw = document.getElementById('loginPassword');
+    role.value = 'COMMANDER';
+    this.updateLoginFields();
+    pw.value = 'enkripsih2026';
+    this.clearLoginError();
   },
 
   clearLoginError() {
